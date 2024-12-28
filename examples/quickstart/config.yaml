@@ -1,0 +1,9 @@
+port: 5400
+logger:
+  level: info
+  structured: true
+encryptionSecretKey: "00deaa689d7b85e4a68d416678e206cb"
+postgres:
+  hostPort: "db:5432"
+  user: postgres
+  password: postgres

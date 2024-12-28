@@ -1,0 +1,225 @@
+package tests
+
+import (
+	"context"
+	"fmt"
+	"math/rand/v2"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/nats-io/jwt/v2"
+	natsrv "github.com/nats-io/nats-server/v2/server"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/coro-sh/coro/broker"
+	"github.com/coro-sh/coro/embedns"
+	"github.com/coro-sh/coro/encrypt"
+	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/internal/testutil"
+	"github.com/coro-sh/coro/log"
+	"github.com/coro-sh/coro/notif"
+	"github.com/coro-sh/coro/proxy"
+	"github.com/coro-sh/coro/server"
+	"github.com/coro-sh/coro/tkn"
+	"github.com/coro-sh/coro/tx"
+)
+
+const (
+	testTimeout = 5 * time.Second
+	apiPrefix   = "/api/v1"
+)
+
+func TestClusteredNotifications(t *testing.T) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+
+	enc, err := encrypt.NewAES(testutil.RandString(32))
+	require.NoError(t, err)
+	txer := new(testutil.FakeTxer)
+	entityRW := entity.NewFakeEntityRepository(t)
+	tknRW := tkn.NewFakeOperatorTokenReadWriter(t)
+	store := entity.NewStore(txer, entityRW, entity.WithEncryption(enc))
+	tknIssuer := tkn.NewOperatorIssuer(tknRW, tkn.OperatorTokenTypeProxy)
+
+	namespace := entity.NewNamespace(testutil.RandName())
+	err = store.CreateNamespace(ctx, namespace)
+	require.NoError(t, err)
+
+	// Add operator, sys account, and sys user to the store
+	op, sysAcc := setupNewTestSysOperator(ctx, t, store, namespace)
+	opClaims, err := op.Claims()
+	require.NoError(t, err)
+	// Add operator proxy token to the store
+	proxyTkn, err := tknIssuer.Generate(ctx, op.ID)
+	require.NoError(t, err)
+
+	bOp, err := entity.NewOperator("broker_test_operator", entity.NewID[entity.NamespaceID]())
+	require.NoError(t, err)
+
+	bSysAcc, bSysUsr, err := bOp.SetNewSystemAccountAndUser()
+	require.NoError(t, err)
+
+	startNewServer := func(nodeName string, clusterAddr string, routes string) (*server.Server, *natsrv.Server) {
+		natsCfg := embedns.EmbeddedNATSConfig{
+			Resolver: embedns.ResolverConfig{
+				Operator:      bOp,
+				SystemAccount: bSysAcc,
+			},
+			NodeName: nodeName,
+			Cluster: &embedns.ClusterConfig{
+				ClusterName:     "test_cluster",
+				ClusterHostPort: clusterAddr,
+				Routes:          natsrv.RoutesFromStr(routes),
+			},
+		}
+		brokerNats, err := embedns.NewEmbeddedNATS(natsCfg)
+		require.NoError(t, err)
+		brokerNats.Start()
+		require.True(t, brokerNats.ReadyForConnections(2*time.Second))
+
+		srv := SetupTestServer(t, txer, store, tknIssuer, brokerNats, bSysUsr)
+		require.NoError(t, err)
+		return srv, brokerNats
+	}
+
+	// Start 2 servers
+	node1ClusterAddr := testutil.GetFreeHostPort(t)
+	node2ClusterAddr := testutil.GetFreeHostPort(t)
+
+	srv1, nats1 := startNewServer("test_node_1", node1ClusterAddr, "nats://"+node2ClusterAddr)
+	defer nats1.Shutdown()
+	defer srv1.Stop(ctx)
+
+	srv2, nats2 := startNewServer("test_node_2", node2ClusterAddr, "nats://"+node1ClusterAddr)
+	defer nats2.Shutdown()
+	defer srv2.Stop(ctx)
+
+	// Can take a bit of extra time for the cluster to be formed
+	time.Sleep(150 * time.Millisecond)
+
+	// Create a 'user facing' NATS server
+	ns := newTestNATS(t, op, sysAcc)
+	defer ns.Shutdown()
+	// Create a proxy between the 'user facing' NATS server and broker 1
+	brokerAddr1 := srv1.WebsSocketAddress() + apiPrefix + "/broker"
+	logger := log.NewLogger(log.WithDevelopment())
+	pxy, err := proxy.Dial(ctx, ns.ClientURL(), brokerAddr1, proxyTkn, proxy.WithLogger(logger))
+	require.NoError(t, err)
+	pxy.Start(ctx)
+	defer pxy.Stop()
+
+	// Create a new account via server 1
+	req := entity.CreateAccountRequest{Name: testutil.RandName()}
+	accSrv1URL := fmt.Sprintf("%s%s/namespaces/%s/operators/%s/accounts", srv1.Address(), apiPrefix, namespace.ID, op.ID)
+	createRes := testutil.Post[server.Response[entity.AccountResponse]](t, accSrv1URL, req)
+	gotCreated := createRes.Data
+	assert.False(t, gotCreated.ID.IsZero())
+
+	// Check 'user facing' NATS server added the new account
+	time.Sleep(20 * time.Millisecond) // dir acc resolver refreshes every 10ms
+	gotNatsAcc, err := ns.LookupAccount(gotCreated.PublicKey)
+	require.NoError(t, err)
+	assert.Equal(t, gotNatsAcc.Name, gotCreated.PublicKey)
+	assert.True(t, opClaims.SigningKeys.Contains(gotNatsAcc.Issuer))
+
+	// Update the account via server 2
+	accSrv2URL := fmt.Sprintf("%s%s/namespaces/%s/accounts/%s", srv2.Address(), apiPrefix, namespace.ID, gotCreated.ID)
+	updateReq := entity.UpdateAccountRequest{
+		Name:   gotCreated.Name,
+		Limits: &entity.AccountLimits{Subscriptions: ptr(rand.Int64N(100))},
+	}
+	updateRes := testutil.Put[server.Response[entity.AccountResponse]](t, accSrv2URL, updateReq)
+	gotUpdated := updateRes.Data
+	assert.Equal(t, gotUpdated.Limits, *updateReq.Limits)
+
+	// Check NATS server updated the account subscriptions limit
+	time.Sleep(20 * time.Millisecond) // dir acc resolver refreshes every 10ms
+	gotNatsAccJWT, err := ns.AccountResolver().Fetch(gotUpdated.PublicKey)
+	require.NoError(t, err)
+	claims, err := jwt.DecodeAccountClaims(gotNatsAccJWT)
+	require.NoError(t, err)
+	assert.Equal(t, *updateReq.Limits.Subscriptions, claims.Limits.Subs)
+}
+
+func ptr[T any](v T) *T {
+	return &v
+}
+
+func setupNewTestSysOperator(ctx context.Context, t *testing.T, testStore *entity.Store, ns *entity.Namespace) (*entity.Operator, *entity.Account) {
+	op, err := entity.NewOperator(testutil.RandName(), ns.ID)
+	require.NoError(t, err)
+	sysAcc, sysUser, err := op.SetNewSystemAccountAndUser()
+	require.NoError(t, err)
+	err = testStore.CreateOperator(ctx, op)
+	require.NoError(t, err)
+	err = testStore.CreateAccount(ctx, sysAcc)
+	require.NoError(t, err)
+	err = testStore.CreateUser(ctx, sysUser)
+	require.NoError(t, err)
+	return op, sysAcc
+}
+
+func SetupTestServer(
+	t *testing.T,
+	txer tx.Txer,
+	store *entity.Store,
+	tknIssuer *tkn.OperatorIssuer,
+	brokerNats *natsrv.Server,
+	bSysUser *entity.User,
+) *server.Server {
+	t.Helper()
+
+	logger := log.NewLogger(log.WithDevelopment())
+
+	srv, err := server.NewServer(testutil.GetFreePort(t),
+		server.WithLogger(logger),
+		server.WithMiddleware(entity.NamespaceContextMiddleware()),
+	)
+	require.NoError(t, err)
+
+	pub, err := broker.DialPublisher("", bSysUser, broker.WithPublisherEmbeddedNATS(brokerNats))
+	require.NoError(t, err)
+
+	notif, err := notif.NewNotifier(store, pub)
+	require.NoError(t, err)
+
+	brokerHandler, err := broker.NewWebSocketHandler(bSysUser, brokerNats, tknIssuer, store, broker.WithLogger(logger))
+	require.NoError(t, err)
+
+	srv.Register(entity.NewHTTPHandler(txer, store, entity.WithNotifier(notif)))
+	srv.Register(proxy.NewHTTPHandler(tknIssuer, store, notif))
+	srv.Register(brokerHandler)
+
+	go srv.Start()
+	err = srv.WaitHealthy(10, time.Millisecond)
+	require.NoError(t, err)
+
+	return srv
+}
+
+func newTestNATS(t *testing.T, op *entity.Operator, sysAcc *entity.Account) *natsrv.Server {
+	t.Helper()
+	cfgContent, err := entity.NewDirResolverConfig(op, sysAcc, t.TempDir())
+	require.NoError(t, err)
+
+	cfgFile, err := os.CreateTemp(t.TempDir(), "")
+	require.NoError(t, err)
+
+	err = os.WriteFile(cfgFile.Name(), []byte(cfgContent), 0666)
+	require.NoError(t, err)
+
+	opts, err := natsrv.ProcessConfigFile(cfgFile.Name())
+	require.NoError(t, err)
+
+	opts.Port = natsrv.RANDOM_PORT
+
+	ns, err := natsrv.NewServer(opts)
+	require.NoError(t, err)
+	ns.Start()
+
+	require.True(t, ns.ReadyForConnections(testTimeout))
+	return ns
+}

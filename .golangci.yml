@@ -1,0 +1,50 @@
+run:
+  concurrency: 4
+  tests: false
+  modules-download-mode: readonly
+
+output:
+  formats:
+    - format: colored-line-number
+      path: stdout
+  print-issued-lines: true
+  print-linter-name: true
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - forbidigo
+    - goimports
+    - revive
+    - staticcheck
+    - gosimple
+    - govet
+    - exhaustive
+    - ineffassign
+    - misspell
+    - unparam
+    - unused
+
+linters-settings:
+  forbidigo:
+    forbid:
+      - ^fmt\.Print(f|ln)?$
+  govet:
+    fieldalignment: 0
+  misspell:
+    locale: US
+  unparam:
+    check-exported: false
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: true
+
+issues:
+  exclude-dirs:
+    - .github
+    - .git
+    - img
+    - examples
+    - local

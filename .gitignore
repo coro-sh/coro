@@ -1,0 +1,8 @@
+.idea/
+.DS_Store
+build/
+tmp/
+local/
+
+# goreleaser
+dist/

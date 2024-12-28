@@ -1,0 +1,1218 @@
+openapi: 3.1.1
+info:
+  title: Coro API
+  version: "0.0.1"
+servers:
+  - url: http://localhost:5400/api/v1
+    description: Local development server
+paths:
+  ####################################
+  # Namespace endpoints
+  ####################################
+  /namespaces:
+    post:
+      summary: Create a Namespace
+      operationId: createNamespace
+      tags:
+        - Namespaces
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNamespaceRequest'
+      responses:
+        '201':
+          description: Namespace created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateNamespaceResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+    get:
+      summary: List Namespaces
+      operationId: listNamespaces
+      tags:
+        - Namespaces
+      parameters:
+        - $ref: '#/components/parameters/pageCursor'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: A list of Namespaces
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetNamespaceResponse'
+                  next_page_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+    delete:
+      summary: Delete Namespace
+      operationId: deleteNamespace
+      tags:
+        - Namespaces
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content (successful deletion)
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+
+  ####################################
+  # Operator endpoints
+  ####################################
+  /namespaces/{namespace_id}/operators:
+    post:
+      summary: Create an Operator
+      operationId: createOperator
+      tags:
+        - Operators
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOperatorRequest'
+      responses:
+        '201':
+          description: Operator created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOperatorResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+    get:
+      summary: List Operators
+      operationId: listOperators
+      tags:
+        - Operators
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/pageCursor'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: A list of Operators
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetOperatorResponse'
+                  next_page_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+
+  /namespaces/{namespace_id}/operators/{operator_id}:
+    get:
+      summary: Get an Operator
+      operationId: getOperator
+      tags:
+        - Operators
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operator_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Operator
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetOperatorResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+    put:
+      summary: Update an Operator
+      operationId: updateOperator
+      tags:
+        - Operators
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operator_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOperatorRequest'
+      responses:
+        '200':
+          description: Operator updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateOperatorResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+
+    delete:
+      summary: Delete Operator
+      operationId: deleteOperator
+      tags:
+        - Operators
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operator_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content (successful deletion)
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+
+  /namespaces/{namespace_id}/operators/{operator_id}/nats-config:
+    get:
+      summary: Get Operator NATS config
+      operationId: getOperatorNATSConfig
+      tags:
+        - Operators
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operator_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Plaintext NATS config
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+
+  ####################################
+  # Account endpoints
+  ####################################
+  /namespaces/{namespace_id}/operators/{operator_id}/accounts:
+    post:
+      summary: Create an Account
+      operationId: createAccount
+      tags:
+        - Accounts
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operator_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccountRequest'
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateAccountResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Operator not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+    get:
+      summary: List Accounts
+      operationId: listAccounts
+      tags:
+        - Accounts
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operator_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/pageCursor'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: A list of Accounts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetAccountResponse'
+                  next_page_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+
+  /namespaces/{namespace_id}/accounts/{account_id}:
+    get:
+      summary: Get an Account
+      operationId: getAccount
+      tags:
+        - Accounts
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAccountResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+    put:
+      summary: Update an Account
+      operationId: updateAccount
+      tags:
+        - Accounts
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAccountRequest'
+      responses:
+        '200':
+          description: Account updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateAccountResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+
+    delete:
+      summary: Delete Account
+      operationId: deleteAccount
+      tags:
+        - Accounts
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content (successful deletion)
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+
+  ####################################
+  # User endpoints
+  ####################################
+  /namespaces/{namespace_id}/accounts/{account_id}/users:
+    post:
+      summary: Create a User
+      operationId: createUser
+      tags:
+        - Users
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUserResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+    get:
+      summary: List Users
+      operationId: listUsers
+      tags:
+        - Users
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/pageCursor'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: A list of Users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetUserResponse'
+                  next_page_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+
+  /namespaces/{namespace_id}/users/{user_id}:
+    get:
+      summary: Get a User
+      operationId: getUser
+      tags:
+        - Users
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetUserResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+    put:
+      summary: Update a User
+      operationId: updateUser
+      tags:
+        - Users
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateUserResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+
+    delete:
+      summary: Delete User
+      operationId: deleteUser
+      tags:
+        - Users
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content (successful deletion)
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+
+  /namespaces/{namespace_id}/users/{user_id}/creds:
+    get:
+      summary: Get User NATS credentials
+      description: Returns a plaintext `.creds` file.
+      operationId: getUserCreds
+      tags:
+        - Users
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Plaintext NATS credentials
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+  /namespaces/{namespace_id}/users/{user_id}/issuances:
+    get:
+      summary: List User JWT issuances
+      operationId: listUserJWTIssuances
+      tags:
+        - Users
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of Users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserJWTIssuance'
+                  next_page_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+
+  ####################################
+  # Operator Proxy endpoints
+  ####################################
+  /namespaces/{namespace_id}/operators/{operator_id}/proxy/token:
+    post:
+      summary: Generate an Operator Proxy token
+      operationId: generateOperatorProxyToken
+      tags:
+        - Operators
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operator_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Proxy token generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: Generated token
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+  /namespaces/{namespace_id}/operators/{operator_id}/proxy/status:
+    post:
+      summary: Get Operator Proxy connection status
+      operationId: getOperatorProxyConnectionStatus
+      tags:
+        - Operators
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operator_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperatorNATSStatus'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+
+components:
+  parameters:
+    pageCursor:
+      name: page_cursor
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Cursor for pagination (base64-encoded ID)
+    pageSize:
+      name: page_size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+      description: Number of items per page
+  schemas:
+    ####################################
+    # Common error response
+    ####################################
+    ResponseError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: string
+
+    ####################################
+    # Namespaces
+    ####################################
+    CreateNamespaceRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: The name of the Namespace
+
+    CreateNamespaceResponse:
+      allOf:
+        - $ref: '#/components/schemas/Namespace'
+      description: Created Namespace
+
+    GetNamespaceResponse:
+      allOf:
+        - $ref: '#/components/schemas/Namespace'
+
+    Namespace:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Namespace ID
+        name:
+          type: string
+          description: Namespace name
+
+    ####################################
+    # Operators
+    ####################################
+    CreateOperatorRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: The name of the Operator
+
+    CreateOperatorResponse:
+      allOf:
+        - $ref: '#/components/schemas/Operator'
+
+    UpdateOperatorRequest:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+
+    UpdateOperatorResponse:
+      allOf:
+        - $ref: '#/components/schemas/Operator'
+
+    GetOperatorResponse:
+      allOf:
+        - $ref: '#/components/schemas/Operator'
+
+    Operator:
+      allOf:
+        - type: object
+          properties:
+            id:
+              type: string
+              description: Operator ID
+            namespace_id:
+              type: string
+              description: Namespace ID
+            jwt:
+              type: string
+              description: Raw operator JWT
+            name:
+              type: string
+              description: Operator name
+            public_key:
+              type: string
+              description: NATS public key
+        - type: object
+          properties:
+            status:
+              $ref: '#/components/schemas/OperatorNATSStatus'
+      description: Common response for Operator endpoints
+
+    OperatorNATSStatus:
+      type: object
+      properties:
+        connected:
+          type: boolean
+        connectTime:
+          type: integer
+          nullable: true
+          description: unix time of when the Operator's NATS server connected via a Proxy Agent
+
+    ####################################
+    # Accounts
+    ####################################
+    CreateAccountRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        limits:
+          $ref: '#/components/schemas/AccountLimits'
+      required:
+        - name
+
+    CreateAccountResponse:
+      allOf:
+        - $ref: '#/components/schemas/Account'
+
+    GetAccountResponse:
+      allOf:
+        - $ref: '#/components/schemas/Account'
+
+    UpdateAccountRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        limits:
+          $ref: '#/components/schemas/AccountLimits'
+      required:
+        - name
+
+    UpdateAccountResponse:
+      allOf:
+        - $ref: '#/components/schemas/Account'
+
+    Account:
+      allOf:
+        - type: object
+          properties:
+            id:
+              type: string
+              description: Account ID
+            namespace_id:
+              type: string
+              description: Namespace ID
+            operator_id:
+              type: string
+              description: The operator owning this account
+            jwt:
+              type: string
+              description: Raw account JWT
+            name:
+              type: string
+            public_key:
+              type: string
+              description: NATS public key for this account
+        - type: object
+          properties:
+            limits:
+              $ref: '#/components/schemas/AccountLimits'
+      description: Common response for Account endpoints
+
+    AccountLimits:
+      type: object
+      properties:
+        subscriptions:
+          type: integer
+          nullable: true
+        payload_size:
+          type: integer
+          nullable: true
+        imports:
+          type: integer
+          nullable: true
+        exports:
+          type: integer
+          nullable: true
+        connections:
+          type: integer
+          nullable: true
+        user_jwt_duration_secs:
+          type: integer
+          nullable: true
+          description: Expiry duration (in seconds) for User JWTs under this Account
+
+    ####################################
+    # Users
+    ####################################
+    CreateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        limits:
+          $ref: '#/components/schemas/UserLimits'
+      required:
+        - name
+
+    CreateUserResponse:
+      allOf:
+        - $ref: '#/components/schemas/User'
+
+    GetUserResponse:
+      allOf:
+        - $ref: '#/components/schemas/User'
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        limits:
+          $ref: '#/components/schemas/UserLimits'
+      required:
+        - name
+      description: Update a user’s name or limits
+
+    UpdateUserResponse:
+      allOf:
+        - $ref: '#/components/schemas/User'
+
+    User:
+      allOf:
+        - type: object
+          properties:
+            id:
+              type: string
+              description: User ID
+            namespace_id:
+              type: string
+              description: Namespace ID
+            operator_id:
+              type: string
+              description: Operator ID
+            account_id:
+              type: string
+              description: Account ID
+            name:
+              type: string
+              description: Name of the User
+            jwt:
+              type: string
+              description: Raw user JWT
+        - type: object
+          properties:
+            limits:
+              $ref: '#/components/schemas/UserLimits'
+      description: Common response for User endpoints
+
+    UserLimits:
+      type: object
+      properties:
+        subscriptions:
+          type: integer
+          nullable: true
+        payload_size:
+          type: integer
+          nullable: true
+        jwt_duration_secs:
+          type: integer
+          nullable: true
+          description: Expiry duration (in seconds) for the User's JWT. Only applied when the parent Account does not have a JWT expiry set for its User's.
+
+    UserJWTIssuance:
+      type: object
+      properties:
+        issue_time:
+          type: integer
+          description: Unix time of when the JWT was issued.
+        expire_time:
+          type: integer
+          nullable: true
+          description: Unix time of when the JWT will expire.
+        active:
+          type: boolean
+          description: Indicates if the issued JWT is currently active.

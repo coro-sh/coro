@@ -1,0 +1,82 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: coro
+    dir: .
+    binary: coro
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+  - id: coro-proxy-agent
+    dir: cmd/proxy
+    binary: coro-proxy-agent
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+  - id: coro-pgtool
+    dir: cmd/pgtool
+    binary: coro-pgtool
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+archives:
+  - formats: [ tar.gz ]
+    # this name template makes the OS and Arch compatible with the results of `uname`.
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    # use zip for windows archives
+    format_overrides:
+      - goos: windows
+        formats: [ zip ]
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+dockers:
+  - id: coro
+    image_templates:
+      - "corosh/coro:{{ .Tag }}"
+      - "corosh/coro:latest"
+    dockerfile: Dockerfile
+  - id: coro-proxy-agent
+    image_templates:
+      - "corosh/coro-proxy-agent:{{ .Tag }}"
+      - "corosh/coro-proxy-agent:latest"
+    dockerfile: cmd/proxy/Dockerfile
+  - id: coro-pgtool
+    image_templates:
+      - "corosh/coro-pgtool:{{ .Tag }}"
+      - "corosh/coro-pgtool:latest"
+    dockerfile: cmd/pgtool/Dockerfile

@@ -1,0 +1,124 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_PORT: 5432
+    ports:
+      - "5432:5432"
+    user: postgres
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d postgres -h localhost" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - example
+
+  coro-pgtool:
+    depends_on:
+      db:
+        condition: service_healthy
+    image: corosh/coro-pgtool
+    ports:
+      - "5400:5400"
+    command: [ "--user", "postgres", "--password", "postgres", "--host", "db", "--port", "5432", "init" ]
+    networks:
+      - example
+
+  controller-server:
+    depends_on:
+      db:
+        condition: service_healthy
+      coro-pgtool:
+        condition: service_completed_successfully
+    image: corosh/coro
+    deploy:
+      replicas: 2
+    expose:
+      - "5400"
+    volumes:
+      - "./config_controller.yaml:/config_controller.yaml:ro"
+    command: [ "--service", "controller", "--config", "config_controller.yaml" ]
+    networks:
+      - example
+
+  broker-node-1:
+    depends_on:
+      db:
+        condition: service_healthy
+      coro-pgtool:
+        condition: service_completed_successfully
+    image: corosh/coro
+    ports:
+      - "5222:5222" # embedded nats server
+    expose:
+      - "6400"
+    volumes:
+      - "./config_broker_1.yaml:/config_broker_1.yaml:ro"
+    command: [ "--service", "broker", "--config", "config_broker_1.yaml" ]
+    networks:
+      - example
+
+  broker-node-2:
+    depends_on:
+      db:
+        condition: service_healthy
+      coro-pgtool:
+        condition: service_completed_successfully
+    image: corosh/coro
+    ports:
+      - "6222:6222" # embedded nats server
+    expose:
+      - "6400"
+    volumes:
+      - "./config_broker_2.yaml:/config_broker_2.yaml:ro"
+    command: [ "--service", "broker", "--config", "config_broker_2.yaml" ]
+    networks:
+      - example
+
+  init-operator:
+    image: alpine:3.21
+    depends_on:
+      - controller-server
+    volumes:
+      - ../util/init-operator.sh:/init-operator.sh:ro
+      - nats-config:/nats-config
+    entrypoint: [ "/bin/sh", "/init-operator.sh" ]
+    command: [ "http://controller-server:5400" ]
+    networks:
+      - example
+
+  nginx:
+    image: nginx:latest
+    depends_on:
+      init-operator:
+        condition: service_completed_successfully
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:80"
+    networks:
+      - example
+
+  # Excluded from `example` network. Only a Coro Proxy should directly
+  # communicate with a NATS server.
+  nats-server:
+    image: nats:2.10-scratch
+    depends_on:
+      init-operator:
+        condition: service_completed_successfully
+    command: [ "-c", "/nats-config/nats.conf" ]
+    volumes:
+      - nats-config:/nats-config
+    ports:
+      - "4222:4222"
+
+networks:
+  example:
+    driver: bridge
+
+volumes:
+  nats-config:
