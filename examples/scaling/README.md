@@ -5,64 +5,34 @@ replicas and a **Broker** cluster behind Nginx load balancing.
 
 ## Steps
 
-### 1. Spin up the environment
+1. Spin up the environment with Docker Compose to start the following services:
 
-Spin up the environment with Docker Compose to start the following services:
+    - **Postgres** (database)
+    - **Coro Controller** service (2 replicas)
+    - **Coro Broker** cluster (2 nodes)
+    - **Coro UI** service
+    - **Nginx** for load balancing
 
-- **Postgres** (database)
-- **Coro Controller** service (2 replicas)
-- **Coro Broker** cluster (2 nodes)
-- **Nginx** for load balancing
-- **NATS** managed by the example Operator
+    ```shell
+    docker compose -p coro-scaling up -d
+    ```
 
-```shell
-docker compose -p coro-scaling up -d
-```
-
-### 2. Run the Proxy
-
-Create a Proxy authorization token for the example Operator initialized during setup.
-
-```shell
-NAMESPACE_ID=$(curl -sS "http://localhost:8080/controller-svc/api/v1/namespaces" | jq -r '.data[] | select(.name == "default") | .id')
-echo "$NAMESPACE_ID"
-OPERATOR_ID=$(curl -sS "http://localhost:8080/controller-svc/api/v1/namespaces/$NAMESPACE_ID/operators" | jq -r '.data[0].id')
-echo "$OPERATOR_ID"
-PROXY_TOKEN=$(curl -sS -X POST "http://localhost:8080/controller-svc/api/v1/namespaces/$NAMESPACE_ID/operators/$OPERATOR_ID/proxy/token"| jq -r '.data.token')
-echo "$PROXY_TOKEN"
-```
-
-Build and run the Proxy to forward updates received from the Notifier cluster to the NATS server. Nginx will route the
-Proxy WebSocket connection to one of the Notifier cluster nodes automatically.
-
-```shell
-docker build -t coro-proxy -f ../../cmd/proxy/Dockerfile ../..
-docker run --rm --network host --name coro-scaling-proxy -d coro-proxy \
-  --nats-url nats://localhost:4222 \
-  --broker-url ws://localhost:8080/broker-svc/api/v1/broker \
-  --token $PROXY_TOKEN
-```
-
-### 3. Validate the setup
-
-Send a request to create a new Account.
-
-```shell
-curl -sS -X POST \
-  "http://localhost:8080/controller-svc/api/v1/namespaces/$NAMESPACE_ID/operators/$OPERATOR_ID/accounts" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "foo"}'
-```
-
-A successful response confirms that:
-
-1. One of the Broker service replicas handled the API request.
-2. The request triggered a notification in one of the Notifier cluster nodes.
-3. The Proxy received and forwarded the notification to the NATS server.
-
-### 4. Teardown environment
-
-```shell
-docker stop coro-scaling-proxy
-docker compose -p coro-scaling down -v
-```
+2. Open http://localhost:8400 in your browser.
+3. Create a new Operator and open it.
+4. Head to the `NATS` tab and follow the instructions on how to set up a NATS server and Coro Proxy Agent.
+    - Use the following flags when running the Proxy Agent:
+        - `--token <PROXY_TOKEN>`
+        - `--nats-url nats://host.docker.internal:4222`
+        - `--broker-url ws://host.docker.internal:8080/broker-svc/api/v1/broker`
+    - Nginx will take care of routing the Proxy Agent's WebSocket connection to one of the Broker
+      cluster nodes.
+5. Once your NATS server is connected, create a new Account.
+6. A successful Account creation confirms that:
+    - One of the Controller service replicas handled the API request.
+    - The request triggered a notification in one of the Broker cluster nodes.
+    - The Proxy Agent received and forwarded the notification to the connected NATS server.
+7. Teardown environment
+   ```shell
+   docker stop coro-scaling-proxy
+   docker compose -p coro-scaling down -v
+   ```

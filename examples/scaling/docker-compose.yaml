@@ -79,42 +79,31 @@ services:
     networks:
       - example
 
-  init-operator:
-    image: alpine:3.21
-    depends_on:
-      - controller-server
+  ui:
+    image: corosh/coro
+    ports:
+      - "8400:8400"
     volumes:
-      - ../util/init-operator.sh:/init-operator.sh:ro
-      - nats-config:/nats-config
-    entrypoint: [ "/bin/sh", "/init-operator.sh" ]
-    command: [ "http://controller-server:5400" ]
+      - "./config_ui.yaml:/config_ui.yaml:ro"
+    command: [ "--service", "ui", "--config", "config_ui.yaml" ]
     networks:
       - example
 
   nginx:
     image: nginx:latest
     depends_on:
-      init-operator:
-        condition: service_completed_successfully
+      controller-server:
+        condition: service_started
+      broker-node-1:
+        condition: service_started
+      broker-node-2:
+        condition: service_started
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
       - "8080:80"
     networks:
       - example
-
-  # Excluded from `example` network. Only a Coro Proxy should directly
-  # communicate with a NATS server.
-  nats-server:
-    image: nats:2.10-scratch
-    depends_on:
-      init-operator:
-        condition: service_completed_successfully
-    command: [ "-c", "/nats-config/nats.conf" ]
-    volumes:
-      - nats-config:/nats-config
-    ports:
-      - "4222:4222"
 
 networks:
   example:
