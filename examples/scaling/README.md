@@ -16,7 +16,6 @@ replicas and a **Broker** cluster behind Nginx load balancing.
     ```shell
     docker compose -p coro-scaling up -d
     ```
-
 2. Open http://localhost:8400 in your browser.
 3. Create a new Operator and open it.
 4. Head to the `NATS` tab and follow the instructions on how to set up a NATS server and Coro Proxy Agent.
@@ -31,8 +30,7 @@ replicas and a **Broker** cluster behind Nginx load balancing.
     - One of the Controller service replicas handled the API request.
     - The request triggered a notification in one of the Broker cluster nodes.
     - The Proxy Agent received and forwarded the notification to the connected NATS server.
-7. Teardown environment
+7. Teardown environment.
    ```shell
-   docker stop coro-scaling-proxy
    docker compose -p coro-scaling down -v
    ```

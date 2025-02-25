@@ -1,6 +1,7 @@
 # Quickstart example
 
-This folder contains a minimal setup to quickly explore Coro. The setup runs the all-in-one mode that combines all
+This folder contains a minimal setup to quickly explore Coro. 
+The setup runs the all-in-one mode that combines all
 services into a single process.
 
 ## Steps
@@ -24,3 +25,7 @@ services into a single process.
 5. Once your NATS server is connected, create a new Account and User.
 6. Open the User, head to the `Connect` tab, and download the User's credentials file
 7. Connect to the NATS server using the credentials.
+8. Teardown environment.
+   ```shell
+   docker compose -p coro down -v
+   ```
