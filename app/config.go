@@ -49,9 +49,9 @@ type UIConfig struct {
 }
 
 func (c *UIConfig) InitDefaults() {
-	c.Port = defaultServerPort
+	c.Port = defaultUIServerPort
 	c.Logger.InitDefaults()
-	c.APIAddress = fmt.Sprintf("http://localhost:%d", c.Port)
+	c.APIAddress = fmt.Sprintf("http://localhost:%d", defaultServerPort)
 }
 
 func (c *UIConfig) Validation() *valgo.Validation {

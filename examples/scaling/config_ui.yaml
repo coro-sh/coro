@@ -1,0 +1,5 @@
+port: 8400
+logger:
+  level: info
+  structured: true
+apiAddress: http://nginx:80/controller-svc

@@ -17,6 +17,10 @@ services into a single process.
 2. Open http://localhost:5400 in your browser.
 3. Create a new Operator and open it.
 4. Head to the `NATS` tab and follow the instructions on how to set up a NATS server and Coro Proxy Agent.
+   - Use the following flags when running the Proxy Agent:
+      - `--token <PROXY_TOKEN>`
+      - `--nats-url nats://host.docker.internal:4222`
+      - `--broker-url ws://host.docker.internal:5400/api/v1/broker`
 5. Once your NATS server is connected, create a new Account and User.
 6. Open the User, head to the `Connect` tab, and download the User's credentials file
 7. Connect to the NATS server using the credentials.
