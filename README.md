@@ -20,6 +20,10 @@ Coro also provides a **Proxy Agent** to connect Operator NATS servers to the **B
 
 ## Getting started
 
+### Demo
+
+https://github.com/user-attachments/assets/63bdafb0-a45f-4494-a13f-699f7f46b14b
+
 ### Quickstart
 
 The fastest way to get up and running is by using all-in-one Coro. Check out
