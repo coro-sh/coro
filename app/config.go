@@ -22,30 +22,14 @@ const (
 // Service configs
 
 type AllConfig struct {
-	BaseConfig  `yaml:",inline"`
-	CorsOrigins []string `yaml:"corsOrigins" env:"CORS_ORIGINS"`
-}
-
-func (c *AllConfig) InitDefaults() {
-	c.BaseConfig.InitDefaults()
-}
-
-func (c *AllConfig) Validation() *valgo.Validation {
-	v := c.BaseConfig.Validation()
-
-	for i, origin := range c.CorsOrigins {
-		v.InRow("corsOrigins", i, valgo.Is(valgoutil.URLValidator(origin, "origin")))
-	}
-
-	return v
+	BaseConfig `yaml:",inline"`
 }
 
 type UIConfig struct {
-	Port        int          `yaml:"port" env:"PORT"` // default: 8400
-	Logger      LoggerConfig `yaml:"logger" envPrefix:"LOGGER_"`
-	APIAddress  string       `yaml:"apiAddress" env:"API_ADDRESS"` // default: http://localhost:5400
-	TLS         *TLSConfig   `yaml:"tls" envPrefix:"TLS"`
-	CorsOrigins []string     `yaml:"corsOrigins" env:"CORS_ORIGINS"`
+	Port       int          `yaml:"port" env:"PORT"` // default: 8400
+	Logger     LoggerConfig `yaml:"logger" envPrefix:"LOGGER_"`
+	APIAddress string       `yaml:"apiAddress" env:"API_ADDRESS"` // default: http://localhost:5400
+	TLS        *TLSConfig   `yaml:"tls" envPrefix:"TLS"`
 }
 
 func (c *UIConfig) InitDefaults() {
@@ -62,10 +46,6 @@ func (c *UIConfig) Validation() *valgo.Validation {
 
 	if c.TLS != nil {
 		v.In("tls", c.TLS.Validation())
-	}
-
-	for i, origin := range c.CorsOrigins {
-		v.InRow("corsOrigins", i, valgo.Is(valgoutil.URLValidator(origin, "origin")))
 	}
 
 	return v

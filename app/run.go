@@ -71,9 +71,6 @@ func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool) 
 			entity.InternalNamespaceMiddleware(intNS.ID),
 		),
 	}
-	if len(cfg.CorsOrigins) > 0 {
-		srvOpts = append(srvOpts, server.WithCORS(cfg.CorsOrigins...))
-	}
 	if cfg.TLS != nil {
 		srvOpts = append(srvOpts, server.WithTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile, cfg.TLS.CACertFile))
 	}
@@ -114,9 +111,6 @@ func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool) 
 
 func RunUI(ctx context.Context, logger log.Logger, cfg UIConfig) error {
 	srvOpts := []server.Option{server.WithLogger(logger)}
-	if len(cfg.CorsOrigins) > 0 {
-		srvOpts = append(srvOpts, server.WithCORS(cfg.CorsOrigins...))
-	}
 	if cfg.TLS != nil {
 		srvOpts = append(srvOpts, server.WithTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile, cfg.TLS.CACertFile))
 	}
