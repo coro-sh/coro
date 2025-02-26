@@ -33,7 +33,7 @@ func main() {
 func run(args []string) error {
 	app := cli.NewApp()
 	app.Name = "coro-pgtool"
-	app.Usage = "Command line tool for Coro Postgres database"
+	app.Usage = "Command line tool to manage the Coro Postgres database"
 
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{

@@ -1,17 +1,19 @@
 # Scaling example
 
-This folder contains a minimal setup to quickly explore Coro scaling capabilities with multiple **Controller** service
-replicas and a **Broker** cluster behind Nginx load balancing.
+This folder provides a minimal setup to explore Coro's scaling capabilities. It demonstrates how to run multiple
+**Controller** service replicas and a **Broker** cluster behind an **Nginx** load balancer.
+
+Each **Broker** node includes an embedded NATS server, which enables communication between nodes to form a cluster.
 
 ## Steps
 
 1. Spin up the environment with Docker Compose to start the following services:
 
     - **Postgres** (database)
-    - **Coro Controller** service (2 replicas)
+    - **Coro Controller** (2 replicas)
     - **Coro Broker** cluster (2 nodes)
-    - **Coro UI** service
-    - **Nginx** for load balancing
+    - **Coro UI**
+    - **Nginx** (load balancer)
 
     ```shell
     docker compose -p coro-scaling up -d
