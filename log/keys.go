@@ -16,9 +16,10 @@ const (
 	KeyUserID       = "user.id"
 	KeySystemUserID = "system_user.id"
 
-	KeyBrokerMessageID         = "broker_message.id"
-	KeyBrokerMessageSubject    = "broker_message.subject"
-	KeyBrokerMessageReplyInbox = "broker_message.reply_inbox"
+	KeyBrokerMessageID             = "broker_message.id"
+	KeyBrokerMessageReplyInbox     = "broker_message.reply_inbox"
+	KeyBrokerMessageOperation      = "broker_message.operation"
+	KeyBrokerMessageRequestSubject = "broker_message.request.subject"
 )
 
 var HTTPKeys = []string{
@@ -35,6 +36,6 @@ var HTTPKeys = []string{
 	KeySystemUserID,
 
 	KeyBrokerMessageID,
-	KeyBrokerMessageSubject,
+	KeyBrokerMessageRequestSubject,
 	KeyBrokerMessageReplyInbox,
 }

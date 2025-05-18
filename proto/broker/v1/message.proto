@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package broker.v1;
+
+message PublishMessage {
+  // Identifier of the broker message used to trace the end-to-end journey.
+  string id = 1;
+  // Subject of the operation reply inbox if a response(s) is expected from the
+  // operation. Can be left empty if no response is expected.
+  string operation_reply_inbox = 2;
+
+  // Operation to perform on the downstream NATS server.
+  oneof operation {
+    // Publish a message to the downstream NATS server and block until a reply
+    // is received.
+    OperationRequest request = 3;
+    // Start an ephemeral JetStream consumer on a stream that exists on the
+    // downstream NATS server.
+    OperationStartConsumer start_consumer = 4;
+    // Stop a consumer.
+    OperationStopConsumer stop_consumer = 5;
+    // Send a consumer heartbeat to keep the connection alive.
+    // Heartbeats should be sent every 15s, but a max of 30s is permitted before
+    // the consumer is stopped due to inactivity.
+    OperationSendConsumerHeartbeat send_consumer_heartbeat = 6;
+  }
+
+  message OperationRequest {
+    // Subject on the downstream NATS server to publish the message on.
+    string subject = 1;
+    // Content of the message.
+    bytes data = 2;
+  }
+
+  message OperationStartConsumer {
+    // Identifier of the ephemeral JetStream consumer.
+    string consumer_id = 1;
+    // Stream to create the ephemeral consumer on.
+    string stream_name = 2;
+    // User credentials to use when creating a new client connection.
+    optional Credentials user_creds = 3;
+  }
+
+  message OperationStopConsumer {
+    // Identifier of the ephemeral JetStream consumer.
+    string consumer_id = 1;
+  }
+
+  message OperationSendConsumerHeartbeat {
+    // Identifier of the ephemeral JetStream consumer.
+    string consumer_id = 1;
+  }
+}
+
+message ReplyMessage {
+  // Identifier of the broker message used to trace the end-to-end journey.
+  string id = 1;
+  // Subject of the reply inbox.
+  string inbox = 2;
+  // Content of the reply message.
+  bytes data = 3;
+  // Error message if the published command failed to be handled.
+  optional string error = 4;
+}
+
+message Credentials {
+  string jwt = 1;
+  string seed = 2;
+}

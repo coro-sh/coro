@@ -16,13 +16,11 @@ import (
 	uiserver "github.com/coro-sh/coro-ui-server"
 	"github.com/labstack/echo/v4"
 
-	"github.com/coro-sh/coro/broker"
+	"github.com/coro-sh/coro/command"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/internal/constants"
 	"github.com/coro-sh/coro/log"
-	"github.com/coro-sh/coro/notif"
 	"github.com/coro-sh/coro/postgres"
-	"github.com/coro-sh/coro/proxy"
 	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/tkn"
 )
@@ -79,24 +77,21 @@ func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool) 
 		return err
 	}
 
-	brokerHandler, err := broker.NewWebSocketHandler(bSysUsr, brokerNats, opTknIssuer, store, broker.WithLogger(logger))
+	brokerHandler, err := command.NewBrokerWebSocketHandler(bSysUsr, brokerNats, opTknIssuer, store, command.WithBrokerWebsocketLogger(logger))
 	if err != nil {
 		return err
 	}
 
-	brokerPub, err := broker.DialPublisher("", bSysUsr, broker.WithPublisherEmbeddedNATS(brokerNats))
+	commander, err := command.NewCommander("", bSysUsr, command.WithCommanderEmbeddedNATS(brokerNats))
 	if err != nil {
 		return fmt.Errorf("dial broker publisher: %w", err)
 	}
 
-	notif, err := notif.NewNotifier(store, brokerPub)
-	if err != nil {
-		return err
-	}
-
-	srv.Register(entity.NewHTTPHandler(txer, store, entity.WithNotifier(notif)))
+	srv.Register(entity.NewHTTPHandler(txer, store, entity.WithCommander(commander)))
 	srv.Register(brokerHandler)
-	srv.Register(proxy.NewHTTPHandler(opTknIssuer, store, notif))
+	srv.Register(command.NewProxyHTTPHandler(opTknIssuer, store, commander))
+	srv.Register(command.NewStreamHTTPHandler(store, commander))
+	srv.Register(command.NewStreamWebSocketHandler(store, commander))
 
 	if withUI {
 		var uiHandler, err = uiserver.AssetsHandler()
@@ -179,28 +174,26 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig)
 		if err != nil {
 			return err
 		}
-		var pubOpts []broker.PublisherOption
+		var cmdOpts []command.CommanderOption
 		if cfg.TLS != nil {
-			pubOpts = append(pubOpts, broker.WithPublisherTLS(broker.TLSConfig{
+			cmdOpts = append(cmdOpts, command.WithCommanderTLS(command.TLSConfig{
 				CertFile:           cfg.TLS.CertFile,
 				KeyFile:            cfg.TLS.KeyFile,
 				CACertFile:         cfg.TLS.CACertFile,
 				InsecureSkipVerify: cfg.TLS.InsecureSkipVerify,
 			}))
 		}
-		brokerPub, err := broker.DialPublisher(strings.Join(cfg.Broker.NatsURLs, ","), bSysUsr, pubOpts...)
+		commander, err := command.NewCommander(strings.Join(cfg.Broker.NatsURLs, ","), bSysUsr, cmdOpts...)
 		if err != nil {
 			return fmt.Errorf("dial broker publisher: %w", err)
 		}
 
-		notif, err := notif.NewNotifier(store, brokerPub)
-		if err != nil {
-			return err
-		}
-		entityHandlerOpts = append(entityHandlerOpts, entity.WithNotifier(notif))
+		entityHandlerOpts = append(entityHandlerOpts, entity.WithCommander(commander))
 		opTknRW := postgres.NewOperatorTokenReadWriter(pg)
 		opTknIssuer := tkn.NewOperatorIssuer(opTknRW, tkn.OperatorTokenTypeProxy)
-		srv.Register(proxy.NewHTTPHandler(opTknIssuer, store, notif))
+		srv.Register(command.NewProxyHTTPHandler(opTknIssuer, store, commander))
+		srv.Register(command.NewStreamHTTPHandler(store, commander))
+		srv.Register(command.NewStreamWebSocketHandler(store, commander))
 	}
 
 	srv.Register(entity.NewHTTPHandler(txer, store, entityHandlerOpts...))
@@ -239,12 +232,12 @@ func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig) error {
 	}
 	defer brokerNats.Shutdown()
 
-	handler, err := broker.NewWebSocketHandler(
+	handler, err := command.NewBrokerWebSocketHandler(
 		bSysUsr,
 		brokerNats,
 		opTknIssuer,
 		store,
-		broker.WithLogger(logger),
+		command.WithBrokerWebsocketLogger(logger),
 	)
 	if err != nil {
 		return err

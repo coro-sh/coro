@@ -18,35 +18,35 @@ import (
 )
 
 const (
-	versionPath          = "/v1"
-	pathParamNamespaceID = "namespace_id"
-	pathParamOperatorID  = "operator_id"
-	pathParamAccountID   = "account_id"
-	pathParamUserID      = "user_id"
+	VersionPath          = "/v1"
+	PathParamNamespaceID = "namespace_id"
+	PathParamOperatorID  = "operator_id"
+	PathParamAccountID   = "account_id"
+	PathParamUserID      = "user_id"
 )
 
-// Notifier sends notifications to a NATS server.
-type Notifier interface {
+// Commander sends commands to a NATS server.
+type Commander interface {
 	NotifyAccountClaimsUpdate(ctx context.Context, account *Account) error
-	// Ping checks if an Operator is connected and ready to receive notifications.
-	Ping(ctx context.Context, operator *Operator) (OperatorNATSStatus, error)
+	// Ping checks if an Operator is connected and ready to receive commands.
+	Ping(ctx context.Context, operatorID OperatorID) (OperatorNATSStatus, error)
 }
 
 // HTTPHandlerOption configures a HTTPHandler.
 type HTTPHandlerOption func(handler *HTTPHandler)
 
-// WithNotifier sets a Notifier on the handler to enable notifications.
-func WithNotifier(notif Notifier) HTTPHandlerOption {
+// WithCommander sets a Commander on the handler to enable commands.
+func WithCommander(commander Commander) HTTPHandlerOption {
 	return func(handler *HTTPHandler) {
-		handler.notif = notif
+		handler.commander = commander
 	}
 }
 
 // HTTPHandler handles entity HTTP requests.
 type HTTPHandler struct {
-	txer  tx.Txer
-	store *Store
-	notif Notifier
+	txer      tx.Txer
+	store     *Store
+	commander Commander
 }
 
 // NewHTTPHandler creates a new HTTPHandler.
@@ -63,20 +63,20 @@ func NewHTTPHandler(txer tx.Txer, store *Store, opts ...HTTPHandlerOption) *HTTP
 
 // Register adds the HTTPHandler endpoints to the provided Echo router group.
 func (h *HTTPHandler) Register(g *echo.Group) {
-	v1 := g.Group(versionPath)
+	v1 := g.Group(VersionPath)
 
 	namespaces := v1.Group("/namespaces")
 	namespaces.POST("", h.CreateNamespace)
 	namespaces.GET("", h.ListNamespaces)
 
-	namespace := namespaces.Group(fmt.Sprintf("/:%s", pathParamNamespaceID))
+	namespace := namespaces.Group(fmt.Sprintf("/:%s", PathParamNamespaceID))
 	namespace.DELETE("", h.DeleteNamespace)
 	namespace.POST("/operators", h.CreateOperator)
 
 	operators := namespace.Group("/operators")
 	operators.GET("", h.ListOperators)
 
-	operator := operators.Group(fmt.Sprintf("/:%s", pathParamOperatorID))
+	operator := operators.Group(fmt.Sprintf("/:%s", PathParamOperatorID))
 	operator.GET("", h.GetOperator)
 	operator.PUT("", h.UpdateOperator)
 	operator.DELETE("", h.DeleteOperator)
@@ -84,14 +84,14 @@ func (h *HTTPHandler) Register(g *echo.Group) {
 	operator.POST("/accounts", h.CreateAccount)
 	operator.GET("/accounts", h.ListAccounts)
 
-	account := namespace.Group(fmt.Sprintf("/accounts/:%s", pathParamAccountID))
+	account := namespace.Group(fmt.Sprintf("/accounts/:%s", PathParamAccountID))
 	account.GET("", h.GetAccount)
 	account.PUT("", h.UpdateAccount)
 	account.DELETE("", h.DeleteAccount)
 	account.POST("/users", h.CreateUser)
 	account.GET("/users", h.ListUsers)
 
-	user := namespace.Group(fmt.Sprintf("/users/:%s", pathParamUserID))
+	user := namespace.Group(fmt.Sprintf("/users/:%s", PathParamUserID))
 	user.GET("", h.GetUser)
 	user.PUT("", h.UpdateUser)
 	user.DELETE("", h.DeleteUser)
@@ -251,7 +251,7 @@ func (h *HTTPHandler) UpdateOperator(c echo.Context) error {
 		return err
 	}
 
-	opStatus, err := h.notif.Ping(ctx, op)
+	opStatus, err := h.commander.Ping(ctx, op.ID)
 	if err != nil {
 		return err
 	}
@@ -288,7 +288,7 @@ func (h *HTTPHandler) GetOperator(c echo.Context) error {
 		return err
 	}
 
-	opStatus, err := h.notif.Ping(ctx, op)
+	opStatus, err := h.commander.Ping(ctx, op.ID)
 	if err != nil {
 		return err
 	}
@@ -361,7 +361,7 @@ func (h *HTTPHandler) ListOperators(c echo.Context) error {
 		sem <- struct{}{}
 		errg.Go(func() error {
 			defer func() { <-sem }()
-			opStatus, err := h.notif.Ping(ctx, op)
+			opStatus, err := h.commander.Ping(ctx, op.ID)
 			if err != nil {
 				return err
 			}
@@ -378,8 +378,8 @@ func (h *HTTPHandler) ListOperators(c echo.Context) error {
 }
 
 // CreateAccount handles POST requests to create an Account.
-// The associated Operator's NATS server will be notified of the new Account
-// notifications are configured.
+// The associated Operator's NATS server will be notified of the new Account if
+// a Commander has been configured.
 func (h *HTTPHandler) CreateAccount(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -437,8 +437,8 @@ func (h *HTTPHandler) CreateAccount(c echo.Context) error {
 		return err
 	}
 
-	if h.notif != nil {
-		if err = h.notif.NotifyAccountClaimsUpdate(ctx, acc); err != nil {
+	if h.commander != nil {
+		if err = h.commander.NotifyAccountClaimsUpdate(ctx, acc); err != nil {
 			return err
 		}
 	}
@@ -451,7 +451,7 @@ func (h *HTTPHandler) CreateAccount(c echo.Context) error {
 
 // UpdateAccount handles PUT requests to update an Account.
 // The associated Operator's NATS server will be notified of the Account update
-// if notifications are configured.
+// if a Commander has been configured.
 func (h *HTTPHandler) UpdateAccount(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -511,8 +511,8 @@ func (h *HTTPHandler) UpdateAccount(c echo.Context) error {
 		return err
 	}
 
-	if h.notif != nil {
-		if err = h.notif.NotifyAccountClaimsUpdate(ctx, acc); err != nil {
+	if h.commander != nil {
+		if err = h.commander.NotifyAccountClaimsUpdate(ctx, acc); err != nil {
 			return err
 		}
 	}

@@ -1,23 +1,27 @@
-package broker
+package command
 
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"sync"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/coro-sh/coro/log"
+	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 )
 
-// SubscriberHandler processes received messages and returns reply data.
-type SubscriberHandler func(msg Message[[]byte]) ([]byte, error)
+type SubscriptionReplier func(ctx context.Context, msg *commandv1.ReplyMessage) error
+
+// SubscriberHandler processes received messages and returns reply(s).
+type SubscriberHandler func(msg *commandv1.PublishMessage, replier SubscriptionReplier) error
 
 // SubscriberErrorHandler handles any errors that occur during the subscription.
 type SubscriberErrorHandler func(err error, metaKeyVals ...any)
@@ -36,47 +40,48 @@ type TLSConfig struct {
 	InsecureSkipVerify bool   // Allows skipping TLS certificate verification.
 }
 
-// SubscriberOption configures a Subscriber.
+// SubscriberOption configures a CommandSubscriber.
 type SubscriberOption func(opts *subscriberOptions)
 
-// WithSubscriberLogger configures the Subscriber to use the specified logger.
+// WithSubscriberLogger configures the CommandSubscriber to use the specified logger.
 func WithSubscriberLogger(logger log.Logger) SubscriberOption {
 	return func(s *subscriberOptions) {
 		s.logger = logger
 	}
 }
 
-// WithSubscriberTLS configures the Subscriber with TLS.
+// WithSubscriberTLS configures the CommandSubscriber with TLS.
 func WithSubscriberTLS(tls TLSConfig) SubscriberOption {
 	return func(s *subscriberOptions) {
 		s.tls = &tls
 	}
 }
 
-// WithSubscriberErrorHandler sets the error handler for the Subscriber.
+// WithSubscriberErrorHandler sets the error handler for the CommandSubscriber.
 func WithSubscriberErrorHandler(errHandler SubscriberErrorHandler) SubscriberOption {
 	return func(s *subscriberOptions) {
 		s.errHandler = errHandler
 	}
 }
 
-// Subscriber subscribes to Operator messages via a WebSocket connection to the
+// CommandSubscriber subscribes to Operator messages via a WebSocket connection to the
 // broker.
-type Subscriber struct {
+type CommandSubscriber struct {
 	ws           *websocket.Conn
 	errHandler   SubscriberErrorHandler
 	logger       log.Logger
 	stopped      chan struct{}
-	sysUserCreds SysUserCreds
+	sysUserCreds UserCreds
+	mu           sync.Mutex
 }
 
-// DialSubscriber establishes a WebSocket connection to the Broker and
-// initializes a Subscriber to receive messages.
-func DialSubscriber(ctx context.Context,
+// NewCommandSubscriber establishes a WebSocket connection to the Broker and
+// initializes a CommandSubscriber to receive messages.
+func NewCommandSubscriber(ctx context.Context,
 	brokerWebSocketURL string,
 	token string,
 	opts ...SubscriberOption,
-) (*Subscriber, error) {
+) (*CommandSubscriber, error) {
 	options := subscriberOptions{
 		logger: log.NewLogger(),
 	}
@@ -124,7 +129,7 @@ func DialSubscriber(ctx context.Context,
 	ws, _, err := websocket.Dial(ctx, brokerWebSocketURL, &websocket.DialOptions{
 		HTTPClient:   httpClient,
 		HTTPHeader:   header,
-		Subprotocols: []string{webSocketSubprotocol},
+		Subprotocols: []string{brokerWebSocketSubprotocol},
 	})
 	if err != nil {
 		return nil, err
@@ -132,12 +137,12 @@ func DialSubscriber(ctx context.Context,
 
 	// First message must always be system user auth credentials
 
-	var sysUserCreds SysUserCreds
+	var sysUserCreds UserCreds
 	if err = wsjson.Read(ctx, ws, &sysUserCreds); err != nil {
 		return nil, err
 	}
 
-	return &Subscriber{
+	return &CommandSubscriber{
 		ws:           ws,
 		logger:       options.logger,
 		stopped:      make(chan struct{}),
@@ -148,47 +153,73 @@ func DialSubscriber(ctx context.Context,
 
 // Subscribe starts listening for incoming messages and processes them using
 // the provided handler.
-func (s *Subscriber) Subscribe(ctx context.Context, handler SubscriberHandler) {
+func (s *CommandSubscriber) Subscribe(ctx context.Context, handler SubscriberHandler) {
 	go func() {
 		defer func() { close(s.stopped) }()
 
 		for {
-			var msg Message[[]byte]
-			if err := wsjson.Read(ctx, s.ws, &msg); err != nil {
+			_, pubMsgb, err := s.ws.Read(ctx)
+			if err != nil {
 				if errors.Is(err, context.Canceled) || errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) || websocket.CloseStatus(err) == websocket.StatusNormalClosure {
 					return
 				}
-				s.errHandler(fmt.Errorf("read message: %w", err))
+				s.errHandler(fmt.Errorf("subscriber stopped: %w", err))
+				return
+			}
+
+			pubMsg := &commandv1.PublishMessage{}
+			if err = proto.Unmarshal(pubMsgb, pubMsg); err != nil {
+				s.logger.Error("failed to unmarshal received message", "error", err)
 				continue
 			}
 
-			errMetaKeyVals := []any{
-				log.KeyBrokerMessageID, msg.ID,
-				log.KeyBrokerMessageSubject, msg.Subject,
-			}
+			var errMetaKeyVals []any
 
-			replyData, err := handler(msg)
+			err = func() error {
+				opType, err := getOperationType(pubMsg)
+				if err != nil {
+					return err
+				}
+
+				errMetaKeyVals = append(errMetaKeyVals,
+					log.KeyBrokerMessageID, pubMsg.Id,
+					log.KeyBrokerMessageOperation, opType,
+				)
+
+				err = handler(pubMsg, func(ctx context.Context, replyMsg *commandv1.ReplyMessage) error {
+					reply, err := proto.Marshal(replyMsg)
+					if err != nil {
+						return fmt.Errorf("marshal reply message: %w", err)
+					}
+					return s.ws.Write(ctx, websocket.MessageText, reply)
+				})
+				if err != nil {
+					return err
+				}
+				return nil
+			}()
 			if err != nil {
-				s.errHandler(fmt.Errorf("handle message: %w", err), errMetaKeyVals...)
-				continue
-			}
-
-			replyMsg := Message[json.RawMessage]{
-				ID:      msg.ID,
-				Inbox:   msg.Inbox,
-				Subject: msg.Subject,
-				Data:    replyData,
-			}
-
-			if err = wsjson.Write(ctx, s.ws, replyMsg); err != nil {
-				s.errHandler(fmt.Errorf("write message reply: %w", err), errMetaKeyVals...)
+				s.errHandler(err, errMetaKeyVals...)
+				errStr := err.Error()
+				reply, err := proto.Marshal(&commandv1.ReplyMessage{
+					Id:    pubMsg.Id,
+					Inbox: pubMsg.CommandReplyInbox,
+					Error: &errStr,
+				})
+				if err != nil {
+					s.errHandler(fmt.Errorf("marshal error reply message: %w", err), errMetaKeyVals...)
+					continue
+				}
+				if err = s.ws.Write(ctx, websocket.MessageText, reply); err != nil {
+					s.errHandler(fmt.Errorf("send error reply message: %w", err), errMetaKeyVals...)
+				}
 			}
 		}
 	}()
 }
 
-// Unsubscribe closes the WebSocket connection and stops the Subscriber.
-func (s *Subscriber) Unsubscribe() error {
+// Unsubscribe closes the WebSocket connection and stops the CommandSubscriber.
+func (s *CommandSubscriber) Unsubscribe() error {
 	if err := s.ws.Close(websocket.StatusNormalClosure, "subscriber stopped"); err != nil {
 		return err
 	}
@@ -196,7 +227,7 @@ func (s *Subscriber) Unsubscribe() error {
 	return nil
 }
 
-// SysUserCreds returns the system user credentials associated with the Subscriber.
-func (s *Subscriber) SysUserCreds() SysUserCreds {
+// SysUserCreds returns the system user credentials associated with the CommandSubscriber.
+func (s *CommandSubscriber) SysUserCreds() UserCreds {
 	return s.sysUserCreds
 }

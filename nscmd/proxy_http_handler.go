@@ -1,4 +1,4 @@
-package proxy
+package nscmd
 
 import (
 	"context"
@@ -17,7 +17,6 @@ import (
 const (
 	pathParamNamespaceID = "namespace_id"
 	pathParamOperatorID  = "operator_id"
-	versionPath          = "/v1"
 )
 
 type OperatorReader interface {
@@ -27,36 +26,36 @@ type OperatorReader interface {
 
 type Pinger interface {
 	// Ping checks if Operator's have an open proxy connection a NATS server.
-	Ping(ctx context.Context, operator *entity.Operator) (entity.OperatorNATSStatus, error)
+	Ping(ctx context.Context, operatorID entity.OperatorID) (entity.OperatorNATSStatus, error)
 }
 
-// HTTPHandler handles proxy related HTTP requests.
-type HTTPHandler struct {
+// ProxyHTTPHandler handles proxy related HTTP requests.
+type ProxyHTTPHandler struct {
 	iss            *tkn.OperatorIssuer
 	operatorLoader OperatorReader
 	pinger         Pinger
 }
 
-// NewHTTPHandler creates a new HTTPHandler.
-func NewHTTPHandler(iss *tkn.OperatorIssuer, operators OperatorReader, pinger Pinger) *HTTPHandler {
-	return &HTTPHandler{
+// NewProxyHTTPHandler creates a new ProxyHTTPHandler.
+func NewProxyHTTPHandler(iss *tkn.OperatorIssuer, operators OperatorReader, pinger Pinger) *ProxyHTTPHandler {
+	return &ProxyHTTPHandler{
 		iss:            iss,
 		operatorLoader: operators,
 		pinger:         pinger,
 	}
 }
 
-func (h *HTTPHandler) Register(g *echo.Group) {
+func (h *ProxyHTTPHandler) Register(g *echo.Group) {
 	v1 := g.Group(versionPath)
-	v1.POST(fmt.Sprintf("/namespaces/:%s/operators/:%s/proxy/token", pathParamNamespaceID, pathParamOperatorID), h.GenerateToken)
-	v1.GET(fmt.Sprintf("/namespaces/:%s/operators/:%s/proxy/status", pathParamNamespaceID, pathParamOperatorID), h.GetStatus)
+	v1.POST(fmt.Sprintf("/namespaces/:%s/operators/:%s/proxy/token", pathParamNamespaceID, pathParamOperatorID), h.GenerateProxyToken)
+	v1.GET(fmt.Sprintf("/namespaces/:%s/operators/:%s/proxy/status", pathParamNamespaceID, pathParamOperatorID), h.GetProxyStatus)
 }
 
-// GenerateToken handles POST requests to generate a Proxy token for an Operator,
-// which is used to authorize a NATS proxy WebSocket connection. Only one token
-// can be active at a given time. Generating a new a token will overwrite and
-// invalidate any pre-existing token.
-func (h *HTTPHandler) GenerateToken(c echo.Context) error {
+// GenerateProxyToken handles POST requests to generate a Proxy token for an
+// Operator, which is used to authorize a NATS proxy WebSocket connection.
+// Only one token can be active at a given time. Generating a new a token wil
+// overwrite and invalidate any pre-existing token.
+func (h *ProxyHTTPHandler) GenerateProxyToken(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[GenerateProxyTokenRequest](c)
@@ -85,10 +84,10 @@ func (h *HTTPHandler) GenerateToken(c echo.Context) error {
 	})
 }
 
-// GetStatus handles GET requests to check if an Operator has an active Proxy
-// connection open between the Broker WebSocket server and the Operator's NATS
-// server.
-func (h *HTTPHandler) GetStatus(c echo.Context) error {
+// GetProxyStatus handles GET requests to check if an Operator has an active
+// Proxy connection open between the Broker WebSocket server and the Operator's
+// NATS server.
+func (h *ProxyHTTPHandler) GetProxyStatus(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[GetProxyStatusRequest](c)
@@ -110,7 +109,7 @@ func (h *HTTPHandler) GetStatus(c echo.Context) error {
 	pctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	opStatus, err := h.pinger.Ping(pctx, op)
+	opStatus, err := h.pinger.Ping(pctx, op.ID)
 	if err != nil {
 		return err
 	}

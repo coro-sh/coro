@@ -220,6 +220,7 @@ func (a *Account) Update(operator *Operator, update UpdateAccountParams) error {
 	claims.Limits.Imports = update.Imports
 	claims.Limits.Exports = update.Exports
 	claims.Limits.Conn = update.Connections
+	claims.Imports.Add()
 
 	tkn, err := claims.Encode(operator.SigningKey().KeyPair())
 	if err != nil {
@@ -228,6 +229,38 @@ func (a *Account) Update(operator *Operator, update UpdateAccountParams) error {
 
 	a.JWT = tkn
 	a.userJWTDuration = update.UserJWTDuration
+	return nil
+}
+
+func (a *Account) Import(operator *Operator, imports ...*jwt.Import) error {
+	claims, err := a.Claims()
+	if err != nil {
+		return err
+	}
+	claims.Imports.Add(imports...)
+
+	tkn, err := claims.Encode(operator.SigningKey().KeyPair())
+	if err != nil {
+		return err
+	}
+
+	a.JWT = tkn
+	return nil
+}
+
+func (a *Account) Export(operator *Operator, exports ...*jwt.Export) error {
+	claims, err := a.Claims()
+	if err != nil {
+		return err
+	}
+	claims.Exports.Add(exports...)
+
+	tkn, err := claims.Encode(operator.SigningKey().KeyPair())
+	if err != nil {
+		return err
+	}
+
+	a.JWT = tkn
 	return nil
 }
 
@@ -261,6 +294,11 @@ func newAccount(name string, operator *Operator, claimsModifiers ...func(claims 
 	claims := jwt.NewAccountClaims(nkPub)
 	claims.Name = name
 	claims.SigningKeys.Add(skPub)
+
+	if name != constants.SysAccountName {
+		claims.Limits.JetStreamLimits.MemoryStorage = -1
+		claims.Limits.JetStreamLimits.DiskStorage = -1
+	}
 
 	for _, mod := range claimsModifiers {
 		mod(claims)
