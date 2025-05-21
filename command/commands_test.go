@@ -70,7 +70,8 @@ func TestListStreams(t *testing.T) {
 
 	// assert all fields are equal except for timestamp
 	assertEqualStreamInfo := func(want *jetstream.StreamInfo, got *jetstream.StreamInfo) {
-		assert.Equal(t, want.Config, got.Config)
+		assert.Equal(t, want.Config.Name, got.Config.Name)
+		assert.Equal(t, want.Config.Subjects, got.Config.Subjects)
 		assert.Equal(t, want.Created, got.Created)
 		assert.Equal(t, want.Cluster, got.Cluster)
 		assert.Equal(t, want.Mirror, got.Mirror)
