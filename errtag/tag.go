@@ -95,7 +95,7 @@ func (t ErrorTag[C]) Details() []string {
 }
 
 func (t *ErrorTag[C]) init(cause error, opts ...Option) {
-	t.tagMeta.cause = cause
+	t.cause = cause
 	for _, opt := range opts {
 		opt(&t.tagMeta)
 	}

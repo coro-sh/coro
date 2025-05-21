@@ -63,7 +63,7 @@ func (s *StreamWebSocketHandler) HandleConsume(c echo.Context) (err error) {
 	wg := new(sync.WaitGroup)
 
 	conn, err := websocket.Accept(c.Response(), c.Request(), &websocket.AcceptOptions{
-		Subprotocols: []string{brokerWebSocketSubprotocol},
+		Subprotocols: []string{streamWebSocketSubprotocol},
 	})
 	if err != nil {
 		return err
@@ -138,7 +138,7 @@ func (s *StreamWebSocketHandler) HandleConsume(c echo.Context) (err error) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// keep a read loop open to ensure the client has not closed connection
+		// keep a read loop open to ensure the client has not closed the connection
 		// and to allow automatic handling of pong replies.
 		for {
 			_, _, rerr := conn.Read(ctx)

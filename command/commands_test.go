@@ -171,7 +171,7 @@ func TestConsumerHeartbeat(t *testing.T) {
 	got := recvCtx(t, ctx, gotRepliesCh)
 	require.Empty(t, got.Data) // empty first reply indicates consumer started
 
-	// Send  heartbeats over a total duration which exceeds the max idle heartbeat allowed
+	// Send heartbeats over a total duration which exceeds the max idle heartbeat allowed
 	for i := 0; i < 3; i++ {
 		time.Sleep(maxIdleHeartbeat / 2)
 		err = consumer.SendHeartbeat(ctx)

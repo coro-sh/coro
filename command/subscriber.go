@@ -8,7 +8,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"sync"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -26,7 +25,7 @@ type SubscriberHandler func(msg *commandv1.PublishMessage, replier SubscriptionR
 // SubscriberErrorHandler handles any errors that occur during the subscription.
 type SubscriberErrorHandler func(err error, metaKeyVals ...any)
 
-type subscriberOptions struct {
+type commandSubscriberOptions struct {
 	tls        *TLSConfig
 	logger     log.Logger
 	errHandler SubscriberErrorHandler
@@ -40,49 +39,49 @@ type TLSConfig struct {
 	InsecureSkipVerify bool   // Allows skipping TLS certificate verification.
 }
 
-// SubscriberOption configures a CommandSubscriber.
-type SubscriberOption func(opts *subscriberOptions)
+// SubscriberOption configures a Subscriber.
+type SubscriberOption func(opts *commandSubscriberOptions)
 
-// WithSubscriberLogger configures the CommandSubscriber to use the specified logger.
-func WithSubscriberLogger(logger log.Logger) SubscriberOption {
-	return func(s *subscriberOptions) {
+// WithCommandSubscriberLogger configures the Subscriber to use the
+// specified logger.
+func WithCommandSubscriberLogger(logger log.Logger) SubscriberOption {
+	return func(s *commandSubscriberOptions) {
 		s.logger = logger
 	}
 }
 
-// WithSubscriberTLS configures the CommandSubscriber with TLS.
-func WithSubscriberTLS(tls TLSConfig) SubscriberOption {
-	return func(s *subscriberOptions) {
+// WithCommandSubscriberTLS configures the Subscriber with TLS.
+func WithCommandSubscriberTLS(tls TLSConfig) SubscriberOption {
+	return func(s *commandSubscriberOptions) {
 		s.tls = &tls
 	}
 }
 
-// WithSubscriberErrorHandler sets the error handler for the CommandSubscriber.
+// WithSubscriberErrorHandler sets the error handler for the Subscriber.
 func WithSubscriberErrorHandler(errHandler SubscriberErrorHandler) SubscriberOption {
-	return func(s *subscriberOptions) {
+	return func(s *commandSubscriberOptions) {
 		s.errHandler = errHandler
 	}
 }
 
-// CommandSubscriber subscribes to Operator messages via a WebSocket connection to the
-// broker.
-type CommandSubscriber struct {
+// Subscriber subscribes to Operator messages via a WebSocket connection
+// to the broker.
+type Subscriber struct {
 	ws           *websocket.Conn
 	errHandler   SubscriberErrorHandler
 	logger       log.Logger
 	stopped      chan struct{}
 	sysUserCreds UserCreds
-	mu           sync.Mutex
 }
 
 // NewCommandSubscriber establishes a WebSocket connection to the Broker and
-// initializes a CommandSubscriber to receive messages.
+// initializes a Subscriber to receive messages.
 func NewCommandSubscriber(ctx context.Context,
 	brokerWebSocketURL string,
 	token string,
 	opts ...SubscriberOption,
-) (*CommandSubscriber, error) {
-	options := subscriberOptions{
+) (*Subscriber, error) {
+	options := commandSubscriberOptions{
 		logger: log.NewLogger(),
 	}
 	for _, opt := range opts {
@@ -142,7 +141,7 @@ func NewCommandSubscriber(ctx context.Context,
 		return nil, err
 	}
 
-	return &CommandSubscriber{
+	return &Subscriber{
 		ws:           ws,
 		logger:       options.logger,
 		stopped:      make(chan struct{}),
@@ -153,7 +152,7 @@ func NewCommandSubscriber(ctx context.Context,
 
 // Subscribe starts listening for incoming messages and processes them using
 // the provided handler.
-func (s *CommandSubscriber) Subscribe(ctx context.Context, handler SubscriberHandler) {
+func (s *Subscriber) Subscribe(ctx context.Context, handler SubscriberHandler) {
 	go func() {
 		defer func() { close(s.stopped) }()
 
@@ -218,8 +217,8 @@ func (s *CommandSubscriber) Subscribe(ctx context.Context, handler SubscriberHan
 	}()
 }
 
-// Unsubscribe closes the WebSocket connection and stops the CommandSubscriber.
-func (s *CommandSubscriber) Unsubscribe() error {
+// Unsubscribe closes the WebSocket connection and stops the Subscriber.
+func (s *Subscriber) Unsubscribe() error {
 	if err := s.ws.Close(websocket.StatusNormalClosure, "subscriber stopped"); err != nil {
 		return err
 	}
@@ -227,7 +226,7 @@ func (s *CommandSubscriber) Unsubscribe() error {
 	return nil
 }
 
-// SysUserCreds returns the system user credentials associated with the CommandSubscriber.
-func (s *CommandSubscriber) SysUserCreds() UserCreds {
+// SysUserCreds returns the system user credentials associated with the Subscriber.
+func (s *Subscriber) SysUserCreds() UserCreds {
 	return s.sysUserCreds
 }

@@ -1,3 +1,5 @@
+version: "2"
+
 run:
   concurrency: 4
   tests: false
@@ -5,46 +7,51 @@ run:
 
 output:
   formats:
-    - format: colored-line-number
+    text:
+      colors: true
+      print-issued-lines: true
+      print-linter-name: true
       path: stdout
-  print-issued-lines: true
-  print-linter-name: true
 
 linters:
-  disable-all: true
   enable:
     - errcheck
     - forbidigo
-    - goimports
-    - revive
     - staticcheck
-    - gosimple
     - govet
     - exhaustive
     - ineffassign
     - misspell
     - unparam
     - unused
+    - iface
+    - importas
+    - goconst
+    - testifylint
+    - whitespace
 
-linters-settings:
-  forbidigo:
-    forbid:
-      - ^fmt\.Print(f|ln)?$
-  govet:
-    fieldalignment: 0
-  misspell:
-    locale: US
-  unparam:
-    check-exported: false
-  prealloc:
-    simple: true
-    range-loops: true
-    for-loops: true
+  settings:
+    forbidigo:
+      forbid:
+        - pattern: ^fmt\.Print(f|ln)?$
+    misspell:
+      locale: US
+    unparam:
+      check-exported: false
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: true
 
-issues:
-  exclude-dirs:
-    - .github
-    - .git
-    - img
-    - examples
-    - local
+formatters:
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: 'interface{}'
+          replacement: 'any'
+        - pattern: 'a[b:len(a)]'
+          replacement: 'a[b:]'
+
+    goimports:
+      local-prefixes:
+        - github.com/coro-sh/coro

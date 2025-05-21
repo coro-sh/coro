@@ -57,7 +57,7 @@ func WithProxyNatsTLS(tlsConfig *tls.Config) ProxyOption {
 // Proxy establishes a connection between a Broker WebSocket server and a NATS
 // server, facilitating message forwarding between the two.
 type Proxy struct {
-	cmdSub       *CommandSubscriber
+	cmdSub       *Subscriber
 	natsURL      string
 	nc           *nats.Conn
 	consumerPool *ConsumerPool
@@ -77,10 +77,10 @@ func NewProxy(ctx context.Context, natsURL string, brokerWebSocketURL string, to
 
 	// Broker subscriber
 	brokerOpts := []SubscriberOption{
-		WithSubscriberLogger(options.logger),
+		WithCommandSubscriberLogger(options.logger),
 	}
 	if options.brokerTLSConfig != nil {
-		brokerOpts = append(brokerOpts, WithSubscriberTLS(*options.brokerTLSConfig))
+		brokerOpts = append(brokerOpts, WithCommandSubscriberTLS(*options.brokerTLSConfig))
 	}
 	cmdSub, err := NewCommandSubscriber(ctx, brokerWebSocketURL, token, brokerOpts...)
 	if err != nil {

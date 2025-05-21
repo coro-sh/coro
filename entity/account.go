@@ -296,8 +296,8 @@ func newAccount(name string, operator *Operator, claimsModifiers ...func(claims 
 	claims.SigningKeys.Add(skPub)
 
 	if name != constants.SysAccountName {
-		claims.Limits.JetStreamLimits.MemoryStorage = -1
-		claims.Limits.JetStreamLimits.DiskStorage = -1
+		claims.Limits.MemoryStorage = -1
+		claims.Limits.DiskStorage = -1
 	}
 
 	for _, mod := range claimsModifiers {

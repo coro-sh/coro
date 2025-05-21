@@ -88,7 +88,6 @@ func getDefaultMeta(c echo.Context, v middleware.RequestLoggerValues) map[any]an
 		if val := c.Get(key); val != nil {
 			defaultMeta[key] = val
 		}
-
 	}
 
 	return defaultMeta
