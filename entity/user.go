@@ -208,7 +208,7 @@ func (u *User) Update(account *Account, update UpdateUserParams) error {
 	}
 
 	claims.Name = update.Name
-	claims.Limits.Subs = update.Subscriptions
+	claims.Subs = update.Subscriptions
 	claims.Limits.Payload = update.PayloadSize
 
 	if accData.UserJWTDuration != nil {

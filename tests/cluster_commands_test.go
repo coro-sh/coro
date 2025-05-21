@@ -13,14 +13,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/coro-sh/coro/broker"
+	"github.com/coro-sh/coro/command"
 	"github.com/coro-sh/coro/embedns"
 	"github.com/coro-sh/coro/encrypt"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/internal/testutil"
 	"github.com/coro-sh/coro/log"
-	"github.com/coro-sh/coro/notif"
-	"github.com/coro-sh/coro/proxy"
 	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/tkn"
 	"github.com/coro-sh/coro/tx"
@@ -106,7 +104,7 @@ func TestClusteredNotifications(t *testing.T) {
 	// Create a proxy between the 'user facing' NATS server and broker 1
 	brokerAddr1 := srv1.WebsSocketAddress() + apiPrefix + "/broker"
 	logger := log.NewLogger(log.WithDevelopment())
-	pxy, err := proxy.Dial(ctx, ns.ClientURL(), brokerAddr1, proxyTkn, proxy.WithLogger(logger))
+	pxy, err := command.NewProxy(ctx, ns.ClientURL(), brokerAddr1, proxyTkn, command.WithProxyLogger(logger))
 	require.NoError(t, err)
 	pxy.Start(ctx)
 	defer pxy.Stop()
@@ -180,17 +178,14 @@ func SetupTestServer(
 	)
 	require.NoError(t, err)
 
-	pub, err := broker.DialPublisher("", bSysUser, broker.WithPublisherEmbeddedNATS(brokerNats))
+	commander, err := command.NewCommander("", bSysUser, command.WithCommanderEmbeddedNATS(brokerNats))
 	require.NoError(t, err)
 
-	notif, err := notif.NewNotifier(store, pub)
+	brokerHandler, err := command.NewBrokerWebSocketHandler(bSysUser, brokerNats, tknIssuer, store, command.WithBrokerWebsocketLogger(logger))
 	require.NoError(t, err)
 
-	brokerHandler, err := broker.NewWebSocketHandler(bSysUser, brokerNats, tknIssuer, store, broker.WithLogger(logger))
-	require.NoError(t, err)
-
-	srv.Register(entity.NewHTTPHandler(txer, store, entity.WithNotifier(notif)))
-	srv.Register(proxy.NewHTTPHandler(tknIssuer, store, notif))
+	srv.Register(entity.NewHTTPHandler(txer, store, entity.WithCommander(commander)))
+	srv.Register(command.NewProxyHTTPHandler(tknIssuer, store, commander))
 	srv.Register(brokerHandler)
 
 	go srv.Start()

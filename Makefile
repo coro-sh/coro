@@ -1,3 +1,6 @@
+PROTO_FILES := $(wildcard proto/*)
+BUF_VERSION := 1.54.0
+
 .PHONY:run
 run:
 	go run main.go --service all --config local/config_all.yaml
@@ -21,3 +24,18 @@ start-postgres:
 
 stop-postgres:
 	docker stop coro-postgres && docker rm -f coro-postgres
+
+# Buf
+
+.PHONY: buf-format
+buf-format: $(PROTO_FILES)
+	docker run -v $$(pwd):/srv -w /srv bufbuild/buf:$(BUF_VERSION) format -w
+
+.PHONY: buf-lint
+buf-lint: $(PROTO_FILES)
+	docker run -v $$(pwd):/srv -w /srv bufbuild/buf:$(BUF_VERSION) lint
+
+.PHONY: buf-gen
+buf-gen: $(PROTO_FILES) buf-format buf-lint
+	rm -rf **/gen/
+	docker run -v $$(pwd):/srv -w /srv bufbuild/buf:$(BUF_VERSION) generate

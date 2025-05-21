@@ -676,5 +676,5 @@ func assertNATSAccountAuth(t *testing.T, natsURL string, operator *Operator, aut
 
 // Hack: overwrite resolver dir path to avoid unwanted items in the current dir
 func sanitizeNATSConfig(t *testing.T, cfgContent string) string {
-	return strings.Replace(cfgContent, fmt.Sprintf("dir: '%s'", defaultResolverDir), fmt.Sprintf("dir: '%s'", t.TempDir()), 1)
+	return strings.ReplaceAll(cfgContent, defaultResolverDir, t.TempDir())
 }

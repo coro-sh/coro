@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const defaultResolverDir = "./jwt"
+const defaultResolverDir = "./data"
 
 const dirResolverConfigTemplate = `# Operator named %s
 operator: %s
@@ -13,11 +13,17 @@ operator: %s
 # System Account named %s
 system_account: %s
 
+jetstream {
+  store_dir: "%s/js"
+  max_mem: 0
+  max_file: 10GB
+}
+
 # Configuration of the nats based resolver
 resolver {
     type: full
     # Directory in which the account jwt will be stored
-    dir: '%s'
+    dir: '%s/jwt'
     # In order to support jwt deletion, set to true
     # If the resolver type is full delete will rename the jwt.
     # This is to allow manual restoration in case of inadvertent deletion.
@@ -78,7 +84,7 @@ func NewDirResolverConfig(op *Operator, sysAcc *Account, dirpath string) (string
 
 	cfgContent := fmt.Sprintf(
 		dirResolverConfigTemplate,
-		opData.Name, op.JWT, sysAccData.Name, sysAccData.PublicKey, dirpath, sysAccData.PublicKey, sysAcc.JWT,
+		opData.Name, op.JWT, sysAccData.Name, sysAccData.PublicKey, dirpath, dirpath, sysAccData.PublicKey, sysAcc.JWT,
 	)
 
 	return cfgContent, nil

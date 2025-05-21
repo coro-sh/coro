@@ -41,7 +41,7 @@ func SetupTestFixture(t *testing.T) *TestFixture {
 		server.WithMiddleware(NamespaceContextMiddleware()),
 	)
 	require.NoError(t, err)
-	srv.Register(NewHTTPHandler(txer, store, WithNotifier(new(notifierStub))))
+	srv.Register(NewHTTPHandler(txer, store, WithCommander(new(commanderStub))))
 
 	go srv.Start()
 	err = srv.WaitHealthy(10, time.Millisecond)
@@ -125,13 +125,13 @@ func (t *TestFixture) Stop() {
 	t.stop()
 }
 
-type notifierStub struct{}
+type commanderStub struct{}
 
-func (n *notifierStub) NotifyAccountClaimsUpdate(_ context.Context, _ *Account) error {
+func (n *commanderStub) NotifyAccountClaimsUpdate(_ context.Context, _ *Account) error {
 	return nil
 }
 
-func (n *notifierStub) Ping(_ context.Context, _ *Operator) (OperatorNATSStatus, error) {
+func (n *commanderStub) Ping(_ context.Context, _ OperatorID) (OperatorNATSStatus, error) {
 	connectTime := stubNotifConnectTime
 	return OperatorNATSStatus{
 		Connected:   true,

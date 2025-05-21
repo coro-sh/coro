@@ -16,11 +16,9 @@ func VerifyEntityNamespace(c echo.Context, entity NamespaceIDGetter) error {
 	if err != nil {
 		return err
 	}
-
 	if nsID != entity.GetNamespaceID() {
 		return errtag.NewTagged[errtag.Unauthorized]("entity namespace id mismatch")
 	}
-
 	return nil
 }
 
@@ -44,6 +42,5 @@ func VerifyPublicUser(usr *User) error {
 	if constants.IsReservedUserName(usrData.Name) {
 		return errtag.NewTagged[errtag.Unauthorized]("user is reserved for internal use only")
 	}
-
 	return nil
 }

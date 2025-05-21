@@ -21,7 +21,7 @@ func NamespaceContextMiddleware() echo.MiddlewareFunc {
 			if !isNamespacePath(c) {
 				return next(c) // skip if path is not scoped to a namespace
 			}
-			nsIDStr := c.Param(pathParamNamespaceID)
+			nsIDStr := c.Param(PathParamNamespaceID)
 			if err := valgo.In("params", valgo.Is(IDValidator[NamespaceID](nsIDStr, "namespace_id"))).Error(); err != nil {
 				return err
 			}
@@ -63,5 +63,5 @@ func NamespaceIDFromContext(c echo.Context) (NamespaceID, error) {
 }
 
 func isNamespacePath(c echo.Context) bool {
-	return strings.HasPrefix(c.Path(), fmt.Sprintf("/api%s/namespaces/:%s", versionPath, pathParamNamespaceID))
+	return strings.HasPrefix(c.Path(), fmt.Sprintf("/api%s/namespaces/:%s", VersionPath, PathParamNamespaceID))
 }

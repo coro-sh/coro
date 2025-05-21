@@ -1,4 +1,4 @@
-package proxy
+package command
 
 import (
 	"context"
@@ -25,7 +25,7 @@ func TestHTTPHandler_GenerateToken(t *testing.T) {
 		entity.NamespaceContextMiddleware(),
 	))
 	require.NoError(t, err)
-	srv.Register(NewHTTPHandler(tknIssuer, entityStore, new(pingerStub)))
+	srv.Register(NewProxyHTTPHandler(tknIssuer, entityStore, new(pingerStub)))
 	go srv.Start()
 	err = srv.WaitHealthy(10, time.Millisecond)
 	require.NoError(t, err)
@@ -35,7 +35,7 @@ func TestHTTPHandler_GenerateToken(t *testing.T) {
 	err = entityStore.CreateOperator(ctx, op)
 	require.NoError(t, err)
 
-	url := fmt.Sprintf("%s%s%s/namespaces/%s/operators/%s/proxy/token", srv.Address(), server.APIPath, versionPath, op.NamespaceID, op.ID)
+	url := fmt.Sprintf("%s%s%s/namespaces/%s/operators/%s/proxy/token", srv.Address(), server.APIPath, entity.VersionPath, op.NamespaceID, op.ID)
 
 	res := testutil.Post[server.Response[GenerateProxyTokenResponse]](t, url, nil)
 	got := res.Data
@@ -55,7 +55,7 @@ func TestHTTPHandler_GetStatus(t *testing.T) {
 		entity.NamespaceContextMiddleware(),
 	))
 	require.NoError(t, err)
-	srv.Register(NewHTTPHandler(tknIssuer, entityStore, new(pingerStub)))
+	srv.Register(NewProxyHTTPHandler(tknIssuer, entityStore, new(pingerStub)))
 	go srv.Start()
 	err = srv.WaitHealthy(10, time.Millisecond)
 	require.NoError(t, err)
@@ -65,7 +65,7 @@ func TestHTTPHandler_GetStatus(t *testing.T) {
 	err = entityStore.CreateOperator(ctx, op)
 	require.NoError(t, err)
 
-	url := fmt.Sprintf("%s%s%s/namespaces/%s/operators/%s/proxy/status", srv.Address(), server.APIPath, versionPath, op.NamespaceID, op.ID)
+	url := fmt.Sprintf("%s%s%s/namespaces/%s/operators/%s/proxy/status", srv.Address(), server.APIPath, entity.VersionPath, op.NamespaceID, op.ID)
 
 	res := testutil.Get[server.Response[GetProxyStatusResponse]](t, url)
 	got := res.Data
@@ -75,7 +75,7 @@ func TestHTTPHandler_GetStatus(t *testing.T) {
 
 type pingerStub struct{}
 
-func (p *pingerStub) Ping(_ context.Context, _ *entity.Operator) (entity.OperatorNATSStatus, error) {
+func (p *pingerStub) Ping(_ context.Context, _ entity.OperatorID) (entity.OperatorNATSStatus, error) {
 	connectTime := time.Now().Unix()
 	return entity.OperatorNATSStatus{
 		Connected:   true,

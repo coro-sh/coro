@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package command.v1;
+
+message PublishMessage {
+  // Identifier of the published message.
+  string id = 1;
+  // Subject of the command reply inbox if a response(s) is expected from the
+  // command. Can be left empty if no response is expected.
+  string command_reply_inbox = 2;
+
+  // Command to perform on the downstream NATS server.
+  oneof command {
+    // Publish a message to the downstream NATS server and block until a reply
+    // is received.
+    CommandRequest request = 3;
+    // List JetStream streams that exists on the downstream NATS server.
+    CommandListStreams list_stream = 4;
+    // Start an ephemeral JetStream consumer on a stream that exists on the
+    // downstream NATS server.
+    CommandStartConsumer start_consumer = 5;
+    // Stop a consumer.
+    CommandStopConsumer stop_consumer = 6;
+    // Send a consumer heartbeat to keep the connection alive.
+    // Heartbeats should be sent every 15s, but a max of 30s is permitted before
+    // the consumer is stopped due to inactivity.
+    CommandSendConsumerHeartbeat send_consumer_heartbeat = 7;
+  }
+
+  message CommandRequest {
+    // Subject on the downstream NATS server to publish the request message on.
+    string subject = 1;
+    // Content of the request message.
+    bytes data = 2;
+  }
+
+  message CommandListStreams {
+    Credentials user_creds = 1;
+  }
+
+  message CommandStartConsumer {
+    // Identifier of the ephemeral JetStream consumer.
+    string consumer_id = 1;
+    // Stream to create the ephemeral consumer on.
+    string stream_name = 2;
+    // User credentials to use when creating a new client connection.
+    Credentials user_creds = 3;
+  }
+
+  message CommandStopConsumer {
+    // Identifier of the ephemeral JetStream consumer.
+    string consumer_id = 1;
+  }
+
+  message CommandSendConsumerHeartbeat {
+    // Identifier of the ephemeral JetStream consumer.
+    string consumer_id = 1;
+  }
+}
+
+message ReplyMessage {
+  // Identifier of the reply message.
+  string id = 1;
+  // Subject of the reply inbox.
+  string inbox = 2;
+  // Content of the reply message.
+  bytes data = 3;
+  // Error message if the published command failed to be handled.
+  optional string error = 4;
+}
+
+message Credentials {
+  string jwt = 1;
+  string seed = 2;
+}

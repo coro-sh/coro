@@ -1,4 +1,4 @@
-package broker
+package command
 
 import (
 	"context"
@@ -19,20 +19,20 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"golang.org/x/time/rate"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/errtag"
 	"github.com/coro-sh/coro/internal/constants"
 	"github.com/coro-sh/coro/log"
+	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 )
 
 const (
-	// versionPath is the base API version path for WebSocket handlers
-	versionPath = "/v1"
 	// apiKeyHeader is the header key used to pass the API key for authentication
 	apiKeyHeader = "X-API-Key"
-	// webSocketSubprotocol specifies the WebSocket subprotocol name
-	webSocketSubprotocol = constants.AppName + "_broker"
+	// brokerWebSocketSubprotocol specifies the WebSocket subprotocol name
+	brokerWebSocketSubprotocol = constants.AppName + "_broker"
 
 	// Subject formats
 	operatorSubjectFormat     = "_" + constants.AppNameUpper + ".BROKER.OPERATOR.%s"
@@ -41,9 +41,9 @@ const (
 	pingOperatorSubjectFormat = pingOperatorSubjectBase + ".OPERATOR.%s"
 
 	// Timeouts and intervals
-	writeTimeout      = 30 * time.Second
-	heartbeatTimeout  = 10 * time.Second
-	heartbeatInterval = 50 * time.Second
+	brokerWriteTimeout      = 30 * time.Second
+	brokerHeartbeatTimeout  = 10 * time.Second
+	brokerHeartbeatInterval = 50 * time.Second
 )
 
 // TokenVerifier verifies API tokens and extracts their associated Operator ID.
@@ -58,22 +58,22 @@ type EntityReader interface {
 	ReadSystemUser(ctx context.Context, operatorID entity.OperatorID, accountID entity.AccountID) (*entity.User, error)
 }
 
-// Option configures a WebSocketHandler instance.
-type Option func(b *WebSocketHandler)
+// BrokerWebsocketOption configures a BrokerWebSocketHandler instance.
+type BrokerWebsocketOption func(b *BrokerWebSocketHandler)
 
-// WithLogger configures a WebSocketHandler to use the specified logger.
-func WithLogger(logger log.Logger) Option {
-	return func(b *WebSocketHandler) {
+// WithBrokerWebsocketLogger configures a BrokerWebSocketHandler to use the specified logger.
+func WithBrokerWebsocketLogger(logger log.Logger) BrokerWebsocketOption {
+	return func(b *BrokerWebSocketHandler) {
 		b.logger = logger.With(log.KeyComponent, "broker.websocket_handler")
 	}
 }
 
-// WebSocketHandler is the WebSocket handler for the Broker server. It receives
-// messages via an embedded NATS server and forwards them to corresponding
-// WebSocket Operator connections. The WebSocket handler is able to function
-// within a cluster of Brokers as long as the embedded NATS server has a
-// clustered setup.
-type WebSocketHandler struct {
+// BrokerWebSocketHandler is the WebSocket handler for the Broker server.
+// It receives messages via an embedded NATS server and forwards them to
+// corresponding WebSocket Operator connections. The WebSocket handler is able
+// to function within a cluster of Brokers as long as the embedded NATS server
+// has a clustered setup.
+type BrokerWebSocketHandler struct {
 	tknv        TokenVerifier
 	entities    EntityReader
 	nsSysUser   *entity.User
@@ -81,25 +81,28 @@ type WebSocketHandler struct {
 	nc          *nats.Conn
 	logger      log.Logger
 	limiter     *rate.Limiter
-	connections sync.Map
+	connections *sync.Map
+	numConns    atomic.Int64
 }
 
-// NewWebSocketHandler creates a new WebSocketHandler.
-func NewWebSocketHandler(
+// NewBrokerWebSocketHandler creates a new BrokerWebSocketHandler.
+func NewBrokerWebSocketHandler(
 	natsSysUser *entity.User,
 	embeddedNats *server.Server,
 	tokener TokenVerifier,
 	entities EntityReader,
-	opts ...Option,
-) (*WebSocketHandler, error) {
-	h := &WebSocketHandler{
+	opts ...BrokerWebsocketOption,
+) (*BrokerWebSocketHandler, error) {
+	h := &BrokerWebSocketHandler{
 		tknv:      tokener,
 		entities:  entities,
 		nsSysUser: natsSysUser,
 		ns:        embeddedNats,
 		logger:    log.NewLogger(),
 		// 1 message every 100ms with a 10 message burst
-		limiter: rate.NewLimiter(rate.Every(100*time.Millisecond), 10),
+		limiter:     rate.NewLimiter(rate.Every(100*time.Millisecond), 10),
+		connections: new(sync.Map),
+		numConns:    atomic.Int64{},
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -124,22 +127,26 @@ func NewWebSocketHandler(
 	return h, nil
 }
 
-// Register adds the WebSocketHandler endpoints to the provided Echo router
+// Register adds the BrokerWebSocketHandler endpoints to the provided Echo router
 // group.
-func (w *WebSocketHandler) Register(g *echo.Group) {
-	v1 := g.Group(versionPath)
-	v1.GET("/broker", w.Handle)
+func (b *BrokerWebSocketHandler) Register(g *echo.Group) {
+	v1 := g.Group(entity.VersionPath)
+	v1.GET("/broker", b.Handle)
+}
+
+func (b *BrokerWebSocketHandler) NumConnections() int64 {
+	return b.numConns.Load()
 }
 
 // Handle first accepts a WebSocket handshake from a client and upgrades the
 // connection to a WebSocket. Once connected, the handler subscribes to its
 // embedded NATS server for messages intended for the connected Operator and
 // forwards them to the WebSocket.
-func (w *WebSocketHandler) Handle(c echo.Context) (err error) {
+func (b *BrokerWebSocketHandler) Handle(c echo.Context) (err error) {
 	rctx, rcancel := context.WithCancel(c.Request().Context())
 	defer rcancel() // ensures all goroutines are stopped
 
-	logger := w.logger.With("websocket.id", uuid.New().String())
+	logger := b.logger.With("websocket.id", uuid.New().String())
 
 	var logCallbacks []func(l log.Logger) log.Logger
 	getLogger := func() log.Logger {
@@ -166,32 +173,46 @@ func (w *WebSocketHandler) Handle(c echo.Context) (err error) {
 	}()
 
 	getLogger().Info("accepting websocket handshake")
-	conn, sysUser, err := w.acceptHandshake(rctx, c)
+	conn, sysUser, err := b.acceptHandshake(rctx, c)
 	if err != nil {
 		return fmt.Errorf("accept handshake: %w", err)
 	}
+
+	const maxWorkerConc = 25
+	notifNatsCh := make(chan *nats.Msg, maxWorkerConc)
+	wsReplyCh := make(chan *commandv1.ReplyMessage, maxWorkerConc)
+	errsCh := make(chan *brokerErr, 4) // aborts worker goroutine with error
+	doneCh := make(chan struct{})      // stops all worker goroutines
+	wg := new(sync.WaitGroup)          // wait for all worker goroutine to finish
+
+	b.numConns.Add(1)
+	defer func() {
+		close(notifNatsCh)
+		close(wsReplyCh)
+		close(doneCh)
+		// close the websocket conn first
+		code, reason := getWebSocketCloseCodeAndReason(err)
+		if code == websocket.StatusNormalClosure {
+			err = nil // not an actual failure
+		}
+		closeWebSocketConn(conn, logger, code, reason)
+		b.numConns.Add(-1)
+		// then wait for all goroutines to finish
+		wg.Wait()
+	}()
+
 	getLogger().Info("websocket handshake accepted")
 	opID := sysUser.OperatorID
 	logger = logger.With(log.KeyOperatorID, opID, log.KeySystemUserID, sysUser.ID)
 
-	w.connections.Store(opID, time.Now())
-	defer func() { w.connections.Delete(opID) }()
-
-	const maxWorkerConc = 25
-	notifNatsCh := make(chan *nats.Msg, maxWorkerConc)
-	wsReplyCh := make(chan Message[json.RawMessage], maxWorkerConc)
-	doneCh := make(chan struct{})
-	errsCh := make(chan *brokerErr, 4) // aborts handler goroutine with error
-	defer func() {
-		close(notifNatsCh)
-		close(wsReplyCh)
-	}()
+	b.connections.Store(opID, time.Now())
+	defer func() { b.connections.Delete(opID) }()
 
 	// Subscribe to operator notifications in background
 	getLogger().Info("subscribing to internal operator notifications")
 	subj := getOperatorSubject(opID)
 	logger = logger.With("forwarder.subscribe_subject", subj)
-	sub, err := w.nc.ChanSubscribe(subj, notifNatsCh)
+	sub, err := b.nc.ChanSubscribe(subj, notifNatsCh)
 	if err != nil {
 		return fmt.Errorf("nats subscribe operator notifications: %w", err)
 	}
@@ -215,7 +236,9 @@ func (w *WebSocketHandler) Handle(c echo.Context) (err error) {
 	})
 
 	// Start writer worker that forwards notifications to the client
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		sem := make(chan struct{}, maxWorkerConc)
 		subWorkerErrsCh := make(chan *brokerErr, maxWorkerConc)
 		for {
@@ -228,27 +251,28 @@ func (w *WebSocketHandler) Handle(c echo.Context) (err error) {
 
 				go func(fwdMsg *nats.Msg) {
 					defer func() { <-sem }()
-					ctx, cancel := context.WithTimeout(rctx, writeTimeout)
+					ctx, cancel := context.WithTimeout(rctx, brokerWriteTimeout)
 					defer cancel()
 
 					metaKV := []any{"nats.subject", fwdMsg.Subject, log.KeyBrokerMessageReplyInbox, fwdMsg.Reply}
 
-					idPayload, werr := unmarshalJSON[messageIDPayload](fwdMsg.Data)
-					if werr != nil {
-						subWorkerErrsCh <- wrapBrokerErr(fmt.Errorf("writer worker: unmarshal notify message id payload: %w", werr), metaKV...)
+					// Unmarshal the message so we can log the message ID
+					msgpb := &commandv1.PublishMessage{}
+					if werr := proto.Unmarshal(fwdMsg.Data, msgpb); werr != nil {
+						subWorkerErrsCh <- wrapBrokerErr(fmt.Errorf("writer worker: unmarshal forward message: %w", werr), metaKV...)
 						return
 					}
-					msgID := idPayload.ID
+					msgID := msgpb.Id
 
-					metaKV = append(metaKV, log.KeyBrokerMessageID, msgID)
+					metaKV = append(metaKV, log.KeyBrokerMessageID, msgpb.Id)
 
-					if werr = conn.Write(ctx, websocket.MessageText, fwdMsg.Data); werr != nil {
+					if werr := conn.Write(ctx, websocket.MessageText, fwdMsg.Data); werr != nil {
 						subWorkerErrsCh <- wrapBrokerErr(fmt.Errorf("writer worker: write notify message %s to websocket: %w", msgID, werr), metaKV...)
 						return
 					}
 
 					writeCount.Add(1)
-					getLogger().With(metaKV...).Info("published notify message to websocket")
+					getLogger().With(metaKV...).Info("published command message to websocket")
 				}(msg)
 			case werr := <-subWorkerErrsCh:
 				if werr != nil {
@@ -263,37 +287,26 @@ func (w *WebSocketHandler) Handle(c echo.Context) (err error) {
 	}()
 
 	// Start reader worker that reads notification replies from the client
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for {
-			rerr := w.limiter.Wait(rctx)
+			rerr := b.limiter.Wait(rctx)
 			if rerr != nil {
 				errsCh <- wrapBrokerErr(fmt.Errorf("reader worker: rate limiter wait: %w", rerr))
 				return
 			}
 
-			var replyMsg Message[json.RawMessage]
-			rerr = wsjson.Read(rctx, conn, &replyMsg)
-
+			_, msgb, rerr := conn.Read(rctx)
 			if rerr != nil {
-				close(doneCh)
-
-				var ce websocket.CloseError
-				if errors.As(rerr, &ce) && ce.Code == websocket.StatusNormalClosure {
-					getLogger().Info("websocket connection stopped by client", "websocket.close_code", ce.Code, "websocket.close_reason", ce.Reason)
-					conn.Close(ce.Code, ce.Reason)
-					return
-				}
-
-				if errors.Is(rerr, context.Canceled) || errors.Is(rerr, io.EOF) || errors.Is(rerr, net.ErrClosed) {
-					code := websocket.StatusGoingAway
-					reason := "connection closed"
-					conn.Close(code, reason)
-					getLogger().Info("websocket connection closed", "websocket.close_code", code, "websocket.close_reason", reason)
-				}
-
-				conn.Close(websocket.StatusInternalError, "internal server error")
-				errsCh <- wrapBrokerErr(fmt.Errorf("reader worker: read nats notify message reply: %w", rerr))
+				errsCh <- wrapBrokerErr(fmt.Errorf("reader worker: read nats message reply: %w", rerr))
 				return
+			}
+
+			replyMsg := &commandv1.ReplyMessage{}
+			if rerr = proto.Unmarshal(msgb, replyMsg); rerr != nil {
+				errsCh <- wrapBrokerErr(fmt.Errorf("reader worker: unmarshal reply message: %w", rerr))
+				continue
 			}
 
 			readCount.Add(1)
@@ -302,7 +315,12 @@ func (w *WebSocketHandler) Handle(c echo.Context) (err error) {
 	}()
 
 	// Start reply worker which publishes replies to their corresponding message inbox
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
+		mu := new(sync.Mutex)
+		replyInboxChans := make(map[string]chan *commandv1.ReplyMessage)
+
 		sem := make(chan struct{}, maxWorkerConc)
 		for {
 			select {
@@ -310,24 +328,62 @@ func (w *WebSocketHandler) Handle(c echo.Context) (err error) {
 				if !ok {
 					return
 				}
-				sem <- struct{}{}
 
-				go func() {
-					defer func() { <-sem }()
-					metaKV := []any{
-						log.KeyBrokerMessageID, replyMsg.ID,
-						log.KeyBrokerMessageSubject, replyMsg.Subject,
-						log.KeyBrokerMessageReplyInbox, replyMsg.Inbox,
-					}
+				// Each message published to a reply inbox is done within a new worker goroutine
+				// after acquiring access to the semaphore. However, some reply inboxes may also
+				// expect many messages to be published (e.g. a stream consumer). To ensure,
+				// messages remain ordered when publishing to the same reply inbox, we maintain
+				// short-lived channels in a map (synchronized via a mutex), which act as a queue
+				// for publishing to that inbox. So if an inbox is currently being published to,
+				// then any other messages received for the same inbox **during this period** will
+				// be forwarded to the channel. This guarantees replies will be published in order,
+				// since we will never end up having two separate goroutines for the same inbox at
+				// any given time. Finally, if there are no active messages within the channel
+				// buffer to publish, then the channel is removed.
+				mu.Lock()
+				if _, ok := replyInboxChans[replyMsg.Inbox]; ok {
+					replyInboxChans[replyMsg.Inbox] <- replyMsg
+					mu.Unlock()
+				} else {
+					sem <- struct{}{}
+					replyInboxCh := make(chan *commandv1.ReplyMessage, 10)
+					replyInboxCh <- replyMsg
+					replyInboxChans[replyMsg.Inbox] = replyInboxCh
 
-					if perr := w.nc.Publish(replyMsg.Inbox, replyMsg.Data); perr != nil {
-						errsCh <- wrapBrokerErr(fmt.Errorf("reply worker: publish notify message nats reply: %w", perr), metaKV...)
-						return
-					}
+					go func() {
+						defer func() {
+							delete(replyInboxChans, replyMsg.Inbox)
+							mu.Unlock()
+							<-sem
+						}()
+						for {
+							select {
+							case nextReplyMsg := <-replyInboxCh:
+								metaKV := []any{
+									log.KeyBrokerMessageID, nextReplyMsg.Id,
+									log.KeyBrokerMessageReplyInbox, nextReplyMsg.Inbox,
+								}
 
-					replyCount.Add(1)
-					getLogger().With(metaKV...).Info("published notify reply to message inbox")
-				}()
+								msgb, err := proto.Marshal(nextReplyMsg)
+								if err != nil {
+									errsCh <- wrapBrokerErr(fmt.Errorf("reply worker: marshal reply message: %w", err), metaKV...)
+									return
+								}
+
+								if perr := b.nc.Publish(nextReplyMsg.Inbox, msgb); perr != nil {
+									errsCh <- wrapBrokerErr(fmt.Errorf("reply worker: publish notify message nats reply: %w", perr), metaKV...)
+									return
+								}
+
+								replyCount.Add(1)
+								getLogger().With(metaKV...).Info("published notify reply to message inbox")
+							default:
+								// no more pending messages for inbox
+								return
+							}
+						}
+					}()
+				}
 			case <-doneCh:
 				return
 			case <-rctx.Done():
@@ -337,8 +393,10 @@ func (w *WebSocketHandler) Handle(c echo.Context) (err error) {
 	}()
 
 	// Start heartbeat worker which receives heartbeats from the client
+	wg.Add(1)
 	go func() {
-		ticker := time.NewTicker(heartbeatInterval)
+		defer wg.Done()
+		ticker := time.NewTicker(brokerHeartbeatInterval)
 		defer ticker.Stop()
 		for {
 			select {
@@ -349,7 +407,7 @@ func (w *WebSocketHandler) Handle(c echo.Context) (err error) {
 				return
 			}
 
-			ctx, cancel := context.WithTimeout(rctx, heartbeatTimeout)
+			ctx, cancel := context.WithTimeout(rctx, brokerHeartbeatTimeout)
 			perr := conn.Ping(ctx)
 			cancel()
 			if err != nil {
@@ -365,9 +423,9 @@ func (w *WebSocketHandler) Handle(c echo.Context) (err error) {
 		case <-doneCh:
 			getLogger().Info("client closed notify websocket connection")
 			return nil
-		case fwdErr := <-errsCh:
-			if fwdErr != nil {
-				return fwdErr
+		case err = <-errsCh:
+			if err != nil {
+				return err
 			}
 		case <-rctx.Done():
 			return rctx.Err()
@@ -375,19 +433,19 @@ func (w *WebSocketHandler) Handle(c echo.Context) (err error) {
 	}
 }
 
-func (w *WebSocketHandler) acceptHandshake(ctx context.Context, c echo.Context) (*websocket.Conn, *entity.User, error) {
+func (b *BrokerWebSocketHandler) acceptHandshake(ctx context.Context, c echo.Context) (*websocket.Conn, *entity.User, error) {
 	token := c.Request().Header.Get(apiKeyHeader)
 	if token == "" {
 		err := errors.New("missing api key header")
 		return nil, nil, errtag.Tag[errtag.Unauthorized](err, errtag.WithMsgf("%s header required", apiKeyHeader))
 	}
 
-	opID, err := w.tknv.Verify(ctx, token)
+	opID, err := b.tknv.Verify(ctx, token)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	op, err := w.entities.ReadOperator(ctx, opID)
+	op, err := b.entities.ReadOperator(ctx, opID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -397,24 +455,24 @@ func (w *WebSocketHandler) acceptHandshake(ctx context.Context, c echo.Context) 
 		return nil, nil, err
 	}
 
-	sysAcc, err := w.entities.ReadAccountByPublicKey(ctx, opClaims.SystemAccount)
+	sysAcc, err := b.entities.ReadAccountByPublicKey(ctx, opClaims.SystemAccount)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	sysUser, err := w.entities.ReadSystemUser(ctx, sysAcc.OperatorID, sysAcc.ID)
+	sysUser, err := b.entities.ReadSystemUser(ctx, sysAcc.OperatorID, sysAcc.ID)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	conn, err := websocket.Accept(c.Response(), c.Request(), &websocket.AcceptOptions{
-		Subprotocols: []string{webSocketSubprotocol},
+		Subprotocols: []string{brokerWebSocketSubprotocol},
 	})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if err = wsjson.Write(ctx, conn, SysUserCreds{
+	if err = wsjson.Write(ctx, conn, UserCreds{
 		JWT:  sysUser.JWT(),
 		Seed: string(sysUser.NKey().Seed),
 	}); err != nil {
@@ -424,24 +482,24 @@ func (w *WebSocketHandler) acceptHandshake(ctx context.Context, c echo.Context) 
 	return conn, sysUser, nil
 }
 
-func (w *WebSocketHandler) startPingOperatorWorker() error {
+func (b *BrokerWebSocketHandler) startPingOperatorWorker() error {
 	msgs := make(chan *nats.Msg, 5000)
 	subj := pingOperatorSubjectBase + ".OPERATOR.>"
-	sub, err := w.nc.ChanSubscribe(subj, msgs)
+	sub, err := b.nc.ChanSubscribe(subj, msgs)
 	if err != nil {
-		w.nc.Close()
+		b.nc.Close()
 		return fmt.Errorf("nats subscribe internal: %w", err)
 	}
 
-	w.logger.Info("started ping operator worker")
+	b.logger.Info("started ping operator worker")
 
 	go func() {
-		defer w.nc.Close()
+		defer b.nc.Close()
 		defer sub.Unsubscribe() //nolint:errcheck
 
 		for msg := range msgs {
 			opIDStr := strings.TrimPrefix(msg.Subject, pingOperatorSubjectBase+".OPERATOR.")
-			logger := w.logger.With(log.KeyOperatorID, opIDStr)
+			logger := b.logger.With(log.KeyOperatorID, opIDStr)
 
 			opID, err := entity.ParseID[entity.OperatorID](opIDStr)
 			if err != nil {
@@ -450,7 +508,7 @@ func (w *WebSocketHandler) startPingOperatorWorker() error {
 			}
 
 			opStatus := entity.OperatorNATSStatus{Connected: false}
-			if v, ok := w.connections.Load(opID); ok {
+			if v, ok := b.connections.Load(opID); ok {
 				opStatus.Connected = true
 				connectTime := v.(time.Time).Unix()
 				opStatus.ConnectTime = &connectTime
@@ -469,20 +527,36 @@ func (w *WebSocketHandler) startPingOperatorWorker() error {
 	return nil
 }
 
+func closeWebSocketConn(conn *websocket.Conn, logger log.Logger, code websocket.StatusCode, reason string) {
+	if cerr := conn.Close(code, reason); cerr != nil {
+		logger.Error("failed to close websocket connection", "error", cerr, "websocket.close_code", code, "websocket.close_reason", reason)
+		return
+	}
+	logger.Info("websocket connection closed", "websocket.close_code", code, "websocket.close_reason", reason)
+}
+
+func getWebSocketCloseCodeAndReason(err error) (websocket.StatusCode, string) {
+	if err != nil {
+		var ce websocket.CloseError
+		if errors.As(err, &ce) && ce.Code == websocket.StatusNormalClosure {
+			return ce.Code, ce.Reason
+		}
+
+		if errors.Is(err, context.Canceled) || errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
+			return websocket.StatusGoingAway, "connection closed"
+		}
+
+		return websocket.StatusInternalError, "internal server error"
+	}
+	return websocket.StatusNormalClosure, ""
+}
+
 func getOperatorSubject(operatorID entity.OperatorID) string {
 	return fmt.Sprintf(operatorSubjectFormat, operatorID)
 }
 
 func getPingOperatorSubject(operatorID entity.OperatorID) string {
 	return fmt.Sprintf(pingOperatorSubjectFormat, operatorID)
-}
-
-func unmarshalJSON[T any](data []byte) (T, error) {
-	var t T
-	if err := json.Unmarshal(data, &t); err != nil {
-		return t, err
-	}
-	return t, nil
 }
 
 type brokerErr struct {
@@ -497,6 +571,10 @@ func wrapBrokerErr(err error, keyVals ...any) *brokerErr {
 	}
 }
 
-func (e *brokerErr) Error() string {
-	return e.err.Error()
+func (b *brokerErr) Unwrap() error {
+	return b.err
+}
+
+func (b *brokerErr) Error() string {
+	return b.err.Error()
 }

@@ -1,4 +1,4 @@
-package broker
+package command
 
 import (
 	"time"
@@ -6,7 +6,7 @@ import (
 	"go.jetify.com/typeid"
 )
 
-type SysUserCreds struct {
+type UserCreds struct {
 	JWT  string `json:"jwt"`
 	Seed string `json:"seed"`
 }
@@ -23,27 +23,29 @@ func NewMessageID() MessageID {
 	return typeid.Must(typeid.New[MessageID]())
 }
 
-// Message is sent by the proxy notifier and consumed by the
-// proxy forwarder so that it can forward the message to the proxy. Once
-// received by the proxy, it then forwards the data to the NATS server on the
-// specified subject.
-type Message[T any] struct {
-	// ID is the identifier of the message used to trace the end-to-end journey.
-	ID MessageID `json:"id"`
-	// Inbox is the subject of the reply inbox if a response is expected.
-	Inbox string `json:"inbox"`
-	// Subject is the external subject on the downstream NATS server to forward
-	// the message data to.
-	Subject string `json:"subject"`
-	// Data is the content of the message being forward.
-	Data T `json:"data"`
+type streamConsumerPrefix struct{}
+
+func (streamConsumerPrefix) Prefix() string { return "cons" }
+
+type StreamConsumerID struct {
+	typeid.TypeID[streamConsumerPrefix]
 }
 
-type messageIDPayload struct {
-	ID MessageID `json:"id"`
+func NewStreamConsumerID() StreamConsumerID {
+	return typeid.Must(typeid.New[StreamConsumerID]())
 }
 
-type brokerPingReplyMessage struct {
+type natsAccountMessageData struct {
+	Code    int    `json:"code"`
+	Account string `json:"account"`
+	Message string `json:"message"`
+}
+
+type accountUpdateReplyMessage struct {
+	Data natsAccountMessageData `json:"data"`
+}
+
+type pingReplyMessage struct {
 	Server struct {
 		Name      string    `json:"name"`
 		Host      string    `json:"host"`

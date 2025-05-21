@@ -13,10 +13,9 @@ import (
 	"github.com/cohesivestack/valgo"
 	"github.com/urfave/cli/v2"
 
-	"github.com/coro-sh/coro/broker"
+	"github.com/coro-sh/coro/command"
 	"github.com/coro-sh/coro/internal/valgoutil"
 	"github.com/coro-sh/coro/log"
-	"github.com/coro-sh/coro/proxy"
 )
 
 func main() {
@@ -134,9 +133,9 @@ func run(ctx context.Context, args []string, logger log.Logger) error {
 
 func cmdRun(ctx context.Context, logger log.Logger, cfg config) error {
 	// Broker TLS
-	var brokerTLSConfig *broker.TLSConfig
+	var brokerTLSConfig *command.TLSConfig
 	if cfg.brokerCertFile != "" && cfg.brokerKeyFile != "" {
-		brokerTLSConfig = &broker.TLSConfig{
+		brokerTLSConfig = &command.TLSConfig{
 			CertFile:           cfg.brokerCertFile,
 			KeyFile:            cfg.brokerKeyFile,
 			CACertFile:         cfg.brokerCACertFile,
@@ -166,19 +165,19 @@ func cmdRun(ctx context.Context, logger log.Logger, cfg config) error {
 		}
 	}
 
-	proxyOptions := []proxy.Option{proxy.WithLogger(logger)}
+	proxyOptions := []command.ProxyOption{command.WithProxyLogger(logger)}
 	if brokerTLSConfig != nil {
-		proxyOptions = append(proxyOptions, proxy.WithBrokerTLS(*brokerTLSConfig))
+		proxyOptions = append(proxyOptions, command.WithProxyBrokerTLS(*brokerTLSConfig))
 	}
 	if natsTLSConfig != nil {
-		proxyOptions = append(proxyOptions, proxy.WithNatsTLS(natsTLSConfig))
+		proxyOptions = append(proxyOptions, command.WithProxyNatsTLS(natsTLSConfig))
 	}
 
 	errCh := make(chan error)
 	var stop func() error
 
 	go func() {
-		pxy, err := proxy.Dial(ctx, cfg.natsURL, cfg.brokerURL, cfg.token, proxyOptions...)
+		pxy, err := command.NewProxy(ctx, cfg.natsURL, cfg.brokerURL, cfg.token, proxyOptions...)
 		if err != nil {
 			errCh <- err
 			return

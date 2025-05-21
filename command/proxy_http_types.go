@@ -1,4 +1,4 @@
-package proxy
+package command
 
 import (
 	"github.com/cohesivestack/valgo"
@@ -12,7 +12,7 @@ type GenerateProxyTokenRequest struct {
 
 func (r GenerateProxyTokenRequest) Validate() error {
 	return valgo.In("params",
-		valgo.Is(entity.IDValidator[entity.OperatorID](r.OperatorID, pathParamOperatorID)),
+		valgo.Is(entity.IDValidator[entity.OperatorID](r.OperatorID, entity.PathParamOperatorID)),
 	).Error()
 }
 
@@ -26,7 +26,7 @@ type GetProxyStatusRequest struct {
 
 func (r GetProxyStatusRequest) Validate() error {
 	return valgo.In("params",
-		valgo.Is(entity.IDValidator[entity.OperatorID](r.OperatorID, pathParamOperatorID)),
+		valgo.Is(entity.IDValidator[entity.OperatorID](r.OperatorID, entity.PathParamOperatorID)),
 	).Error()
 }
 
