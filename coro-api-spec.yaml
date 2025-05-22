@@ -1,4 +1,4 @@
-openapi: 3.1.1
+openapi: 3.0.3
 info:
   title: Coro API
   version: "0.0.1"
@@ -27,7 +27,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreateNamespaceResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CreateNamespaceResponse'
         '400':
           description: Bad Request
           content:
@@ -69,6 +72,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseError'
+
+  /namespaces/{namespace_id}:
     delete:
       summary: Delete Namespace
       operationId: deleteNamespace
@@ -123,7 +128,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreateOperatorResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CreateOperatorResponse'
         '400':
           description: Bad Request
           content:
@@ -194,7 +202,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetOperatorResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/GetOperatorResponse'
         '400':
           description: Bad Request
           content:
@@ -234,7 +245,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateOperatorRequest'
+              type: object
+              properties:
+                data:
+                  $ref: '#/components/schemas/UpdateOperatorRequest'
       responses:
         '200':
           description: Operator updated
@@ -362,7 +376,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreateAccountResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CreateAccountResponse'
         '400':
           description: Bad Request
           content:
@@ -450,7 +467,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetAccountResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/GetAccountResponse'
         '400':
           description: Bad Request
           content:
@@ -484,7 +504,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateAccountRequest'
+              type: object
+              properties:
+                data:
+                  $ref: '#/components/schemas/UpdateAccountRequest'
       responses:
         '200':
           description: Account updated
@@ -568,7 +591,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateUserRequest'
+              type: object
+              properties:
+                data:
+                  $ref: '#/components/schemas/CreateUserRequest'
       responses:
         '201':
           description: User created
@@ -663,7 +689,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetUserResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/GetUserResponse'
         '400':
           description: Bad Request
           content:
@@ -704,7 +733,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateUserResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UpdateUserResponse'
         '400':
           description: Bad Request
           content:
@@ -764,6 +796,11 @@ paths:
       tags:
         - Users
       parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
         - name: user_id
           in: path
           required: true
@@ -795,6 +832,11 @@ paths:
       tags:
         - Users
       parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
         - name: user_id
           in: path
           required: true
@@ -856,9 +898,12 @@ paths:
               schema:
                 type: object
                 properties:
-                  token:
-                    type: string
-                    description: Generated token
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        description: Generated token
         '400':
           description: Bad Request
           content:
@@ -890,10 +935,14 @@ paths:
             type: string
       responses:
         '200':
+          description: Proxy status received
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OperatorNATSStatus'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OperatorNATSStatus'
         '400':
           description: Bad Request
           content:
@@ -925,6 +974,7 @@ components:
         minimum: 1
         maximum: 500
       description: Number of items per page
+
   schemas:
     ####################################
     # Common error response
