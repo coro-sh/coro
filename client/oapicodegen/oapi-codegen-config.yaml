@@ -1,0 +1,10 @@
+package: client
+generate:
+  models: true
+  client: true
+output: ../client.gen.go
+output-options:
+  client-type-name: oapiClient
+  user-templates:
+    client.tmpl: client.tmpl
+    client-with-responses.tmpl: client-with-responses.tmpl

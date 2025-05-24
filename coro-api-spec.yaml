@@ -1,4 +1,4 @@
-openapi: 3.1.1
+openapi: 3.0.3
 info:
   title: Coro API
   version: "0.0.1"
@@ -27,7 +27,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreateNamespaceResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Namespace'
         '400':
           description: Bad Request
           content:
@@ -55,11 +58,13 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/GetNamespaceResponse'
+                      $ref: '#/components/schemas/Namespace'
                   next_page_cursor:
                     type: string
                     nullable: true
@@ -69,6 +74,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseError'
+
+  /namespaces/{namespace_id}:
     delete:
       summary: Delete Namespace
       operationId: deleteNamespace
@@ -123,7 +130,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreateOperatorResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Operator'
         '400':
           description: Bad Request
           content:
@@ -156,11 +166,13 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/GetOperatorResponse'
+                      $ref: '#/components/schemas/Operator'
                   next_page_cursor:
                     type: string
                     nullable: true
@@ -194,7 +206,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetOperatorResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Operator'
         '400':
           description: Bad Request
           content:
@@ -234,14 +249,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateOperatorRequest'
+              type: object
+              properties:
+                data:
+                  $ref: '#/components/schemas/UpdateOperatorRequest'
       responses:
         '200':
           description: Operator updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateOperatorResponse'
+                $ref: '#/components/schemas/Operator'
         '400':
           description: Bad Request
           content:
@@ -362,7 +380,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreateAccountResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Account'
         '400':
           description: Bad Request
           content:
@@ -406,11 +427,13 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/GetAccountResponse'
+                      $ref: '#/components/schemas/Account'
                   next_page_cursor:
                     type: string
                     nullable: true
@@ -450,7 +473,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetAccountResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Account'
         '400':
           description: Bad Request
           content:
@@ -484,14 +510,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateAccountRequest'
+              type: object
+              properties:
+                data:
+                  $ref: '#/components/schemas/UpdateAccountRequest'
       responses:
         '200':
           description: Account updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateAccountResponse'
+                $ref: '#/components/schemas/Account'
         '400':
           description: Bad Request
           content:
@@ -575,13 +604,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreateUserResponse'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
         '400':
           description: Bad Request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseError'
+                    $ref: '#/components/schemas/ResponseError'
         '404':
           description: Not Found
           content:
@@ -619,11 +650,13 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/GetUserResponse'
+                      $ref: '#/components/schemas/User'
                   next_page_cursor:
                     type: string
                     nullable: true
@@ -663,7 +696,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetUserResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
         '400':
           description: Bad Request
           content:
@@ -704,7 +740,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateUserResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
         '400':
           description: Bad Request
           content:
@@ -764,6 +803,11 @@ paths:
       tags:
         - Users
       parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
         - name: user_id
           in: path
           required: true
@@ -795,6 +839,11 @@ paths:
       tags:
         - Users
       parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
         - name: user_id
           in: path
           required: true
@@ -856,9 +905,14 @@ paths:
               schema:
                 type: object
                 properties:
-                  token:
-                    type: string
-                    description: Generated token
+                  data:
+                    type: object
+                    required:
+                      - token
+                    properties:
+                      token:
+                        type: string
+                        description: Generated token
         '400':
           description: Bad Request
           content:
@@ -872,7 +926,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResponseError'
   /namespaces/{namespace_id}/operators/{operator_id}/proxy/status:
-    post:
+    get:
       summary: Get Operator Proxy connection status
       operationId: getOperatorProxyConnectionStatus
       tags:
@@ -890,10 +944,14 @@ paths:
             type: string
       responses:
         '200':
+          description: Proxy status received
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OperatorNATSStatus'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OperatorNATSStatus'
         '400':
           description: Bad Request
           content:
@@ -925,15 +983,21 @@ components:
         minimum: 1
         maximum: 500
       description: Number of items per page
+
   schemas:
     ####################################
     # Common error response
     ####################################
     ResponseError:
       type: object
+      required:
+        - error
       properties:
         error:
           type: object
+          required:
+            - message
+            - details
           properties:
             message:
               type: string
@@ -954,16 +1018,10 @@ components:
           type: string
           description: The name of the Namespace
 
-    CreateNamespaceResponse:
-      allOf:
-        - $ref: '#/components/schemas/Namespace'
-      description: Created Namespace
-
-    GetNamespaceResponse:
-      allOf:
-        - $ref: '#/components/schemas/Namespace'
-
     Namespace:
+      required:
+        - id
+        - name
       type: object
       properties:
         id:
@@ -985,10 +1043,6 @@ components:
           type: string
           description: The name of the Operator
 
-    CreateOperatorResponse:
-      allOf:
-        - $ref: '#/components/schemas/Operator'
-
     UpdateOperatorRequest:
       type: object
       properties:
@@ -997,45 +1051,43 @@ components:
       required:
         - name
 
-    UpdateOperatorResponse:
-      allOf:
-        - $ref: '#/components/schemas/Operator'
-
-    GetOperatorResponse:
-      allOf:
-        - $ref: '#/components/schemas/Operator'
-
     Operator:
-      allOf:
-        - type: object
-          properties:
-            id:
-              type: string
-              description: Operator ID
-            namespace_id:
-              type: string
-              description: Namespace ID
-            jwt:
-              type: string
-              description: Raw operator JWT
-            name:
-              type: string
-              description: Operator name
-            public_key:
-              type: string
-              description: NATS public key
-        - type: object
-          properties:
-            status:
-              $ref: '#/components/schemas/OperatorNATSStatus'
+      required:
+        - id
+        - namespace_id
+        - jwt
+        - name
+        - public_key
+        - status
+      type: object
+      properties:
+        id:
+          type: string
+          description: Operator ID
+        namespace_id:
+          type: string
+          description: Namespace ID
+        jwt:
+          type: string
+          description: Raw operator JWT
+        name:
+          type: string
+          description: Operator name
+        public_key:
+          type: string
+          description: NATS public key
+        status:
+          $ref: '#/components/schemas/OperatorNATSStatus'
       description: Common response for Operator endpoints
 
     OperatorNATSStatus:
       type: object
+      required:
+        - connected
       properties:
         connected:
           type: boolean
-        connectTime:
+        connect_time:
           type: integer
           nullable: true
           description: unix time of when the Operator's NATS server connected via a Proxy Agent
@@ -1053,14 +1105,6 @@ components:
       required:
         - name
 
-    CreateAccountResponse:
-      allOf:
-        - $ref: '#/components/schemas/Account'
-
-    GetAccountResponse:
-      allOf:
-        - $ref: '#/components/schemas/Account'
-
     UpdateAccountRequest:
       type: object
       properties:
@@ -1071,36 +1115,36 @@ components:
       required:
         - name
 
-    UpdateAccountResponse:
-      allOf:
-        - $ref: '#/components/schemas/Account'
-
     Account:
-      allOf:
-        - type: object
-          properties:
-            id:
-              type: string
-              description: Account ID
-            namespace_id:
-              type: string
-              description: Namespace ID
-            operator_id:
-              type: string
-              description: The operator owning this account
-            jwt:
-              type: string
-              description: Raw account JWT
-            name:
-              type: string
-            public_key:
-              type: string
-              description: NATS public key for this account
-        - type: object
-          properties:
-            limits:
-              $ref: '#/components/schemas/AccountLimits'
-      description: Common response for Account endpoints
+      type: object
+      required:
+        - id
+        - namespace_id
+        - operator_id
+        - jwt
+        - name
+        - public_key
+        - limits
+      properties:
+        id:
+          type: string
+          description: Account ID
+        namespace_id:
+          type: string
+          description: Namespace ID
+        operator_id:
+          type: string
+          description: The operator owning this account
+        jwt:
+          type: string
+          description: Raw account JWT
+        name:
+          type: string
+        public_key:
+          type: string
+          description: NATS public key for this account
+        limits:
+          $ref: '#/components/schemas/AccountLimits'
 
     AccountLimits:
       type: object
@@ -1138,14 +1182,6 @@ components:
       required:
         - name
 
-    CreateUserResponse:
-      allOf:
-        - $ref: '#/components/schemas/User'
-
-    GetUserResponse:
-      allOf:
-        - $ref: '#/components/schemas/User'
-
     UpdateUserRequest:
       type: object
       properties:
@@ -1157,36 +1193,37 @@ components:
         - name
       description: Update a user’s name or limits
 
-    UpdateUserResponse:
-      allOf:
-        - $ref: '#/components/schemas/User'
-
     User:
-      allOf:
-        - type: object
-          properties:
-            id:
-              type: string
-              description: User ID
-            namespace_id:
-              type: string
-              description: Namespace ID
-            operator_id:
-              type: string
-              description: Operator ID
-            account_id:
-              type: string
-              description: Account ID
-            name:
-              type: string
-              description: Name of the User
-            jwt:
-              type: string
-              description: Raw user JWT
-        - type: object
-          properties:
-            limits:
-              $ref: '#/components/schemas/UserLimits'
+      required:
+        - id
+        - namespace_id
+        - operator_id
+        - account_id
+        - name
+        - jwt
+        - limits
+      type: object
+      properties:
+        id:
+          type: string
+          description: User ID
+        namespace_id:
+          type: string
+          description: Namespace ID
+        operator_id:
+          type: string
+          description: Operator ID
+        account_id:
+          type: string
+          description: Account ID
+        name:
+          type: string
+          description: Name of the User
+        jwt:
+          type: string
+          description: Raw user JWT
+        limits:
+          $ref: '#/components/schemas/UserLimits'
       description: Common response for User endpoints
 
     UserLimits:
@@ -1204,6 +1241,10 @@ components:
           description: Expiry duration (in seconds) for the User's JWT. Only applied when the parent Account does not have a JWT expiry set for its User's.
 
     UserJWTIssuance:
+      required:
+        - issue_time
+        - expire_time
+        - active
       type: object
       properties:
         issue_time:

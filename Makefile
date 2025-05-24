@@ -39,3 +39,15 @@ buf-lint: $(PROTO_FILES)
 buf-gen: $(PROTO_FILES) buf-format buf-lint
 	rm -rf **/gen/
 	docker run -v $$(pwd):/srv -w /srv bufbuild/buf:$(BUF_VERSION) generate
+
+# OpenAPI
+
+.PHONY: client-gen
+client-gen:
+	go generate -run "oapi-codegen" ./client/oapicodegen/gen.go
+
+# Dev Server
+
+.PHONY: dev-server
+dev-server:
+	go run ./cmd/devserver

@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const defaultResolverDir = "./data"
+const DefaultResolverDir = "./data"
 
 const dirResolverConfigTemplate = `# Operator named %s
 operator: %s
