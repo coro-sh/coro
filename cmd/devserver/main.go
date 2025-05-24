@@ -40,10 +40,17 @@ type config struct {
 	postgresUser     string
 	postgresPassword string
 	enableUI         bool
+	corsOrigins      []string
 }
 
 func (c config) validate() *valgo.Validation {
-	return valgo.Is(
+	v := valgo.New()
+
+	for i, origin := range c.corsOrigins {
+		v.InRow("corsOrigins", i, valgo.Is(valgoutil.URLValidator(origin, "origin")))
+	}
+
+	return v.Is(
 		valgo.Int(c.port, "port").Not().Zero(),
 		valgoutil.HostPortValidator(c.postgresHostPort, "postgres-hostport"),
 		valgo.String(c.postgresUser, "postgres-user").Not().Blank(),
@@ -58,6 +65,7 @@ func loadConfig(c *cli.Context) config {
 		postgresUser:     c.String("postgres-user"),
 		postgresPassword: c.String("postgres-password"),
 		enableUI:         c.Bool("server-ui"),
+		corsOrigins:      c.StringSlice("cors-origin"),
 	}
 	exitOnInvalidFlags(c, cfg.validate())
 	return cfg
@@ -104,6 +112,13 @@ func run(ctx context.Context, args []string, logger log.Logger) error {
 			Usage:   "enable coro server ui",
 			EnvVars: []string{"SERVER_UI"},
 		},
+		&cli.StringSliceFlag{
+			Name:    "cors-origin",
+			Aliases: []string{"co"},
+			Value:   nil,
+			Usage:   "add cors origin",
+			EnvVars: []string{"CORS_ORIGINS"},
+		},
 	}
 
 	app.Commands = []*cli.Command{
@@ -148,6 +163,7 @@ func cmdRun(ctx context.Context, logger log.Logger, cfg config) error {
 				Password: cfg.postgresPassword,
 			},
 		},
+		CorsOrigins: cfg.corsOrigins,
 	}
 
 	ctx, cancel := context.WithCancel(ctx)

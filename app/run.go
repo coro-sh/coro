@@ -64,6 +64,7 @@ func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool) 
 	// Server
 	srvOpts := []server.Option{
 		server.WithLogger(logger),
+		server.WithCORS(cfg.CorsOrigins...),
 		server.WithMiddleware(
 			entity.NamespaceContextMiddleware(),
 			entity.InternalNamespaceMiddleware(intNS.ID),

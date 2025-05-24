@@ -50,4 +50,4 @@ client-gen:
 
 .PHONY: dev-server
 dev-server:
-	go run ./cmd/devserver
+	go run ./cmd/devserver -cors-origin http://localhost:5173 # Vite UI server
