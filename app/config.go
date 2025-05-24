@@ -22,7 +22,16 @@ const (
 // Service configs
 
 type AllConfig struct {
-	BaseConfig `yaml:",inline"`
+	BaseConfig  `yaml:",inline"`
+	CorsOrigins []string `yaml:"corsOrigins" env:"CORS_ORIGINS"`
+}
+
+func (c *AllConfig) Validation() *valgo.Validation {
+	v := c.BaseConfig.Validation()
+	for i, origin := range c.CorsOrigins {
+		v.InRow("corsOrigins", i, valgo.Is(valgoutil.URLValidator(origin, "origin")))
+	}
+	return v
 }
 
 type UIConfig struct {
