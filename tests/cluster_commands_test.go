@@ -202,6 +202,7 @@ func newTestNATS(t *testing.T, op *entity.Operator, sysAcc *entity.Account) *nat
 
 	cfgFile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
+	defer cfgFile.Close()
 
 	err = os.WriteFile(cfgFile.Name(), []byte(cfgContent), 0666)
 	require.NoError(t, err)

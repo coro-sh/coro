@@ -1057,7 +1057,7 @@ func (h *HTTPHandler) GetNATSConfig(c echo.Context) error {
 	}
 	c.Set(log.KeySystemAccountID, sysAcc.ID)
 
-	content, err := NewDirResolverConfig(op, sysAcc, defaultResolverDir)
+	content, err := NewDirResolverConfig(op, sysAcc, DefaultResolverDir)
 	if err != nil {
 		return err
 	}

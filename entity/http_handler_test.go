@@ -532,6 +532,7 @@ func TestServer_GetServerConfig(t *testing.T) {
 	// Write to file and process it
 	cfgFile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
+	defer cfgFile.Close()
 	err = os.WriteFile(cfgFile.Name(), []byte(cfgContent), 0666)
 	require.NoError(t, err)
 	opts, err := natsrv.ProcessConfigFile(cfgFile.Name())
@@ -676,5 +677,5 @@ func assertNATSAccountAuth(t *testing.T, natsURL string, operator *Operator, aut
 
 // Hack: overwrite resolver dir path to avoid unwanted items in the current dir
 func sanitizeNATSConfig(t *testing.T, cfgContent string) string {
-	return strings.ReplaceAll(cfgContent, defaultResolverDir, t.TempDir())
+	return strings.ReplaceAll(cfgContent, DefaultResolverDir, t.TempDir())
 }

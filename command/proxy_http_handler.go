@@ -74,7 +74,7 @@ func (h *ProxyHTTPHandler) GenerateProxyToken(c echo.Context) error {
 		return err
 	}
 
-	return server.SetResponse(c, http.StatusOK, &GenerateProxyTokenResponse{
+	return server.SetResponse(c, http.StatusCreated, &GenerateProxyTokenResponse{
 		Token: token,
 	})
 }
