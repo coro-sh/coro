@@ -40,22 +40,26 @@ func (c *streamConsumer) ID() string {
 	return c.consumerID
 }
 
-func (c *streamConsumer) Start(handler func(msg *commandv1.ReplyMessage)) error {
+func (c *streamConsumer) Start(startSeq uint64, handler func(msg *commandv1.ReplyMessage)) error {
 	if c.started {
 		return errors.New("consumer already started")
+	}
+	if startSeq == 0 {
+		startSeq = 1
 	}
 
 	msg := &commandv1.PublishMessage{
 		Id:                NewMessageID().String(),
 		CommandReplyInbox: nats.NewInbox(),
-		Command: &commandv1.PublishMessage_StartConsumer{
-			StartConsumer: &commandv1.PublishMessage_CommandStartConsumer{
-				ConsumerId: c.consumerID,
-				StreamName: c.streamName,
+		Command: &commandv1.PublishMessage_StartStreamConsumer{
+			StartStreamConsumer: &commandv1.PublishMessage_CommandStartStreamConsumer{
 				UserCreds: &commandv1.Credentials{
 					Jwt:  c.consumerUser.JWT(),
 					Seed: string(c.consumerUser.NKey().Seed),
 				},
+				ConsumerId:    c.consumerID,
+				StreamName:    c.streamName,
+				StartSequence: startSeq,
 			},
 		},
 	}
@@ -92,8 +96,8 @@ func (c *streamConsumer) SendHeartbeat(ctx context.Context) error {
 	_, err := command(ctx, c.nc, c.operatorID, &commandv1.PublishMessage{
 		Id:                NewMessageID().String(),
 		CommandReplyInbox: NewMessageID().String(),
-		Command: &commandv1.PublishMessage_SendConsumerHeartbeat{
-			SendConsumerHeartbeat: &commandv1.PublishMessage_CommandSendConsumerHeartbeat{
+		Command: &commandv1.PublishMessage_SendStreamConsumerHeartbeat{
+			SendStreamConsumerHeartbeat: &commandv1.PublishMessage_CommandSendStreamConsumerHeartbeat{
 				ConsumerId: c.consumerID,
 			},
 		},
@@ -115,8 +119,8 @@ func (c *streamConsumer) Stop(ctx context.Context) error {
 	msgb, err := command(ctx, c.nc, c.operatorID, &commandv1.PublishMessage{
 		Id:                NewMessageID().String(),
 		CommandReplyInbox: NewMessageID().String(),
-		Command: &commandv1.PublishMessage_StopConsumer{
-			StopConsumer: &commandv1.PublishMessage_CommandStopConsumer{
+		Command: &commandv1.PublishMessage_StopStreamConsumer{
+			StopStreamConsumer: &commandv1.PublishMessage_CommandStopStreamConsumer{
 				ConsumerId: c.consumerID,
 			},
 		},

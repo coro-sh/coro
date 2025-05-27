@@ -40,7 +40,8 @@ func WithRequestTimeout(timeout time.Duration) Option {
 	}
 }
 
-// WithCORS configures the server to use Cross-Origin Resource Sharing (CORS).
+// WithCORS configures the server to authorize Cross-Origin Resource Sharing (CORS)
+// for the provided origins.
 func WithCORS(origins ...string) Option {
 	return func(opts *options) error {
 		opts.corsOrigins = append(opts.corsOrigins, origins...)

@@ -18,7 +18,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
-	"golang.org/x/time/rate"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/coro-sh/coro/entity"
@@ -80,7 +79,6 @@ type BrokerWebSocketHandler struct {
 	ns          *server.Server
 	nc          *nats.Conn
 	logger      log.Logger
-	limiter     *rate.Limiter
 	connections *sync.Map
 	numConns    atomic.Int64
 }
@@ -94,13 +92,11 @@ func NewBrokerWebSocketHandler(
 	opts ...BrokerWebsocketOption,
 ) (*BrokerWebSocketHandler, error) {
 	h := &BrokerWebSocketHandler{
-		tknv:      tokener,
-		entities:  entities,
-		nsSysUser: natsSysUser,
-		ns:        embeddedNats,
-		logger:    log.NewLogger(),
-		// 1 message every 100ms with a 10 message burst
-		limiter:     rate.NewLimiter(rate.Every(100*time.Millisecond), 10),
+		tknv:        tokener,
+		entities:    entities,
+		nsSysUser:   natsSysUser,
+		ns:          embeddedNats,
+		logger:      log.NewLogger(),
 		connections: new(sync.Map),
 		numConns:    atomic.Int64{},
 	}
@@ -291,12 +287,6 @@ func (b *BrokerWebSocketHandler) Handle(c echo.Context) (err error) {
 	go func() {
 		defer wg.Done()
 		for {
-			rerr := b.limiter.Wait(rctx)
-			if rerr != nil {
-				errsCh <- wrapBrokerErr(fmt.Errorf("reader worker: rate limiter wait: %w", rerr))
-				return
-			}
-
 			_, msgb, rerr := conn.Read(rctx)
 			if rerr != nil {
 				errsCh <- wrapBrokerErr(fmt.Errorf("reader worker: read nats message reply: %w", rerr))
@@ -466,7 +456,8 @@ func (b *BrokerWebSocketHandler) acceptHandshake(ctx context.Context, c echo.Con
 	}
 
 	conn, err := websocket.Accept(c.Response(), c.Request(), &websocket.AcceptOptions{
-		Subprotocols: []string{brokerWebSocketSubprotocol},
+		Subprotocols:       []string{brokerWebSocketSubprotocol},
+		InsecureSkipVerify: true, // allow all origins since this is a public websocket
 	})
 	if err != nil {
 		return nil, nil, err
@@ -528,7 +519,7 @@ func (b *BrokerWebSocketHandler) startPingOperatorWorker() error {
 }
 
 func closeWebSocketConn(conn *websocket.Conn, logger log.Logger, code websocket.StatusCode, reason string) {
-	if cerr := conn.Close(code, reason); cerr != nil {
+	if cerr := conn.Close(code, reason); cerr != nil && !errors.Is(cerr, net.ErrClosed) {
 		logger.Error("failed to close websocket connection", "error", cerr, "websocket.close_code", code, "websocket.close_reason", reason)
 		return
 	}

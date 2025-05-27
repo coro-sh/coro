@@ -37,13 +37,13 @@ func exitOnInvalidFlags(c *cli.Context, v *valgo.Validation) {
 		fmt.Fprintf(os.Stderr, "  %s: %s\n", verr.Name(), strings.Join(verr.Messages(), ","))
 	}
 
-	fmt.Fprintln(os.Stdout)
+	fmt.Fprintln(os.Stdout) //nolint:errcheck
 	cli.ShowAppHelpAndExit(c, 1)
 }
 
 func recreateDB(ctx context.Context, cfg config, logger log.Logger) (*pgxpool.Pool, error) {
 	logger.Info("connecting to default postgres database")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	pgConn, err := postgres.Dial(ctx, cfg.postgresUser, cfg.postgresPassword, cfg.postgresHostPort, "postgres")
 	if err != nil {
@@ -119,35 +119,35 @@ func waitForClientConnectionHealthy(ctx context.Context, port int, maxRetries in
 	return errCh
 }
 
-func createNamespace(ctx context.Context, c *client.Client, logger log.Logger) (*client.Namespace, error) {
+func createNamespace(ctx context.Context, c *client.Client, logger log.Logger) (client.Namespace, error) {
 	namespace, err := c.CreateNamespace(ctx, client.CreateNamespaceRequest{
 		Name: testutil.RandName(),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create namespace: %w", err)
+		return client.Namespace{}, fmt.Errorf("create namespace: %w", err)
 	}
 	logger.Info(fmt.Sprintf("created namespace '%s'", namespace.Name))
 	return namespace, nil
 }
 
-func createOperator(ctx context.Context, c *client.Client, logger log.Logger, namespaceID string) (*client.Operator, string, []byte, error) {
+func createOperator(ctx context.Context, c *client.Client, logger log.Logger, namespaceID string) (client.Operator, string, []byte, error) {
 	operator, err := c.CreateOperator(ctx, namespaceID, client.CreateOperatorRequest{
 		Name: testutil.RandName(),
 	})
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("create operator: %w", err)
+		return client.Operator{}, "", nil, fmt.Errorf("create operator: %w", err)
 	}
 	logger.Info(fmt.Sprintf("created operator '%s'", operator.Name))
 
 	proxyTkn, err := c.GenerateOperatorProxyToken(ctx, namespaceID, operator.Id)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("generated operator proxy token: %w", err)
+		return client.Operator{}, "", nil, fmt.Errorf("generated operator proxy token: %w", err)
 	}
 	logger.Info(fmt.Sprintf("generated operatory proxy token: %s", proxyTkn))
 
 	natsCfg, err := c.GetOperatorNATSConfig(ctx, namespaceID, operator.Id)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("get operator nats config: %w", err)
+		return client.Operator{}, "", nil, fmt.Errorf("get operator nats config: %w", err)
 	}
 	logger.Info("fetched operator nats config")
 
@@ -158,43 +158,43 @@ func createOperator(ctx context.Context, c *client.Client, logger log.Logger, na
 	return operator, proxyTkn, natsCfg, nil
 }
 
-func createAccount(ctx context.Context, c *client.Client, logger log.Logger, namespaceID string, operatorID string) (*client.Account, error) {
+func createAccount(ctx context.Context, c *client.Client, logger log.Logger, namespaceID string, operatorID string) (client.Account, error) {
 	account, err := c.CreateAccount(ctx, namespaceID, operatorID, client.CreateAccountRequest{
 		Name: testutil.RandName(),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create account: %w", err)
+		return client.Account{}, fmt.Errorf("create account: %w", err)
 	}
 	logger.Info(fmt.Sprintf("created account '%s'", account.Name))
 	return account, nil
 }
 
-func createUser(ctx context.Context, c *client.Client, logger log.Logger, namespaceID string, accountID string) (*client.User, string, string, error) {
+func createUser(ctx context.Context, c *client.Client, logger log.Logger, namespaceID string, accountID string) (client.User, string, string, error) {
 	user, err := c.CreateUser(ctx, namespaceID, accountID, client.CreateUserRequest{
 		Name: testutil.RandName(),
 	})
 	if err != nil {
-		return nil, "", "", fmt.Errorf("create user: %w", err)
+		return client.User{}, "", "", fmt.Errorf("create user: %w", err)
 	}
 	logger.Info(fmt.Sprintf("created user '%s'", user.Name))
 
 	userCreds, err := c.GetUserCreds(ctx, namespaceID, user.Id)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("get user creds: %w", err)
+		return client.User{}, "", "", fmt.Errorf("get user creds: %w", err)
 	}
 	logger.Info(fmt.Sprintf("fetched user '%s' nats credentials", user.Name))
 
 	userJWT, err := jwt.ParseDecoratedJWT(userCreds)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("parse user nkey: %w", err)
+		return client.User{}, "", "", fmt.Errorf("parse user nkey: %w", err)
 	}
 	userNkey, err := jwt.ParseDecoratedNKey(userCreds)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("parse user nkey: %w", err)
+		return client.User{}, "", "", fmt.Errorf("parse user nkey: %w", err)
 	}
 	userSeed, err := userNkey.Seed()
 	if err != nil {
-		return nil, "", "", fmt.Errorf("get seed from user jwt: %w", err)
+		return client.User{}, "", "", fmt.Errorf("get seed from user jwt: %w", err)
 	}
 
 	return user, userJWT, string(userSeed), nil
@@ -239,7 +239,7 @@ func startNATS(cfg []byte) (*natsrv.Server, error) {
 	return ns, nil
 }
 
-func connectNATS(ns *natsrv.Server, logger log.Logger, user *client.User, userJWT string, userSeed string) (*nats.Conn, jetstream.JetStream, error) {
+func connectNATS(ns *natsrv.Server, logger log.Logger, user client.User, userJWT string, userSeed string) (*nats.Conn, jetstream.JetStream, error) {
 	logger.Info(fmt.Sprintf("connecting to nats server with user '%s' credentials", user.Name))
 	nc, err := natsutil.Connect(ns.ClientURL(), userJWT, userSeed)
 	if err != nil {
@@ -266,18 +266,26 @@ func createStreamAndPublisher(ctx context.Context, js jetstream.JetStream, logge
 	if err != nil {
 		return fmt.Errorf("create jetstream dev server stream: %w", err)
 	}
+	// Immediately publish 10 messages to the stream
+	for i := 0; i < 10; i++ {
+		if _, perr := js.Publish(ctx, streamSubject, []byte(fmt.Sprintf("devserver message %d", i))); perr != nil {
+			return fmt.Errorf("publish message to dev server stream subject '%s': %w", streamSubject, perr)
+		}
+		logger.Info(fmt.Sprintf("published message to dev server stream subject '%s' (total: %d)", streamSubject, i))
+	}
+	// Then publish messages every 30s
 	go func() {
 		i := 1
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(time.Minute):
+			case <-time.After(30 * time.Second):
 				if _, perr := js.Publish(ctx, streamSubject, []byte(fmt.Sprintf("devserver message %d", i))); perr != nil {
 					errCh <- fmt.Errorf("publish message to dev server stream subject '%s': %w", streamSubject, perr)
 					return
 				}
-				logger.Info(fmt.Sprintf("published message to dev server stream subject '%s' (total: %d)", streamSubject, i))
+				logger.Info(fmt.Sprintf("published message to dev server stream subject '%s' (total: %d)", streamSubject, i+10))
 				i++
 			}
 		}

@@ -61,7 +61,9 @@ func NewEmbeddedNATS(cfg EmbeddedNATSConfig) (*server.Server, error) {
 	defer os.Remove(cfgFile.Name())
 
 	cfgFileName := cfgFile.Name()
-	cfgFile.Close()
+	if err = cfgFile.Close(); err != nil {
+		return nil, fmt.Errorf("close embedded nats temp config file: %w", err)
+	}
 
 	if err = os.WriteFile(cfgFileName, []byte(cfgContent), 0666); err != nil {
 		return nil, fmt.Errorf("write embedded nats temp config file: %w", err)

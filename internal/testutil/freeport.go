@@ -62,8 +62,10 @@ func GetFreePort(t *testing.T) int {
 		c, err := l.Accept()
 		require.NoError(t, err, "failed to accept connection")
 		// Closing the socket from the server side
-		c.Close()
-		defer r.Close()
+		require.NoError(t, c.Close())
+		defer func() {
+			require.NoError(t, r.Close())
+		}()
 	}
 
 	return port

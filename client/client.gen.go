@@ -115,6 +115,45 @@ type ResponseError struct {
 	} `json:"error"`
 }
 
+// Stream JetStream stream
+type Stream struct {
+	// ConsumerCount Number of consumers
+	ConsumerCount string `json:"consumer_count"`
+
+	// CreateTime Unix milli timestamp of when the stream was created
+	CreateTime int `json:"create_time"`
+
+	// MessageCount Number of messages published
+	MessageCount int `json:"message_count"`
+
+	// Name Name of the stream
+	Name string `json:"name"`
+
+	// Subjects Stream subjects
+	Subjects []string `json:"subjects"`
+}
+
+// StreamMessage JetStream stream message
+type StreamMessage struct {
+	// StreamSequence Stream sequence number of the message
+	StreamSequence string `json:"stream_sequence"`
+
+	// Timestamp Time that the message was originally sent on the stream
+	Timestamp int `json:"timestamp"`
+}
+
+// StreamMessageContent JetStream stream message content
+type StreamMessageContent struct {
+	// Data Content of the message
+	Data []byte `json:"data"`
+
+	// StreamSequence Stream sequence number of the message
+	StreamSequence string `json:"stream_sequence"`
+
+	// Timestamp Time that the message was originally sent on the stream
+	Timestamp int `json:"timestamp"`
+}
+
 // UpdateAccountRequest defines model for UpdateAccountRequest.
 type UpdateAccountRequest struct {
 	Limits *AccountLimits `json:"limits,omitempty"`
@@ -192,6 +231,15 @@ type ListNamespacesParams struct {
 // UpdateAccountJSONBody defines parameters for UpdateAccount.
 type UpdateAccountJSONBody struct {
 	Data *UpdateAccountRequest `json:"data,omitempty"`
+}
+
+// FetchStreamMessagesParams defines parameters for FetchStreamMessages.
+type FetchStreamMessagesParams struct {
+	// StartSequence The sequence number to start reading messages from.
+	StartSequence *uint64 `form:"start_sequence,omitempty" json:"start_sequence,omitempty"`
+
+	// BatchSize The number of messages to fetch (max 1000).
+	BatchSize *uint32 `form:"batch_size,omitempty" json:"batch_size,omitempty"`
 }
 
 // ListUsersParams defines parameters for ListUsers.
@@ -342,6 +390,18 @@ type clientInterface interface {
 
 	UpdateAccount(ctx context.Context, namespaceId string, accountId string, body UpdateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListStreams request
+	ListStreams(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetStream request
+	GetStream(ctx context.Context, namespaceId string, accountId string, streamName string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// FetchStreamMessages request
+	FetchStreamMessages(ctx context.Context, namespaceId string, accountId string, streamName string, params *FetchStreamMessagesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetStreamMessageContent request
+	GetStreamMessageContent(ctx context.Context, namespaceId string, accountId string, streamName string, sequence uint64, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListUsers request
 	ListUsers(ctx context.Context, namespaceId string, accountId string, params *ListUsersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -490,6 +550,54 @@ func (c *oapiClient) UpdateAccountWithBody(ctx context.Context, namespaceId stri
 
 func (c *oapiClient) UpdateAccount(ctx context.Context, namespaceId string, accountId string, body UpdateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := newUpdateAccountRequest(c.Server, namespaceId, accountId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *oapiClient) ListStreams(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := newListStreamsRequest(c.Server, namespaceId, accountId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *oapiClient) GetStream(ctx context.Context, namespaceId string, accountId string, streamName string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := newGetStreamRequest(c.Server, namespaceId, accountId, streamName)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *oapiClient) FetchStreamMessages(ctx context.Context, namespaceId string, accountId string, streamName string, params *FetchStreamMessagesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := newFetchStreamMessagesRequest(c.Server, namespaceId, accountId, streamName, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *oapiClient) GetStreamMessageContent(ctx context.Context, namespaceId string, accountId string, streamName string, sequence uint64, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := newGetStreamMessageContentRequest(c.Server, namespaceId, accountId, streamName, sequence)
 	if err != nil {
 		return nil, err
 	}
@@ -1035,6 +1143,236 @@ func newUpdateAccountRequestWithBody(server string, namespaceId string, accountI
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// newListStreamsRequest generates requests for ListStreams
+func newListStreamsRequest(server string, namespaceId string, accountId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "namespace_id", runtime.ParamLocationPath, namespaceId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "account_id", runtime.ParamLocationPath, accountId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/namespaces/%s/accounts/%s/streams", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// newGetStreamRequest generates requests for GetStream
+func newGetStreamRequest(server string, namespaceId string, accountId string, streamName string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "namespace_id", runtime.ParamLocationPath, namespaceId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "account_id", runtime.ParamLocationPath, accountId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithLocation("simple", false, "stream_name", runtime.ParamLocationPath, streamName)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/namespaces/%s/accounts/%s/streams/%s", pathParam0, pathParam1, pathParam2)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// newFetchStreamMessagesRequest generates requests for FetchStreamMessages
+func newFetchStreamMessagesRequest(server string, namespaceId string, accountId string, streamName string, params *FetchStreamMessagesParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "namespace_id", runtime.ParamLocationPath, namespaceId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "account_id", runtime.ParamLocationPath, accountId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithLocation("simple", false, "stream_name", runtime.ParamLocationPath, streamName)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/namespaces/%s/accounts/%s/streams/%s/messages", pathParam0, pathParam1, pathParam2)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.StartSequence != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "start_sequence", runtime.ParamLocationQuery, *params.StartSequence); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.BatchSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "batch_size", runtime.ParamLocationQuery, *params.BatchSize); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// newGetStreamMessageContentRequest generates requests for GetStreamMessageContent
+func newGetStreamMessageContentRequest(server string, namespaceId string, accountId string, streamName string, sequence uint64) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "namespace_id", runtime.ParamLocationPath, namespaceId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "account_id", runtime.ParamLocationPath, accountId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithLocation("simple", false, "stream_name", runtime.ParamLocationPath, streamName)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam3 string
+
+	pathParam3, err = runtime.StyleParamWithLocation("simple", false, "sequence", runtime.ParamLocationPath, sequence)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/namespaces/%s/accounts/%s/streams/%s/messages/%s", pathParam0, pathParam1, pathParam2, pathParam3)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -1964,6 +2302,18 @@ type clientWithResponsesInterface interface {
 
 	UpdateAccountWithResponse(ctx context.Context, namespaceId string, accountId string, body UpdateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAccountResponse, error)
 
+	// ListStreamsWithResponse request
+	ListStreamsWithResponse(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*ListStreamsResponse, error)
+
+	// GetStreamWithResponse request
+	GetStreamWithResponse(ctx context.Context, namespaceId string, accountId string, streamName string, reqEditors ...RequestEditorFn) (*GetStreamResponse, error)
+
+	// FetchStreamMessagesWithResponse request
+	FetchStreamMessagesWithResponse(ctx context.Context, namespaceId string, accountId string, streamName string, params *FetchStreamMessagesParams, reqEditors ...RequestEditorFn) (*FetchStreamMessagesResponse, error)
+
+	// GetStreamMessageContentWithResponse request
+	GetStreamMessageContentWithResponse(ctx context.Context, namespaceId string, accountId string, streamName string, sequence uint64, reqEditors ...RequestEditorFn) (*GetStreamMessageContentResponse, error)
+
 	// ListUsersWithResponse request
 	ListUsersWithResponse(ctx context.Context, namespaceId string, accountId string, params *ListUsersParams, reqEditors ...RequestEditorFn) (*ListUsersResponse, error)
 
@@ -2065,7 +2415,7 @@ type CreateNamespaceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *struct {
-		Data *Namespace `json:"data,omitempty"`
+		Data Namespace `json:"data"`
 	}
 	JSON400 *ResponseError
 	JSON409 *ResponseError
@@ -2164,7 +2514,7 @@ type GetAccountResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
-		Data *Account `json:"data,omitempty"`
+		Data Account `json:"data"`
 	}
 	JSON400 *ResponseError
 	JSON404 *ResponseError
@@ -2229,6 +2579,148 @@ func (r UpdateAccountResponse) StatusCode() int {
 	return 0
 }
 
+type ListStreamsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Data []Stream `json:"data"`
+	}
+	JSON400 *ResponseError
+	JSON404 *ResponseError
+}
+
+// GetBody returns the raw response body
+// Note: this is a custom method added to the template
+func (r *ListStreamsResponse) GetBody() []byte {
+	if r == nil {
+		return nil
+	}
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListStreamsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListStreamsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetStreamResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		// Data JetStream stream
+		Data Stream `json:"data"`
+	}
+	JSON400 *ResponseError
+	JSON404 *ResponseError
+}
+
+// GetBody returns the raw response body
+// Note: this is a custom method added to the template
+func (r *GetStreamResponse) GetBody() []byte {
+	if r == nil {
+		return nil
+	}
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetStreamResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetStreamResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type FetchStreamMessagesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Data []StreamMessage `json:"data"`
+	}
+	JSON400 *ResponseError
+	JSON404 *ResponseError
+}
+
+// GetBody returns the raw response body
+// Note: this is a custom method added to the template
+func (r *FetchStreamMessagesResponse) GetBody() []byte {
+	if r == nil {
+		return nil
+	}
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r FetchStreamMessagesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r FetchStreamMessagesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetStreamMessageContentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		// Data JetStream stream message content
+		Data StreamMessageContent `json:"data"`
+	}
+	JSON400 *ResponseError
+	JSON404 *ResponseError
+}
+
+// GetBody returns the raw response body
+// Note: this is a custom method added to the template
+func (r *GetStreamMessageContentResponse) GetBody() []byte {
+	if r == nil {
+		return nil
+	}
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetStreamMessageContentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetStreamMessageContentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type ListUsersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -2270,7 +2762,7 @@ type CreateUserResponse struct {
 	HTTPResponse *http.Response
 	JSON201      *struct {
 		// Data Common response for User endpoints
-		Data *User `json:"data,omitempty"`
+		Data User `json:"data"`
 	}
 	JSON400 *ResponseError
 	JSON404 *ResponseError
@@ -2342,7 +2834,7 @@ type CreateOperatorResponse struct {
 	HTTPResponse *http.Response
 	JSON201      *struct {
 		// Data Common response for Operator endpoints
-		Data *Operator `json:"data,omitempty"`
+		Data Operator `json:"data"`
 	}
 	JSON400 *ResponseError
 	JSON409 *ResponseError
@@ -2410,7 +2902,7 @@ type GetOperatorResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *struct {
 		// Data Common response for Operator endpoints
-		Data *Operator `json:"data,omitempty"`
+		Data Operator `json:"data"`
 	}
 	JSON400 *ResponseError
 	JSON404 *ResponseError
@@ -2516,7 +3008,7 @@ type CreateAccountResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *struct {
-		Data *Account `json:"data,omitempty"`
+		Data Account `json:"data"`
 	}
 	JSON400 *ResponseError
 	JSON404 *ResponseError
@@ -2584,7 +3076,7 @@ type GetOperatorProxyConnectionStatusResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
-		Data *OperatorNATSStatus `json:"data,omitempty"`
+		Data OperatorNATSStatus `json:"data"`
 	}
 	JSON400 *ResponseError
 	JSON404 *ResponseError
@@ -2690,7 +3182,7 @@ type GetUserResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *struct {
 		// Data Common response for User endpoints
-		Data *User `json:"data,omitempty"`
+		Data User `json:"data"`
 	}
 	JSON400 *ResponseError
 	JSON404 *ResponseError
@@ -2726,7 +3218,7 @@ type UpdateUserResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *struct {
 		// Data Common response for User endpoints
-		Data *User `json:"data,omitempty"`
+		Data User `json:"data"`
 	}
 	JSON400 *ResponseError
 	JSON404 *ResponseError
@@ -2894,6 +3386,42 @@ func (c *clientWithResponses) UpdateAccountWithResponse(ctx context.Context, nam
 		return nil, err
 	}
 	return parseUpdateAccountResponse(rsp)
+}
+
+// ListStreamsWithResponse request returning *ListStreamsResponse
+func (c *clientWithResponses) ListStreamsWithResponse(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*ListStreamsResponse, error) {
+	rsp, err := c.ListStreams(ctx, namespaceId, accountId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return parseListStreamsResponse(rsp)
+}
+
+// GetStreamWithResponse request returning *GetStreamResponse
+func (c *clientWithResponses) GetStreamWithResponse(ctx context.Context, namespaceId string, accountId string, streamName string, reqEditors ...RequestEditorFn) (*GetStreamResponse, error) {
+	rsp, err := c.GetStream(ctx, namespaceId, accountId, streamName, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return parseGetStreamResponse(rsp)
+}
+
+// FetchStreamMessagesWithResponse request returning *FetchStreamMessagesResponse
+func (c *clientWithResponses) FetchStreamMessagesWithResponse(ctx context.Context, namespaceId string, accountId string, streamName string, params *FetchStreamMessagesParams, reqEditors ...RequestEditorFn) (*FetchStreamMessagesResponse, error) {
+	rsp, err := c.FetchStreamMessages(ctx, namespaceId, accountId, streamName, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return parseFetchStreamMessagesResponse(rsp)
+}
+
+// GetStreamMessageContentWithResponse request returning *GetStreamMessageContentResponse
+func (c *clientWithResponses) GetStreamMessageContentWithResponse(ctx context.Context, namespaceId string, accountId string, streamName string, sequence uint64, reqEditors ...RequestEditorFn) (*GetStreamMessageContentResponse, error) {
+	rsp, err := c.GetStreamMessageContent(ctx, namespaceId, accountId, streamName, sequence, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return parseGetStreamMessageContentResponse(rsp)
 }
 
 // ListUsersWithResponse request returning *ListUsersResponse
@@ -3141,7 +3669,7 @@ func parseCreateNamespaceResponse(rsp *http.Response) (*CreateNamespaceResponse,
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest struct {
-			Data *Namespace `json:"data,omitempty"`
+			Data Namespace `json:"data"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -3249,7 +3777,7 @@ func parseGetAccountResponse(rsp *http.Response) (*GetAccountResponse, error) {
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
-			Data *Account `json:"data,omitempty"`
+			Data Account `json:"data"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -3322,6 +3850,176 @@ func parseUpdateAccountResponse(rsp *http.Response) (*UpdateAccountResponse, err
 	return response, nil
 }
 
+// parseListStreamsResponse parses an HTTP response from a ListStreamsWithResponse call
+func parseListStreamsResponse(rsp *http.Response) (*ListStreamsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListStreamsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Data []Stream `json:"data"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// parseGetStreamResponse parses an HTTP response from a GetStreamWithResponse call
+func parseGetStreamResponse(rsp *http.Response) (*GetStreamResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetStreamResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			// Data JetStream stream
+			Data Stream `json:"data"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// parseFetchStreamMessagesResponse parses an HTTP response from a FetchStreamMessagesWithResponse call
+func parseFetchStreamMessagesResponse(rsp *http.Response) (*FetchStreamMessagesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &FetchStreamMessagesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Data []StreamMessage `json:"data"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// parseGetStreamMessageContentResponse parses an HTTP response from a GetStreamMessageContentWithResponse call
+func parseGetStreamMessageContentResponse(rsp *http.Response) (*GetStreamMessageContentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetStreamMessageContentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			// Data JetStream stream message content
+			Data StreamMessageContent `json:"data"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
 // parseListUsersResponse parses an HTTP response from a ListUsersWithResponse call
 func parseListUsersResponse(rsp *http.Response) (*ListUsersResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -3382,7 +4080,7 @@ func parseCreateUserResponse(rsp *http.Response) (*CreateUserResponse, error) {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest struct {
 			// Data Common response for User endpoints
-			Data *User `json:"data,omitempty"`
+			Data User `json:"data"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -3468,7 +4166,7 @@ func parseCreateOperatorResponse(rsp *http.Response) (*CreateOperatorResponse, e
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest struct {
 			// Data Common response for Operator endpoints
-			Data *Operator `json:"data,omitempty"`
+			Data Operator `json:"data"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -3544,7 +4242,7 @@ func parseGetOperatorResponse(rsp *http.Response) (*GetOperatorResponse, error) 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			// Data Common response for Operator endpoints
-			Data *Operator `json:"data,omitempty"`
+			Data Operator `json:"data"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -3683,7 +4381,7 @@ func parseCreateAccountResponse(rsp *http.Response) (*CreateAccountResponse, err
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest struct {
-			Data *Account `json:"data,omitempty"`
+			Data Account `json:"data"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -3765,7 +4463,7 @@ func parseGetOperatorProxyConnectionStatusResponse(rsp *http.Response) (*GetOper
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
-			Data *OperatorNATSStatus `json:"data,omitempty"`
+			Data OperatorNATSStatus `json:"data"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -3886,7 +4584,7 @@ func parseGetUserResponse(rsp *http.Response) (*GetUserResponse, error) {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			// Data Common response for User endpoints
-			Data *User `json:"data,omitempty"`
+			Data User `json:"data"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -3929,7 +4627,7 @@ func parseUpdateUserResponse(rsp *http.Response) (*UpdateUserResponse, error) {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			// Data Common response for User endpoints
-			Data *User `json:"data,omitempty"`
+			Data User `json:"data"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

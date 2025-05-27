@@ -23,15 +23,15 @@ func NewClient(url string, opts ...ClientOption) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) CreateNamespace(ctx context.Context, req CreateNamespaceRequest, reqEditors ...RequestEditorFn) (*Namespace, error) {
+func (c *Client) CreateNamespace(ctx context.Context, req CreateNamespaceRequest, reqEditors ...RequestEditorFn) (Namespace, error) {
 	res, err := c.oac.CreateNamespaceWithResponse(ctx, req, reqEditors...)
 	if err != nil {
-		return nil, err
+		return Namespace{}, err
 	}
 	if res.StatusCode() == http.StatusCreated {
 		return res.JSON201.Data, nil
 	}
-	return nil, getResErr(res)
+	return Namespace{}, getResErr(res)
 }
 
 func (c *Client) ListNamespaces(ctx context.Context, params *ListNamespacesParams, reqEditors ...RequestEditorFn) ([]Namespace, error) {
@@ -56,26 +56,26 @@ func (c *Client) DeleteNamespace(ctx context.Context, namespaceID string, reqEdi
 	return getResErr(res)
 }
 
-func (c *Client) CreateOperator(ctx context.Context, namespaceID string, req CreateOperatorRequest, reqEditors ...RequestEditorFn) (*Operator, error) {
+func (c *Client) CreateOperator(ctx context.Context, namespaceID string, req CreateOperatorRequest, reqEditors ...RequestEditorFn) (Operator, error) {
 	res, err := c.oac.CreateOperatorWithResponse(ctx, namespaceID, req, reqEditors...)
 	if err != nil {
-		return nil, err
+		return Operator{}, err
 	}
 	if res.JSON201 != nil {
 		return res.JSON201.Data, nil
 	}
-	return nil, getResErr(res)
+	return Operator{}, getResErr(res)
 }
 
-func (c *Client) GetOperator(ctx context.Context, namespaceID, operatorID string, reqEditors ...RequestEditorFn) (*Operator, error) {
+func (c *Client) GetOperator(ctx context.Context, namespaceID, operatorID string, reqEditors ...RequestEditorFn) (Operator, error) {
 	res, err := c.oac.GetOperatorWithResponse(ctx, namespaceID, operatorID, reqEditors...)
 	if err != nil {
-		return nil, err
+		return Operator{}, err
 	}
 	if res.JSON200 != nil {
 		return res.JSON200.Data, nil
 	}
-	return nil, getResErr(res)
+	return Operator{}, getResErr(res)
 }
 
 func (c *Client) ListOperators(ctx context.Context, namespaceID string, params *ListOperatorsParams, reqEditors ...RequestEditorFn) ([]Operator, error) {
@@ -87,6 +87,17 @@ func (c *Client) ListOperators(ctx context.Context, namespaceID string, params *
 		return res.JSON200.Data, nil
 	}
 	return nil, getResErr(res)
+}
+
+func (c *Client) DeleteOperator(ctx context.Context, namespaceID, operatorID string, reqEditors ...RequestEditorFn) error {
+	res, err := c.oac.DeleteOperatorWithResponse(ctx, namespaceID, operatorID, reqEditors...)
+	if err != nil {
+		return err
+	}
+	if res.StatusCode() == http.StatusNoContent {
+		return nil
+	}
+	return getResErr(res)
 }
 
 func (c *Client) GenerateOperatorProxyToken(ctx context.Context, namespaceID, operatorID string, reqEditors ...RequestEditorFn) (string, error) {
@@ -111,48 +122,37 @@ func (c *Client) GetOperatorNATSConfig(ctx context.Context, namespaceID, operato
 	return nil, getResErr(res)
 }
 
-func (c *Client) GetOperatorProxyConnectionStatus(ctx context.Context, namespaceID, operatorID string, reqEditors ...RequestEditorFn) (*OperatorNATSStatus, error) {
+func (c *Client) GetOperatorProxyConnectionStatus(ctx context.Context, namespaceID, operatorID string, reqEditors ...RequestEditorFn) (OperatorNATSStatus, error) {
 	res, err := c.oac.GetOperatorProxyConnectionStatusWithResponse(ctx, namespaceID, operatorID, reqEditors...)
 	if err != nil {
-		return nil, err
+		return OperatorNATSStatus{}, err
 	}
 	if res.JSON200 != nil {
 		return res.JSON200.Data, nil
 	}
-	return nil, getResErr(res)
+	return OperatorNATSStatus{}, getResErr(res)
 }
 
-func (c *Client) DeleteOperator(ctx context.Context, namespaceID, operatorID string, reqEditors ...RequestEditorFn) error {
-	res, err := c.oac.DeleteOperatorWithResponse(ctx, namespaceID, operatorID, reqEditors...)
-	if err != nil {
-		return err
-	}
-	if res.StatusCode() == http.StatusNoContent {
-		return nil
-	}
-	return getResErr(res)
-}
-
-func (c *Client) CreateAccount(ctx context.Context, namespaceID, operatorID string, req CreateAccountRequest, reqEditors ...RequestEditorFn) (*Account, error) {
+func (c *Client) CreateAccount(ctx context.Context, namespaceID, operatorID string, req CreateAccountRequest, reqEditors ...RequestEditorFn) (Account, error) {
 	res, err := c.oac.CreateAccountWithResponse(ctx, namespaceID, operatorID, req, reqEditors...)
 	if err != nil {
-		return nil, err
+		return Account{}, err
 	}
 	if res.JSON201 != nil {
 		return res.JSON201.Data, nil
 	}
-	return nil, getResErr(res)
+	return Account{}, getResErr(res)
 }
 
-func (c *Client) GetAccount(ctx context.Context, namespaceID, accountID string, reqEditors ...RequestEditorFn) (*Account, error) {
+func (c *Client) GetAccount(ctx context.Context, namespaceID, accountID string, reqEditors ...RequestEditorFn) (Account, error) {
 	res, err := c.oac.GetAccountWithResponse(ctx, namespaceID, accountID, reqEditors...)
 	if err != nil {
-		return nil, err
+		return Account{}, err
 	}
 	if res.JSON200 != nil {
 		return res.JSON200.Data, nil
 	}
-	return nil, getResErr(res)
+	return Account{}, getResErr(res)
 }
 
 func (c *Client) ListAccounts(ctx context.Context, namespaceID, operatorID string, params *ListAccountsParams, reqEditors ...RequestEditorFn) ([]Account, error) {
@@ -177,26 +177,26 @@ func (c *Client) DeleteAccount(ctx context.Context, namespaceID, accountID strin
 	return getResErr(res)
 }
 
-func (c *Client) CreateUser(ctx context.Context, namespaceID, accountID string, req CreateUserRequest, reqEditors ...RequestEditorFn) (*User, error) {
+func (c *Client) CreateUser(ctx context.Context, namespaceID, accountID string, req CreateUserRequest, reqEditors ...RequestEditorFn) (User, error) {
 	res, err := c.oac.CreateUserWithResponse(ctx, namespaceID, accountID, req, reqEditors...)
 	if err != nil {
-		return nil, err
+		return User{}, err
 	}
 	if res.JSON201 != nil {
 		return res.JSON201.Data, nil
 	}
-	return nil, getResErr(res)
+	return User{}, getResErr(res)
 }
 
-func (c *Client) GetUser(ctx context.Context, namespaceID, userID string, reqEditors ...RequestEditorFn) (*User, error) {
+func (c *Client) GetUser(ctx context.Context, namespaceID, userID string, reqEditors ...RequestEditorFn) (User, error) {
 	res, err := c.oac.GetUserWithResponse(ctx, namespaceID, userID, reqEditors...)
 	if err != nil {
-		return nil, err
+		return User{}, err
 	}
 	if res.JSON200 != nil {
 		return res.JSON200.Data, nil
 	}
-	return nil, getResErr(res)
+	return User{}, getResErr(res)
 }
 
 func (c *Client) ListUsers(ctx context.Context, namespaceID, accountID string, params *ListUsersParams, reqEditors ...RequestEditorFn) ([]User, error) {
@@ -230,6 +230,39 @@ func (c *Client) DeleteUser(ctx context.Context, namespaceID, userID string, req
 		return nil
 	}
 	return getResErr(res)
+}
+
+func (c *Client) ListStreams(ctx context.Context, namespaceID, accountID string, reqEditors ...RequestEditorFn) ([]Stream, error) {
+	res, err := c.oac.ListStreamsWithResponse(ctx, namespaceID, accountID, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	if res.JSON200 != nil {
+		return res.JSON200.Data, nil
+	}
+	return nil, getResErr(res)
+}
+
+func (c *Client) FetchStreamMessages(ctx context.Context, namespaceID, accountID string, streamName string, params *FetchStreamMessagesParams, reqEditors ...RequestEditorFn) ([]StreamMessage, error) {
+	res, err := c.oac.FetchStreamMessagesWithResponse(ctx, namespaceID, accountID, streamName, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	if res.JSON200 != nil {
+		return res.JSON200.Data, nil
+	}
+	return nil, getResErr(res)
+}
+
+func (c *Client) GetStreamMessageContent(ctx context.Context, namespaceID, accountID string, streamName string, sequence uint64, reqEditors ...RequestEditorFn) (StreamMessageContent, error) {
+	res, err := c.oac.GetStreamMessageContentWithResponse(ctx, namespaceID, accountID, streamName, sequence, reqEditors...)
+	if err != nil {
+		return StreamMessageContent{}, err
+	}
+	if res.JSON200 != nil {
+		return res.JSON200.Data, nil
+	}
+	return StreamMessageContent{}, getResErr(res)
 }
 
 type response interface {

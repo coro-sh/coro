@@ -16,15 +16,22 @@ message PublishMessage {
     CommandRequest request = 3;
     // List JetStream streams that exists on the downstream NATS server.
     CommandListStreams list_stream = 4;
+    // Get a JetStream stream that exists on the downstream NATS server.
+    CommandGetStream get_stream = 5;
+    // Fetch a batch of messages that are currently available in the stream.
+    // Does not wait for new messages to arrive, even if batch size is not met.
+    CommandFetchStreamMessages fetch_stream_messages = 6;
+    // Get the content of a stream message.
+    CommandGetStreamMessageContent get_stream_message_content = 7;
     // Start an ephemeral JetStream consumer on a stream that exists on the
     // downstream NATS server.
-    CommandStartConsumer start_consumer = 5;
+    CommandStartStreamConsumer start_stream_consumer = 8;
     // Stop a consumer.
-    CommandStopConsumer stop_consumer = 6;
+    CommandStopStreamConsumer stop_stream_consumer = 9;
     // Send a consumer heartbeat to keep the connection alive.
     // Heartbeats should be sent every 15s, but a max of 30s is permitted before
     // the consumer is stopped due to inactivity.
-    CommandSendConsumerHeartbeat send_consumer_heartbeat = 7;
+    CommandSendStreamConsumerHeartbeat send_stream_consumer_heartbeat = 10;
   }
 
   message CommandRequest {
@@ -38,21 +45,52 @@ message PublishMessage {
     Credentials user_creds = 1;
   }
 
-  message CommandStartConsumer {
-    // Identifier of the ephemeral JetStream consumer.
-    string consumer_id = 1;
-    // Stream to create the ephemeral consumer on.
-    string stream_name = 2;
+  message CommandGetStream {
     // User credentials to use when creating a new client connection.
-    Credentials user_creds = 3;
+    Credentials user_creds = 1;
+    // Stream to retrieve info.
+    string stream_name = 2;
   }
 
-  message CommandStopConsumer {
+  message CommandFetchStreamMessages {
+    // User credentials to use when creating a new client connection.
+    Credentials user_creds = 1;
+    // Stream to fetch messages on.
+    string stream_name = 2;
+    // Optional sequence number from which to fetch message from (defaults to 1)
+    uint64 start_sequence = 3;
+    // Optional number of messages to retrieve up to a max of 1000 (defaults to
+    // 100). Only applies to messages that are currently available in the stream
+    // and will not wait for new messages to arrive, even if batch size is not met.
+    uint32 batch_size = 4;
+  }
+
+  message CommandGetStreamMessageContent {
+    // User credentials to use when creating a new client connection.
+    Credentials user_creds = 1;
+    // Stream to fetch messages on.
+    string stream_name = 2;
+    //  Sequence number of the message to get.
+    uint64 sequence = 3;
+  }
+
+  message CommandStartStreamConsumer {
+    // User credentials to use when creating a new client connection.
+    Credentials user_creds = 1;
+    // Identifier of the ephemeral JetStream consumer.
+    string consumer_id = 2;
+    // Stream to create the ephemeral consumer on.
+    string stream_name = 3;
+    // Optional sequence number from which to fetch message from (defaults to 1)
+    uint64 start_sequence = 4;
+  }
+
+  message CommandStopStreamConsumer {
     // Identifier of the ephemeral JetStream consumer.
     string consumer_id = 1;
   }
 
-  message CommandSendConsumerHeartbeat {
+  message CommandSendStreamConsumerHeartbeat {
     // Identifier of the ephemeral JetStream consumer.
     string consumer_id = 1;
   }
@@ -67,6 +105,37 @@ message ReplyMessage {
   bytes data = 3;
   // Error message if the published command failed to be handled.
   optional string error = 4;
+}
+
+message StreamMessage {
+  // Stream sequence number of the message.
+  uint64 stream_sequence = 1;
+  // Time that the message was originally sent on the stream.
+  int64 timestamp = 2;
+}
+
+message StreamMessageBatch {
+  // Messages in the batch.
+  repeated StreamMessage messages = 1;
+}
+
+message StreamConsumerMessage {
+  // Stream sequence number of the message.
+  uint64 stream_sequence = 1;
+  // Number of messages that match the consumer's filter, but have not been
+  // delivered yet.
+  uint64 messages_pending = 2;
+  // Time that the message was originally sent on the stream.
+  int64 timestamp = 3;
+}
+
+message StreamMessageContent {
+  // Stream sequence number of the message.
+  uint64 stream_sequence = 1;
+  // Time that the message was originally sent on the stream.
+  int64 timestamp = 2;
+  // Content of the consumer message.
+  bytes data = 3;
 }
 
 message Credentials {

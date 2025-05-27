@@ -7,15 +7,16 @@ import (
 )
 
 type StartStreamConsumerRequest struct {
-	AccountID string `json:"account_id"`
-	Stream    string `json:"stream"`
+	AccountID     string `param:"account_id" json:"-"`
+	StreamName    string `param:"stream_name" json:"-"`
+	StartSequence uint64 `query:"start_sequence"`
 }
 
 func (r StartStreamConsumerRequest) Validate() error {
-	return valgo.Is(
+	return valgo.In("params", valgo.Is(
 		entity.IDValidator[entity.AccountID](r.AccountID, entity.PathParamAccountID),
-		valgo.String(r.Stream, "stream").Not().Blank(),
-	).Error()
+		valgo.String(r.StreamName, "stream_name").Not().Blank(),
+	)).Error()
 }
 
 type StreamConsumerMessage struct {

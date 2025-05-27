@@ -43,6 +43,12 @@ linters:
       range-loops: true
       for-loops: true
 
+  exclusions:
+    rules:
+      - linters:
+          - errcheck
+        source: "^\\s*defer\\s+"
+
 formatters:
   settings:
     gofmt:

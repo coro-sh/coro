@@ -34,9 +34,12 @@ type PublishMessage struct {
 	//
 	//	*PublishMessage_Request
 	//	*PublishMessage_ListStream
-	//	*PublishMessage_StartConsumer
-	//	*PublishMessage_StopConsumer
-	//	*PublishMessage_SendConsumerHeartbeat
+	//	*PublishMessage_GetStream
+	//	*PublishMessage_FetchStreamMessages
+	//	*PublishMessage_GetStreamMessageContent
+	//	*PublishMessage_StartStreamConsumer
+	//	*PublishMessage_StopStreamConsumer
+	//	*PublishMessage_SendStreamConsumerHeartbeat
 	Command       isPublishMessage_Command `protobuf_oneof:"command"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -111,28 +114,55 @@ func (x *PublishMessage) GetListStream() *PublishMessage_CommandListStreams {
 	return nil
 }
 
-func (x *PublishMessage) GetStartConsumer() *PublishMessage_CommandStartConsumer {
+func (x *PublishMessage) GetGetStream() *PublishMessage_CommandGetStream {
 	if x != nil {
-		if x, ok := x.Command.(*PublishMessage_StartConsumer); ok {
-			return x.StartConsumer
+		if x, ok := x.Command.(*PublishMessage_GetStream); ok {
+			return x.GetStream
 		}
 	}
 	return nil
 }
 
-func (x *PublishMessage) GetStopConsumer() *PublishMessage_CommandStopConsumer {
+func (x *PublishMessage) GetFetchStreamMessages() *PublishMessage_CommandFetchStreamMessages {
 	if x != nil {
-		if x, ok := x.Command.(*PublishMessage_StopConsumer); ok {
-			return x.StopConsumer
+		if x, ok := x.Command.(*PublishMessage_FetchStreamMessages); ok {
+			return x.FetchStreamMessages
 		}
 	}
 	return nil
 }
 
-func (x *PublishMessage) GetSendConsumerHeartbeat() *PublishMessage_CommandSendConsumerHeartbeat {
+func (x *PublishMessage) GetGetStreamMessageContent() *PublishMessage_CommandGetStreamMessageContent {
 	if x != nil {
-		if x, ok := x.Command.(*PublishMessage_SendConsumerHeartbeat); ok {
-			return x.SendConsumerHeartbeat
+		if x, ok := x.Command.(*PublishMessage_GetStreamMessageContent); ok {
+			return x.GetStreamMessageContent
+		}
+	}
+	return nil
+}
+
+func (x *PublishMessage) GetStartStreamConsumer() *PublishMessage_CommandStartStreamConsumer {
+	if x != nil {
+		if x, ok := x.Command.(*PublishMessage_StartStreamConsumer); ok {
+			return x.StartStreamConsumer
+		}
+	}
+	return nil
+}
+
+func (x *PublishMessage) GetStopStreamConsumer() *PublishMessage_CommandStopStreamConsumer {
+	if x != nil {
+		if x, ok := x.Command.(*PublishMessage_StopStreamConsumer); ok {
+			return x.StopStreamConsumer
+		}
+	}
+	return nil
+}
+
+func (x *PublishMessage) GetSendStreamConsumerHeartbeat() *PublishMessage_CommandSendStreamConsumerHeartbeat {
+	if x != nil {
+		if x, ok := x.Command.(*PublishMessage_SendStreamConsumerHeartbeat); ok {
+			return x.SendStreamConsumerHeartbeat
 		}
 	}
 	return nil
@@ -153,33 +183,55 @@ type PublishMessage_ListStream struct {
 	ListStream *PublishMessage_CommandListStreams `protobuf:"bytes,4,opt,name=list_stream,json=listStream,proto3,oneof"`
 }
 
-type PublishMessage_StartConsumer struct {
+type PublishMessage_GetStream struct {
+	// Get a JetStream stream that exists on the downstream NATS server.
+	GetStream *PublishMessage_CommandGetStream `protobuf:"bytes,5,opt,name=get_stream,json=getStream,proto3,oneof"`
+}
+
+type PublishMessage_FetchStreamMessages struct {
+	// Fetch a batch of messages that are currently available in the stream.
+	// Does not wait for new messages to arrive, even if batch size is not met.
+	FetchStreamMessages *PublishMessage_CommandFetchStreamMessages `protobuf:"bytes,6,opt,name=fetch_stream_messages,json=fetchStreamMessages,proto3,oneof"`
+}
+
+type PublishMessage_GetStreamMessageContent struct {
+	// Get the content of a stream message.
+	GetStreamMessageContent *PublishMessage_CommandGetStreamMessageContent `protobuf:"bytes,7,opt,name=get_stream_message_content,json=getStreamMessageContent,proto3,oneof"`
+}
+
+type PublishMessage_StartStreamConsumer struct {
 	// Start an ephemeral JetStream consumer on a stream that exists on the
 	// downstream NATS server.
-	StartConsumer *PublishMessage_CommandStartConsumer `protobuf:"bytes,5,opt,name=start_consumer,json=startConsumer,proto3,oneof"`
+	StartStreamConsumer *PublishMessage_CommandStartStreamConsumer `protobuf:"bytes,8,opt,name=start_stream_consumer,json=startStreamConsumer,proto3,oneof"`
 }
 
-type PublishMessage_StopConsumer struct {
+type PublishMessage_StopStreamConsumer struct {
 	// Stop a consumer.
-	StopConsumer *PublishMessage_CommandStopConsumer `protobuf:"bytes,6,opt,name=stop_consumer,json=stopConsumer,proto3,oneof"`
+	StopStreamConsumer *PublishMessage_CommandStopStreamConsumer `protobuf:"bytes,9,opt,name=stop_stream_consumer,json=stopStreamConsumer,proto3,oneof"`
 }
 
-type PublishMessage_SendConsumerHeartbeat struct {
+type PublishMessage_SendStreamConsumerHeartbeat struct {
 	// Send a consumer heartbeat to keep the connection alive.
 	// Heartbeats should be sent every 15s, but a max of 30s is permitted before
 	// the consumer is stopped due to inactivity.
-	SendConsumerHeartbeat *PublishMessage_CommandSendConsumerHeartbeat `protobuf:"bytes,7,opt,name=send_consumer_heartbeat,json=sendConsumerHeartbeat,proto3,oneof"`
+	SendStreamConsumerHeartbeat *PublishMessage_CommandSendStreamConsumerHeartbeat `protobuf:"bytes,10,opt,name=send_stream_consumer_heartbeat,json=sendStreamConsumerHeartbeat,proto3,oneof"`
 }
 
 func (*PublishMessage_Request) isPublishMessage_Command() {}
 
 func (*PublishMessage_ListStream) isPublishMessage_Command() {}
 
-func (*PublishMessage_StartConsumer) isPublishMessage_Command() {}
+func (*PublishMessage_GetStream) isPublishMessage_Command() {}
 
-func (*PublishMessage_StopConsumer) isPublishMessage_Command() {}
+func (*PublishMessage_FetchStreamMessages) isPublishMessage_Command() {}
 
-func (*PublishMessage_SendConsumerHeartbeat) isPublishMessage_Command() {}
+func (*PublishMessage_GetStreamMessageContent) isPublishMessage_Command() {}
+
+func (*PublishMessage_StartStreamConsumer) isPublishMessage_Command() {}
+
+func (*PublishMessage_StopStreamConsumer) isPublishMessage_Command() {}
+
+func (*PublishMessage_SendStreamConsumerHeartbeat) isPublishMessage_Command() {}
 
 type ReplyMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -253,6 +305,232 @@ func (x *ReplyMessage) GetError() string {
 	return ""
 }
 
+type StreamMessage struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Stream sequence number of the message.
+	StreamSequence uint64 `protobuf:"varint,1,opt,name=stream_sequence,json=streamSequence,proto3" json:"stream_sequence,omitempty"`
+	// Time that the message was originally sent on the stream.
+	Timestamp     int64 `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamMessage) Reset() {
+	*x = StreamMessage{}
+	mi := &file_command_v1_message_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamMessage) ProtoMessage() {}
+
+func (x *StreamMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_command_v1_message_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamMessage.ProtoReflect.Descriptor instead.
+func (*StreamMessage) Descriptor() ([]byte, []int) {
+	return file_command_v1_message_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *StreamMessage) GetStreamSequence() uint64 {
+	if x != nil {
+		return x.StreamSequence
+	}
+	return 0
+}
+
+func (x *StreamMessage) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+type StreamMessageBatch struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Messages in the batch.
+	Messages      []*StreamMessage `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamMessageBatch) Reset() {
+	*x = StreamMessageBatch{}
+	mi := &file_command_v1_message_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamMessageBatch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamMessageBatch) ProtoMessage() {}
+
+func (x *StreamMessageBatch) ProtoReflect() protoreflect.Message {
+	mi := &file_command_v1_message_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamMessageBatch.ProtoReflect.Descriptor instead.
+func (*StreamMessageBatch) Descriptor() ([]byte, []int) {
+	return file_command_v1_message_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *StreamMessageBatch) GetMessages() []*StreamMessage {
+	if x != nil {
+		return x.Messages
+	}
+	return nil
+}
+
+type StreamConsumerMessage struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Stream sequence number of the message.
+	StreamSequence uint64 `protobuf:"varint,1,opt,name=stream_sequence,json=streamSequence,proto3" json:"stream_sequence,omitempty"`
+	// Number of messages that match the consumer's filter, but have not been
+	// delivered yet.
+	MessagesPending uint64 `protobuf:"varint,2,opt,name=messages_pending,json=messagesPending,proto3" json:"messages_pending,omitempty"`
+	// Time that the message was originally sent on the stream.
+	Timestamp     int64 `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamConsumerMessage) Reset() {
+	*x = StreamConsumerMessage{}
+	mi := &file_command_v1_message_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamConsumerMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamConsumerMessage) ProtoMessage() {}
+
+func (x *StreamConsumerMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_command_v1_message_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamConsumerMessage.ProtoReflect.Descriptor instead.
+func (*StreamConsumerMessage) Descriptor() ([]byte, []int) {
+	return file_command_v1_message_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *StreamConsumerMessage) GetStreamSequence() uint64 {
+	if x != nil {
+		return x.StreamSequence
+	}
+	return 0
+}
+
+func (x *StreamConsumerMessage) GetMessagesPending() uint64 {
+	if x != nil {
+		return x.MessagesPending
+	}
+	return 0
+}
+
+func (x *StreamConsumerMessage) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+type StreamMessageContent struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Stream sequence number of the message.
+	StreamSequence uint64 `protobuf:"varint,1,opt,name=stream_sequence,json=streamSequence,proto3" json:"stream_sequence,omitempty"`
+	// Time that the message was originally sent on the stream.
+	Timestamp int64 `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// Content of the consumer message.
+	Data          []byte `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamMessageContent) Reset() {
+	*x = StreamMessageContent{}
+	mi := &file_command_v1_message_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamMessageContent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamMessageContent) ProtoMessage() {}
+
+func (x *StreamMessageContent) ProtoReflect() protoreflect.Message {
+	mi := &file_command_v1_message_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamMessageContent.ProtoReflect.Descriptor instead.
+func (*StreamMessageContent) Descriptor() ([]byte, []int) {
+	return file_command_v1_message_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *StreamMessageContent) GetStreamSequence() uint64 {
+	if x != nil {
+		return x.StreamSequence
+	}
+	return 0
+}
+
+func (x *StreamMessageContent) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+func (x *StreamMessageContent) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 type Credentials struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Jwt           string                 `protobuf:"bytes,1,opt,name=jwt,proto3" json:"jwt,omitempty"`
@@ -263,7 +541,7 @@ type Credentials struct {
 
 func (x *Credentials) Reset() {
 	*x = Credentials{}
-	mi := &file_command_v1_message_proto_msgTypes[2]
+	mi := &file_command_v1_message_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -275,7 +553,7 @@ func (x *Credentials) String() string {
 func (*Credentials) ProtoMessage() {}
 
 func (x *Credentials) ProtoReflect() protoreflect.Message {
-	mi := &file_command_v1_message_proto_msgTypes[2]
+	mi := &file_command_v1_message_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -288,7 +566,7 @@ func (x *Credentials) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Credentials.ProtoReflect.Descriptor instead.
 func (*Credentials) Descriptor() ([]byte, []int) {
-	return file_command_v1_message_proto_rawDescGZIP(), []int{2}
+	return file_command_v1_message_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Credentials) GetJwt() string {
@@ -317,7 +595,7 @@ type PublishMessage_CommandRequest struct {
 
 func (x *PublishMessage_CommandRequest) Reset() {
 	*x = PublishMessage_CommandRequest{}
-	mi := &file_command_v1_message_proto_msgTypes[3]
+	mi := &file_command_v1_message_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -329,7 +607,7 @@ func (x *PublishMessage_CommandRequest) String() string {
 func (*PublishMessage_CommandRequest) ProtoMessage() {}
 
 func (x *PublishMessage_CommandRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_command_v1_message_proto_msgTypes[3]
+	mi := &file_command_v1_message_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -368,7 +646,7 @@ type PublishMessage_CommandListStreams struct {
 
 func (x *PublishMessage_CommandListStreams) Reset() {
 	*x = PublishMessage_CommandListStreams{}
-	mi := &file_command_v1_message_proto_msgTypes[4]
+	mi := &file_command_v1_message_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -380,7 +658,7 @@ func (x *PublishMessage_CommandListStreams) String() string {
 func (*PublishMessage_CommandListStreams) ProtoMessage() {}
 
 func (x *PublishMessage_CommandListStreams) ProtoReflect() protoreflect.Message {
-	mi := &file_command_v1_message_proto_msgTypes[4]
+	mi := &file_command_v1_message_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -403,33 +681,31 @@ func (x *PublishMessage_CommandListStreams) GetUserCreds() *Credentials {
 	return nil
 }
 
-type PublishMessage_CommandStartConsumer struct {
+type PublishMessage_CommandGetStream struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Identifier of the ephemeral JetStream consumer.
-	ConsumerId string `protobuf:"bytes,1,opt,name=consumer_id,json=consumerId,proto3" json:"consumer_id,omitempty"`
-	// Stream to create the ephemeral consumer on.
-	StreamName string `protobuf:"bytes,2,opt,name=stream_name,json=streamName,proto3" json:"stream_name,omitempty"`
 	// User credentials to use when creating a new client connection.
-	UserCreds     *Credentials `protobuf:"bytes,3,opt,name=user_creds,json=userCreds,proto3" json:"user_creds,omitempty"`
+	UserCreds *Credentials `protobuf:"bytes,1,opt,name=user_creds,json=userCreds,proto3" json:"user_creds,omitempty"`
+	// Stream to retrieve info.
+	StreamName    string `protobuf:"bytes,2,opt,name=stream_name,json=streamName,proto3" json:"stream_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PublishMessage_CommandStartConsumer) Reset() {
-	*x = PublishMessage_CommandStartConsumer{}
-	mi := &file_command_v1_message_proto_msgTypes[5]
+func (x *PublishMessage_CommandGetStream) Reset() {
+	*x = PublishMessage_CommandGetStream{}
+	mi := &file_command_v1_message_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PublishMessage_CommandStartConsumer) String() string {
+func (x *PublishMessage_CommandGetStream) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PublishMessage_CommandStartConsumer) ProtoMessage() {}
+func (*PublishMessage_CommandGetStream) ProtoMessage() {}
 
-func (x *PublishMessage_CommandStartConsumer) ProtoReflect() protoreflect.Message {
-	mi := &file_command_v1_message_proto_msgTypes[5]
+func (x *PublishMessage_CommandGetStream) ProtoReflect() protoreflect.Message {
+	mi := &file_command_v1_message_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -440,55 +716,56 @@ func (x *PublishMessage_CommandStartConsumer) ProtoReflect() protoreflect.Messag
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PublishMessage_CommandStartConsumer.ProtoReflect.Descriptor instead.
-func (*PublishMessage_CommandStartConsumer) Descriptor() ([]byte, []int) {
+// Deprecated: Use PublishMessage_CommandGetStream.ProtoReflect.Descriptor instead.
+func (*PublishMessage_CommandGetStream) Descriptor() ([]byte, []int) {
 	return file_command_v1_message_proto_rawDescGZIP(), []int{0, 2}
 }
 
-func (x *PublishMessage_CommandStartConsumer) GetConsumerId() string {
-	if x != nil {
-		return x.ConsumerId
-	}
-	return ""
-}
-
-func (x *PublishMessage_CommandStartConsumer) GetStreamName() string {
-	if x != nil {
-		return x.StreamName
-	}
-	return ""
-}
-
-func (x *PublishMessage_CommandStartConsumer) GetUserCreds() *Credentials {
+func (x *PublishMessage_CommandGetStream) GetUserCreds() *Credentials {
 	if x != nil {
 		return x.UserCreds
 	}
 	return nil
 }
 
-type PublishMessage_CommandStopConsumer struct {
+func (x *PublishMessage_CommandGetStream) GetStreamName() string {
+	if x != nil {
+		return x.StreamName
+	}
+	return ""
+}
+
+type PublishMessage_CommandFetchStreamMessages struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Identifier of the ephemeral JetStream consumer.
-	ConsumerId    string `protobuf:"bytes,1,opt,name=consumer_id,json=consumerId,proto3" json:"consumer_id,omitempty"`
+	// User credentials to use when creating a new client connection.
+	UserCreds *Credentials `protobuf:"bytes,1,opt,name=user_creds,json=userCreds,proto3" json:"user_creds,omitempty"`
+	// Stream to fetch messages on.
+	StreamName string `protobuf:"bytes,2,opt,name=stream_name,json=streamName,proto3" json:"stream_name,omitempty"`
+	// Optional sequence number from which to fetch message from (defaults to 1)
+	StartSequence uint64 `protobuf:"varint,3,opt,name=start_sequence,json=startSequence,proto3" json:"start_sequence,omitempty"`
+	// Optional max number of messages to retrieve (defaults to 100). Only
+	// applies to messages that are currently available in the stream and will
+	// not wait for new messages to arrive, even if batch size is not met.
+	BatchSize     uint32 `protobuf:"varint,4,opt,name=batch_size,json=batchSize,proto3" json:"batch_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PublishMessage_CommandStopConsumer) Reset() {
-	*x = PublishMessage_CommandStopConsumer{}
-	mi := &file_command_v1_message_proto_msgTypes[6]
+func (x *PublishMessage_CommandFetchStreamMessages) Reset() {
+	*x = PublishMessage_CommandFetchStreamMessages{}
+	mi := &file_command_v1_message_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PublishMessage_CommandStopConsumer) String() string {
+func (x *PublishMessage_CommandFetchStreamMessages) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PublishMessage_CommandStopConsumer) ProtoMessage() {}
+func (*PublishMessage_CommandFetchStreamMessages) ProtoMessage() {}
 
-func (x *PublishMessage_CommandStopConsumer) ProtoReflect() protoreflect.Message {
-	mi := &file_command_v1_message_proto_msgTypes[6]
+func (x *PublishMessage_CommandFetchStreamMessages) ProtoReflect() protoreflect.Message {
+	mi := &file_command_v1_message_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -499,19 +776,175 @@ func (x *PublishMessage_CommandStopConsumer) ProtoReflect() protoreflect.Message
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PublishMessage_CommandStopConsumer.ProtoReflect.Descriptor instead.
-func (*PublishMessage_CommandStopConsumer) Descriptor() ([]byte, []int) {
+// Deprecated: Use PublishMessage_CommandFetchStreamMessages.ProtoReflect.Descriptor instead.
+func (*PublishMessage_CommandFetchStreamMessages) Descriptor() ([]byte, []int) {
 	return file_command_v1_message_proto_rawDescGZIP(), []int{0, 3}
 }
 
-func (x *PublishMessage_CommandStopConsumer) GetConsumerId() string {
+func (x *PublishMessage_CommandFetchStreamMessages) GetUserCreds() *Credentials {
+	if x != nil {
+		return x.UserCreds
+	}
+	return nil
+}
+
+func (x *PublishMessage_CommandFetchStreamMessages) GetStreamName() string {
+	if x != nil {
+		return x.StreamName
+	}
+	return ""
+}
+
+func (x *PublishMessage_CommandFetchStreamMessages) GetStartSequence() uint64 {
+	if x != nil {
+		return x.StartSequence
+	}
+	return 0
+}
+
+func (x *PublishMessage_CommandFetchStreamMessages) GetBatchSize() uint32 {
+	if x != nil {
+		return x.BatchSize
+	}
+	return 0
+}
+
+type PublishMessage_CommandGetStreamMessageContent struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// User credentials to use when creating a new client connection.
+	UserCreds *Credentials `protobuf:"bytes,1,opt,name=user_creds,json=userCreds,proto3" json:"user_creds,omitempty"`
+	// Stream to fetch messages on.
+	StreamName string `protobuf:"bytes,2,opt,name=stream_name,json=streamName,proto3" json:"stream_name,omitempty"`
+	// Sequence number of the message to get.
+	Sequence      uint64 `protobuf:"varint,3,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PublishMessage_CommandGetStreamMessageContent) Reset() {
+	*x = PublishMessage_CommandGetStreamMessageContent{}
+	mi := &file_command_v1_message_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PublishMessage_CommandGetStreamMessageContent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PublishMessage_CommandGetStreamMessageContent) ProtoMessage() {}
+
+func (x *PublishMessage_CommandGetStreamMessageContent) ProtoReflect() protoreflect.Message {
+	mi := &file_command_v1_message_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PublishMessage_CommandGetStreamMessageContent.ProtoReflect.Descriptor instead.
+func (*PublishMessage_CommandGetStreamMessageContent) Descriptor() ([]byte, []int) {
+	return file_command_v1_message_proto_rawDescGZIP(), []int{0, 4}
+}
+
+func (x *PublishMessage_CommandGetStreamMessageContent) GetUserCreds() *Credentials {
+	if x != nil {
+		return x.UserCreds
+	}
+	return nil
+}
+
+func (x *PublishMessage_CommandGetStreamMessageContent) GetStreamName() string {
+	if x != nil {
+		return x.StreamName
+	}
+	return ""
+}
+
+func (x *PublishMessage_CommandGetStreamMessageContent) GetSequence() uint64 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+type PublishMessage_CommandStartStreamConsumer struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// User credentials to use when creating a new client connection.
+	UserCreds *Credentials `protobuf:"bytes,1,opt,name=user_creds,json=userCreds,proto3" json:"user_creds,omitempty"`
+	// Identifier of the ephemeral JetStream consumer.
+	ConsumerId string `protobuf:"bytes,2,opt,name=consumer_id,json=consumerId,proto3" json:"consumer_id,omitempty"`
+	// Stream to create the ephemeral consumer on.
+	StreamName string `protobuf:"bytes,3,opt,name=stream_name,json=streamName,proto3" json:"stream_name,omitempty"`
+	// Optional sequence number from which to fetch message from (defaults to 1)
+	StartSequence uint64 `protobuf:"varint,4,opt,name=start_sequence,json=startSequence,proto3" json:"start_sequence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PublishMessage_CommandStartStreamConsumer) Reset() {
+	*x = PublishMessage_CommandStartStreamConsumer{}
+	mi := &file_command_v1_message_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PublishMessage_CommandStartStreamConsumer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PublishMessage_CommandStartStreamConsumer) ProtoMessage() {}
+
+func (x *PublishMessage_CommandStartStreamConsumer) ProtoReflect() protoreflect.Message {
+	mi := &file_command_v1_message_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PublishMessage_CommandStartStreamConsumer.ProtoReflect.Descriptor instead.
+func (*PublishMessage_CommandStartStreamConsumer) Descriptor() ([]byte, []int) {
+	return file_command_v1_message_proto_rawDescGZIP(), []int{0, 5}
+}
+
+func (x *PublishMessage_CommandStartStreamConsumer) GetUserCreds() *Credentials {
+	if x != nil {
+		return x.UserCreds
+	}
+	return nil
+}
+
+func (x *PublishMessage_CommandStartStreamConsumer) GetConsumerId() string {
 	if x != nil {
 		return x.ConsumerId
 	}
 	return ""
 }
 
-type PublishMessage_CommandSendConsumerHeartbeat struct {
+func (x *PublishMessage_CommandStartStreamConsumer) GetStreamName() string {
+	if x != nil {
+		return x.StreamName
+	}
+	return ""
+}
+
+func (x *PublishMessage_CommandStartStreamConsumer) GetStartSequence() uint64 {
+	if x != nil {
+		return x.StartSequence
+	}
+	return 0
+}
+
+type PublishMessage_CommandStopStreamConsumer struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Identifier of the ephemeral JetStream consumer.
 	ConsumerId    string `protobuf:"bytes,1,opt,name=consumer_id,json=consumerId,proto3" json:"consumer_id,omitempty"`
@@ -519,21 +952,21 @@ type PublishMessage_CommandSendConsumerHeartbeat struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PublishMessage_CommandSendConsumerHeartbeat) Reset() {
-	*x = PublishMessage_CommandSendConsumerHeartbeat{}
-	mi := &file_command_v1_message_proto_msgTypes[7]
+func (x *PublishMessage_CommandStopStreamConsumer) Reset() {
+	*x = PublishMessage_CommandStopStreamConsumer{}
+	mi := &file_command_v1_message_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PublishMessage_CommandSendConsumerHeartbeat) String() string {
+func (x *PublishMessage_CommandStopStreamConsumer) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PublishMessage_CommandSendConsumerHeartbeat) ProtoMessage() {}
+func (*PublishMessage_CommandStopStreamConsumer) ProtoMessage() {}
 
-func (x *PublishMessage_CommandSendConsumerHeartbeat) ProtoReflect() protoreflect.Message {
-	mi := &file_command_v1_message_proto_msgTypes[7]
+func (x *PublishMessage_CommandStopStreamConsumer) ProtoReflect() protoreflect.Message {
+	mi := &file_command_v1_message_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -544,12 +977,57 @@ func (x *PublishMessage_CommandSendConsumerHeartbeat) ProtoReflect() protoreflec
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PublishMessage_CommandSendConsumerHeartbeat.ProtoReflect.Descriptor instead.
-func (*PublishMessage_CommandSendConsumerHeartbeat) Descriptor() ([]byte, []int) {
-	return file_command_v1_message_proto_rawDescGZIP(), []int{0, 4}
+// Deprecated: Use PublishMessage_CommandStopStreamConsumer.ProtoReflect.Descriptor instead.
+func (*PublishMessage_CommandStopStreamConsumer) Descriptor() ([]byte, []int) {
+	return file_command_v1_message_proto_rawDescGZIP(), []int{0, 6}
 }
 
-func (x *PublishMessage_CommandSendConsumerHeartbeat) GetConsumerId() string {
+func (x *PublishMessage_CommandStopStreamConsumer) GetConsumerId() string {
+	if x != nil {
+		return x.ConsumerId
+	}
+	return ""
+}
+
+type PublishMessage_CommandSendStreamConsumerHeartbeat struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Identifier of the ephemeral JetStream consumer.
+	ConsumerId    string `protobuf:"bytes,1,opt,name=consumer_id,json=consumerId,proto3" json:"consumer_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PublishMessage_CommandSendStreamConsumerHeartbeat) Reset() {
+	*x = PublishMessage_CommandSendStreamConsumerHeartbeat{}
+	mi := &file_command_v1_message_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PublishMessage_CommandSendStreamConsumerHeartbeat) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PublishMessage_CommandSendStreamConsumerHeartbeat) ProtoMessage() {}
+
+func (x *PublishMessage_CommandSendStreamConsumerHeartbeat) ProtoReflect() protoreflect.Message {
+	mi := &file_command_v1_message_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PublishMessage_CommandSendStreamConsumerHeartbeat.ProtoReflect.Descriptor instead.
+func (*PublishMessage_CommandSendStreamConsumerHeartbeat) Descriptor() ([]byte, []int) {
+	return file_command_v1_message_proto_rawDescGZIP(), []int{0, 7}
+}
+
+func (x *PublishMessage_CommandSendStreamConsumerHeartbeat) GetConsumerId() string {
 	if x != nil {
 		return x.ConsumerId
 	}
@@ -561,33 +1039,58 @@ var File_command_v1_message_proto protoreflect.FileDescriptor
 const file_command_v1_message_proto_rawDesc = "" +
 	"\n" +
 	"\x18command/v1/message.proto\x12\n" +
-	"command.v1\"\xb2\a\n" +
+	"command.v1\"\x9d\x0e\n" +
 	"\x0ePublishMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12.\n" +
 	"\x13command_reply_inbox\x18\x02 \x01(\tR\x11commandReplyInbox\x12E\n" +
 	"\arequest\x18\x03 \x01(\v2).command.v1.PublishMessage.CommandRequestH\x00R\arequest\x12P\n" +
 	"\vlist_stream\x18\x04 \x01(\v2-.command.v1.PublishMessage.CommandListStreamsH\x00R\n" +
-	"listStream\x12X\n" +
-	"\x0estart_consumer\x18\x05 \x01(\v2/.command.v1.PublishMessage.CommandStartConsumerH\x00R\rstartConsumer\x12U\n" +
-	"\rstop_consumer\x18\x06 \x01(\v2..command.v1.PublishMessage.CommandStopConsumerH\x00R\fstopConsumer\x12q\n" +
-	"\x17send_consumer_heartbeat\x18\a \x01(\v27.command.v1.PublishMessage.CommandSendConsumerHeartbeatH\x00R\x15sendConsumerHeartbeat\x1a>\n" +
+	"listStream\x12L\n" +
+	"\n" +
+	"get_stream\x18\x05 \x01(\v2+.command.v1.PublishMessage.CommandGetStreamH\x00R\tgetStream\x12k\n" +
+	"\x15fetch_stream_messages\x18\x06 \x01(\v25.command.v1.PublishMessage.CommandFetchStreamMessagesH\x00R\x13fetchStreamMessages\x12x\n" +
+	"\x1aget_stream_message_content\x18\a \x01(\v29.command.v1.PublishMessage.CommandGetStreamMessageContentH\x00R\x17getStreamMessageContent\x12k\n" +
+	"\x15start_stream_consumer\x18\b \x01(\v25.command.v1.PublishMessage.CommandStartStreamConsumerH\x00R\x13startStreamConsumer\x12h\n" +
+	"\x14stop_stream_consumer\x18\t \x01(\v24.command.v1.PublishMessage.CommandStopStreamConsumerH\x00R\x12stopStreamConsumer\x12\x84\x01\n" +
+	"\x1esend_stream_consumer_heartbeat\x18\n" +
+	" \x01(\v2=.command.v1.PublishMessage.CommandSendStreamConsumerHeartbeatH\x00R\x1bsendStreamConsumerHeartbeat\x1a>\n" +
 	"\x0eCommandRequest\x12\x18\n" +
 	"\asubject\x18\x01 \x01(\tR\asubject\x12\x12\n" +
 	"\x04data\x18\x02 \x01(\fR\x04data\x1aL\n" +
 	"\x12CommandListStreams\x126\n" +
 	"\n" +
-	"user_creds\x18\x01 \x01(\v2\x17.command.v1.CredentialsR\tuserCreds\x1a\x90\x01\n" +
-	"\x14CommandStartConsumer\x12\x1f\n" +
-	"\vconsumer_id\x18\x01 \x01(\tR\n" +
-	"consumerId\x12\x1f\n" +
-	"\vstream_name\x18\x02 \x01(\tR\n" +
-	"streamName\x126\n" +
+	"user_creds\x18\x01 \x01(\v2\x17.command.v1.CredentialsR\tuserCreds\x1ak\n" +
+	"\x10CommandGetStream\x126\n" +
 	"\n" +
-	"user_creds\x18\x03 \x01(\v2\x17.command.v1.CredentialsR\tuserCreds\x1a6\n" +
-	"\x13CommandStopConsumer\x12\x1f\n" +
+	"user_creds\x18\x01 \x01(\v2\x17.command.v1.CredentialsR\tuserCreds\x12\x1f\n" +
+	"\vstream_name\x18\x02 \x01(\tR\n" +
+	"streamName\x1a\xbb\x01\n" +
+	"\x1aCommandFetchStreamMessages\x126\n" +
+	"\n" +
+	"user_creds\x18\x01 \x01(\v2\x17.command.v1.CredentialsR\tuserCreds\x12\x1f\n" +
+	"\vstream_name\x18\x02 \x01(\tR\n" +
+	"streamName\x12%\n" +
+	"\x0estart_sequence\x18\x03 \x01(\x04R\rstartSequence\x12\x1d\n" +
+	"\n" +
+	"batch_size\x18\x04 \x01(\rR\tbatchSize\x1a\x95\x01\n" +
+	"\x1eCommandGetStreamMessageContent\x126\n" +
+	"\n" +
+	"user_creds\x18\x01 \x01(\v2\x17.command.v1.CredentialsR\tuserCreds\x12\x1f\n" +
+	"\vstream_name\x18\x02 \x01(\tR\n" +
+	"streamName\x12\x1a\n" +
+	"\bsequence\x18\x03 \x01(\x04R\bsequence\x1a\xbd\x01\n" +
+	"\x1aCommandStartStreamConsumer\x126\n" +
+	"\n" +
+	"user_creds\x18\x01 \x01(\v2\x17.command.v1.CredentialsR\tuserCreds\x12\x1f\n" +
+	"\vconsumer_id\x18\x02 \x01(\tR\n" +
+	"consumerId\x12\x1f\n" +
+	"\vstream_name\x18\x03 \x01(\tR\n" +
+	"streamName\x12%\n" +
+	"\x0estart_sequence\x18\x04 \x01(\x04R\rstartSequence\x1a<\n" +
+	"\x19CommandStopStreamConsumer\x12\x1f\n" +
 	"\vconsumer_id\x18\x01 \x01(\tR\n" +
-	"consumerId\x1a?\n" +
-	"\x1cCommandSendConsumerHeartbeat\x12\x1f\n" +
+	"consumerId\x1aE\n" +
+	"\"CommandSendStreamConsumerHeartbeat\x12\x1f\n" +
 	"\vconsumer_id\x18\x01 \x01(\tR\n" +
 	"consumerIdB\t\n" +
 	"\acommand\"m\n" +
@@ -596,7 +1099,20 @@ const file_command_v1_message_proto_rawDesc = "" +
 	"\x05inbox\x18\x02 \x01(\tR\x05inbox\x12\x12\n" +
 	"\x04data\x18\x03 \x01(\fR\x04data\x12\x19\n" +
 	"\x05error\x18\x04 \x01(\tH\x00R\x05error\x88\x01\x01B\b\n" +
-	"\x06_error\"3\n" +
+	"\x06_error\"V\n" +
+	"\rStreamMessage\x12'\n" +
+	"\x0fstream_sequence\x18\x01 \x01(\x04R\x0estreamSequence\x12\x1c\n" +
+	"\ttimestamp\x18\x02 \x01(\x03R\ttimestamp\"K\n" +
+	"\x12StreamMessageBatch\x125\n" +
+	"\bmessages\x18\x01 \x03(\v2\x19.command.v1.StreamMessageR\bmessages\"\x89\x01\n" +
+	"\x15StreamConsumerMessage\x12'\n" +
+	"\x0fstream_sequence\x18\x01 \x01(\x04R\x0estreamSequence\x12)\n" +
+	"\x10messages_pending\x18\x02 \x01(\x04R\x0fmessagesPending\x12\x1c\n" +
+	"\ttimestamp\x18\x03 \x01(\x03R\ttimestamp\"q\n" +
+	"\x14StreamMessageContent\x12'\n" +
+	"\x0fstream_sequence\x18\x01 \x01(\x04R\x0estreamSequence\x12\x1c\n" +
+	"\ttimestamp\x18\x02 \x01(\x03R\ttimestamp\x12\x12\n" +
+	"\x04data\x18\x03 \x01(\fR\x04data\"3\n" +
 	"\vCredentials\x12\x10\n" +
 	"\x03jwt\x18\x01 \x01(\tR\x03jwt\x12\x12\n" +
 	"\x04seed\x18\x02 \x01(\tR\x04seedB\x9f\x01\n" +
@@ -616,30 +1132,44 @@ func file_command_v1_message_proto_rawDescGZIP() []byte {
 	return file_command_v1_message_proto_rawDescData
 }
 
-var file_command_v1_message_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_command_v1_message_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_command_v1_message_proto_goTypes = []any{
-	(*PublishMessage)(nil),                              // 0: command.v1.PublishMessage
-	(*ReplyMessage)(nil),                                // 1: command.v1.ReplyMessage
-	(*Credentials)(nil),                                 // 2: command.v1.Credentials
-	(*PublishMessage_CommandRequest)(nil),               // 3: command.v1.PublishMessage.CommandRequest
-	(*PublishMessage_CommandListStreams)(nil),           // 4: command.v1.PublishMessage.CommandListStreams
-	(*PublishMessage_CommandStartConsumer)(nil),         // 5: command.v1.PublishMessage.CommandStartConsumer
-	(*PublishMessage_CommandStopConsumer)(nil),          // 6: command.v1.PublishMessage.CommandStopConsumer
-	(*PublishMessage_CommandSendConsumerHeartbeat)(nil), // 7: command.v1.PublishMessage.CommandSendConsumerHeartbeat
+	(*PublishMessage)(nil),                                    // 0: command.v1.PublishMessage
+	(*ReplyMessage)(nil),                                      // 1: command.v1.ReplyMessage
+	(*StreamMessage)(nil),                                     // 2: command.v1.StreamMessage
+	(*StreamMessageBatch)(nil),                                // 3: command.v1.StreamMessageBatch
+	(*StreamConsumerMessage)(nil),                             // 4: command.v1.StreamConsumerMessage
+	(*StreamMessageContent)(nil),                              // 5: command.v1.StreamMessageContent
+	(*Credentials)(nil),                                       // 6: command.v1.Credentials
+	(*PublishMessage_CommandRequest)(nil),                     // 7: command.v1.PublishMessage.CommandRequest
+	(*PublishMessage_CommandListStreams)(nil),                 // 8: command.v1.PublishMessage.CommandListStreams
+	(*PublishMessage_CommandGetStream)(nil),                   // 9: command.v1.PublishMessage.CommandGetStream
+	(*PublishMessage_CommandFetchStreamMessages)(nil),         // 10: command.v1.PublishMessage.CommandFetchStreamMessages
+	(*PublishMessage_CommandGetStreamMessageContent)(nil),     // 11: command.v1.PublishMessage.CommandGetStreamMessageContent
+	(*PublishMessage_CommandStartStreamConsumer)(nil),         // 12: command.v1.PublishMessage.CommandStartStreamConsumer
+	(*PublishMessage_CommandStopStreamConsumer)(nil),          // 13: command.v1.PublishMessage.CommandStopStreamConsumer
+	(*PublishMessage_CommandSendStreamConsumerHeartbeat)(nil), // 14: command.v1.PublishMessage.CommandSendStreamConsumerHeartbeat
 }
 var file_command_v1_message_proto_depIdxs = []int32{
-	3, // 0: command.v1.PublishMessage.request:type_name -> command.v1.PublishMessage.CommandRequest
-	4, // 1: command.v1.PublishMessage.list_stream:type_name -> command.v1.PublishMessage.CommandListStreams
-	5, // 2: command.v1.PublishMessage.start_consumer:type_name -> command.v1.PublishMessage.CommandStartConsumer
-	6, // 3: command.v1.PublishMessage.stop_consumer:type_name -> command.v1.PublishMessage.CommandStopConsumer
-	7, // 4: command.v1.PublishMessage.send_consumer_heartbeat:type_name -> command.v1.PublishMessage.CommandSendConsumerHeartbeat
-	2, // 5: command.v1.PublishMessage.CommandListStreams.user_creds:type_name -> command.v1.Credentials
-	2, // 6: command.v1.PublishMessage.CommandStartConsumer.user_creds:type_name -> command.v1.Credentials
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	7,  // 0: command.v1.PublishMessage.request:type_name -> command.v1.PublishMessage.CommandRequest
+	8,  // 1: command.v1.PublishMessage.list_stream:type_name -> command.v1.PublishMessage.CommandListStreams
+	9,  // 2: command.v1.PublishMessage.get_stream:type_name -> command.v1.PublishMessage.CommandGetStream
+	10, // 3: command.v1.PublishMessage.fetch_stream_messages:type_name -> command.v1.PublishMessage.CommandFetchStreamMessages
+	11, // 4: command.v1.PublishMessage.get_stream_message_content:type_name -> command.v1.PublishMessage.CommandGetStreamMessageContent
+	12, // 5: command.v1.PublishMessage.start_stream_consumer:type_name -> command.v1.PublishMessage.CommandStartStreamConsumer
+	13, // 6: command.v1.PublishMessage.stop_stream_consumer:type_name -> command.v1.PublishMessage.CommandStopStreamConsumer
+	14, // 7: command.v1.PublishMessage.send_stream_consumer_heartbeat:type_name -> command.v1.PublishMessage.CommandSendStreamConsumerHeartbeat
+	2,  // 8: command.v1.StreamMessageBatch.messages:type_name -> command.v1.StreamMessage
+	6,  // 9: command.v1.PublishMessage.CommandListStreams.user_creds:type_name -> command.v1.Credentials
+	6,  // 10: command.v1.PublishMessage.CommandGetStream.user_creds:type_name -> command.v1.Credentials
+	6,  // 11: command.v1.PublishMessage.CommandFetchStreamMessages.user_creds:type_name -> command.v1.Credentials
+	6,  // 12: command.v1.PublishMessage.CommandGetStreamMessageContent.user_creds:type_name -> command.v1.Credentials
+	6,  // 13: command.v1.PublishMessage.CommandStartStreamConsumer.user_creds:type_name -> command.v1.Credentials
+	14, // [14:14] is the sub-list for method output_type
+	14, // [14:14] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_command_v1_message_proto_init() }
@@ -650,9 +1180,12 @@ func file_command_v1_message_proto_init() {
 	file_command_v1_message_proto_msgTypes[0].OneofWrappers = []any{
 		(*PublishMessage_Request)(nil),
 		(*PublishMessage_ListStream)(nil),
-		(*PublishMessage_StartConsumer)(nil),
-		(*PublishMessage_StopConsumer)(nil),
-		(*PublishMessage_SendConsumerHeartbeat)(nil),
+		(*PublishMessage_GetStream)(nil),
+		(*PublishMessage_FetchStreamMessages)(nil),
+		(*PublishMessage_GetStreamMessageContent)(nil),
+		(*PublishMessage_StartStreamConsumer)(nil),
+		(*PublishMessage_StopStreamConsumer)(nil),
+		(*PublishMessage_SendStreamConsumerHeartbeat)(nil),
 	}
 	file_command_v1_message_proto_msgTypes[1].OneofWrappers = []any{}
 	type x struct{}
@@ -661,7 +1194,7 @@ func file_command_v1_message_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_command_v1_message_proto_rawDesc), len(file_command_v1_message_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -22,9 +22,6 @@ type RequestLoggerConfigFunc func(logger log.Logger) middleware.RequestLoggerCon
 
 func newRequestLoggerConfig(logger log.Logger) middleware.RequestLoggerConfig {
 	return middleware.RequestLoggerConfig{
-		Skipper: func(c echo.Context) bool {
-			return c.IsWebSocket()
-		},
 		LogValuesFunc:    logValuesFunc(logger),
 		LogLatency:       true,
 		LogRemoteIP:      true,

@@ -29,7 +29,7 @@ type AllConfig struct {
 func (c *AllConfig) Validation() *valgo.Validation {
 	v := c.BaseConfig.Validation()
 	for i, origin := range c.CorsOrigins {
-		v.InRow("corsOrigins", i, valgo.Is(valgoutil.URLValidator(origin, "origin")))
+		v.InRow("corsOrigins", i, valgo.Is(valgoutil.CORSValidator(origin, "origin")))
 	}
 	return v
 }
