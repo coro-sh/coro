@@ -47,7 +47,7 @@ func (c config) validate() *valgo.Validation {
 	v := valgo.New()
 
 	for i, origin := range c.corsOrigins {
-		v.InRow("corsOrigins", i, valgo.Is(valgoutil.URLValidator(origin, "origin")))
+		v.InRow("corsOrigins", i, valgo.Is(valgoutil.CORSValidator(origin, "origin")))
 	}
 
 	return v.Is(
@@ -211,7 +211,6 @@ func cmdRun(ctx context.Context, logger log.Logger, cfg config) error {
 		return fmt.Errorf("start nats: %w", err)
 	}
 	logger.Info(fmt.Sprintf("started nats server on %s", ns.ClientURL()))
-	defer ns.Shutdown()
 
 	brokerURL := wsURL + "/broker"
 	proxy, err := startProxy(ctx, c, logger, ns.ClientURL(), brokerURL, namespace.Id, operator.Id, proxyTkn)

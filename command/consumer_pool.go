@@ -41,6 +41,7 @@ func NewConsumerPool(natsURL string) *ConsumerPool {
 func (c *ConsumerPool) StartConsumer(
 	ctx context.Context,
 	streamName string,
+	startSeq uint64,
 	consumerID string,
 	userJWT string,
 	userSeed string,
@@ -60,8 +61,11 @@ func (c *ConsumerPool) StartConsumer(
 		return fmt.Errorf("create consumer jetstream client: %w", err)
 	}
 
-	jsc, err := js.OrderedConsumer(ctx, streamName, jetstream.OrderedConsumerConfig{
-		DeliverPolicy: jetstream.DeliverAllPolicy,
+	jsc, err := js.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
+		DeliverPolicy: jetstream.DeliverByStartSequencePolicy,
+		AckPolicy:     jetstream.AckNonePolicy,
+		OptStartSeq:   startSeq,
+		MaxDeliver:    1, // safeguard: shouldn't matter since we are using ack none policy
 	})
 	if err != nil {
 		return fmt.Errorf("create jetstream consumer: %w", err)

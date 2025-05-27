@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 	"testing"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/coder/websocket/wsjson"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/internal/testutil"
@@ -44,49 +44,62 @@ func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {
 	require.NoError(t, err)
 	defer srv.Stop(ctx)
 
-	url := fmt.Sprintf("%s/api%s/namespaces/%s/accounts/%s/streams/consume", srv.WebsSocketAddress(), entity.VersionPath, acc.NamespaceID, acc.ID)
+	streamName := testutil.RandName()
+
+	url := fmt.Sprintf("%s/api%s/namespaces/%s/accounts/%s/streams/%s/consume", srv.WebsSocketAddress(), entity.VersionPath, acc.NamespaceID, acc.ID, streamName)
 	ws, _, err := websocket.Dial(ctx, url, &websocket.DialOptions{
 		HTTPClient:   http.DefaultClient,
 		Subprotocols: []string{streamWebSocketSubprotocol},
 	})
 	require.NoError(t, err)
-	require.Equal(t, int64(1), handler.NumConnections())
+	require.Eventually(t, func() bool {
+		return int64(1) == handler.NumConnections()
+	}, 100*time.Millisecond, 5*time.Millisecond)
 
-	startReq := StartStreamConsumerRequest{
-		AccountID: acc.ID.String(),
-		Stream:    testutil.RandName(),
+	// first reply will have empty data to indicate consumer has started
+	pubMsgCh <- &commandv1.ReplyMessage{
+		Id:    NewMessageID().String(),
+		Inbox: testutil.RandName(),
+		Data:  nil,
 	}
-	err = wsjson.Write(ctx, ws, startReq)
-	require.NoError(t, err)
 
-	wantResps := make(chan []byte, numMsgs)
+	wantConsumerMsgs := make(chan *commandv1.StreamConsumerMessage, numMsgs)
 	go func() {
 		for i := 0; i < numMsgs; i++ {
-			data := []byte(strconv.Itoa(i))
-			wantResps <- data
+			streamSeq := uint64(i + 1)
+			cmsg := &commandv1.StreamConsumerMessage{
+				StreamSequence:  streamSeq,
+				MessagesPending: uint64(numMsgs) - streamSeq,
+				Timestamp:       time.Now().Unix(),
+			}
+			data, err := proto.Marshal(cmsg)
+			require.NoError(t, err)
+
 			pubMsgCh <- &commandv1.ReplyMessage{
 				Id:    NewMessageID().String(),
 				Inbox: testutil.RandName(),
 				Data:  data,
 			}
-			time.Sleep(10 * time.Millisecond)
+			wantConsumerMsgs <- cmsg
 		}
 	}()
 
 	for i := 0; i < numMsgs; i++ {
-		var res server.Response[[]byte]
+		var res server.Response[*commandv1.StreamConsumerMessage]
 		err = wsjson.Read(ctx, ws, &res)
 		require.NoError(t, err)
-		want := recvCtx(t, ctx, wantResps)
-		require.Equal(t, string(want), string(res.Data))
+		want := recvCtx(t, ctx, wantConsumerMsgs)
+		require.True(t, proto.Equal(want, res.Data))
 	}
 
-	assert.Len(t, wantResps, 0) // no more expected messages
+	assert.Len(t, wantConsumerMsgs, 0) // no more expected messages
 
 	err = ws.Close(websocket.StatusNormalClosure, "")
 	require.NoError(t, err)
 
 	// wait for websocket closed on the server side
 	time.Sleep(5 * time.Millisecond)
-	require.Equal(t, int64(0), handler.NumConnections())
+	require.Eventually(t, func() bool {
+		return int64(0) == handler.NumConnections()
+	}, 100*time.Millisecond, 5*time.Millisecond)
 }

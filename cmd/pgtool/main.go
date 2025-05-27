@@ -253,6 +253,6 @@ func exitOnInvalidFlags(c *cli.Context, v *valgo.Validation) {
 		fmt.Fprintf(os.Stderr, "  %s: %s\n", verr.Name(), strings.Join(verr.Messages(), ","))
 	}
 
-	fmt.Fprintln(os.Stdout)
+	fmt.Fprintln(os.Stdout) //nolint:errcheck
 	cli.ShowAppHelpAndExit(c, 1)
 }

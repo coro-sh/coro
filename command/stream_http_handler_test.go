@@ -18,24 +18,21 @@ import (
 )
 
 func TestStreamHTTPHandler_ListStreams(t *testing.T) {
-	ctx := t.Context()
-
 	now := time.Now()
-
 	want := []StreamResponse{
 		{
 			Name:          "stream_1",
 			Subjects:      []string{"subject_foo", "subject_bar"},
 			MessageCount:  100,
 			ConsumerCount: 5,
-			CreateTime:    now.UnixMilli(),
+			CreateTime:    now.Unix(),
 		},
 		{
 			Name:          "stream_2",
 			Subjects:      []string{"subject_lorem", "subject_ipsum"},
 			MessageCount:  1000,
 			ConsumerCount: 50,
-			CreateTime:    now.UnixMilli(),
+			CreateTime:    now.Unix(),
 		},
 	}
 
@@ -53,7 +50,7 @@ func TestStreamHTTPHandler_ListStreams(t *testing.T) {
 	op, err := entity.NewOperator(testutil.RandName(), entity.NewID[entity.NamespaceID]())
 	require.NoError(t, err)
 	acc, err := entity.NewAccount(testutil.RandName(), op)
-	err = entityStore.CreateAccount(ctx, acc)
+	err = entityStore.CreateAccount(t.Context(), acc)
 	require.NoError(t, err)
 
 	url := fmt.Sprintf("%s%s%s/namespaces/%s/accounts/%s/streams", srv.Address(), server.APIPath, entity.VersionPath, op.NamespaceID, acc.ID)
@@ -62,6 +59,51 @@ func TestStreamHTTPHandler_ListStreams(t *testing.T) {
 	got := res.Data
 	assert.Equal(t, want, got)
 	assert.Nil(t, res.NextPageCursor)
+}
+
+func TestStreamHTTPHandler_FetchStreamMessages(t *testing.T) {
+	srv, entityStore := newStreamHTTPServer(t, nil, nil)
+
+	op, err := entity.NewOperator(testutil.RandName(), entity.NewID[entity.NamespaceID]())
+	require.NoError(t, err)
+	acc, err := entity.NewAccount(testutil.RandName(), op)
+	err = entityStore.CreateAccount(t.Context(), acc)
+	require.NoError(t, err)
+
+	url := fmt.Sprintf(
+		"%s%s%s/namespaces/%s/accounts/%s/streams/fake_stream/messages?start_sequence=1&batch_size=10",
+		srv.Address(), server.APIPath, entity.VersionPath, op.NamespaceID, acc.ID,
+	)
+
+	res := testutil.Get[server.ResponseList[*commandv1.StreamMessage]](t, url)
+	got := res.Data
+	require.NotEmpty(t, res.Data)
+	for _, msg := range got {
+		assert.NotZero(t, msg.StreamSequence)
+		assert.NotZero(t, msg.Timestamp)
+	}
+}
+
+func TestStreamHTTPHandler_GetStreamMessageContent(t *testing.T) {
+	srv, entityStore := newStreamHTTPServer(t, nil, nil)
+
+	op, err := entity.NewOperator(testutil.RandName(), entity.NewID[entity.NamespaceID]())
+	require.NoError(t, err)
+	acc, err := entity.NewAccount(testutil.RandName(), op)
+	err = entityStore.CreateAccount(t.Context(), acc)
+	require.NoError(t, err)
+
+	url := fmt.Sprintf(
+		"%s%s%s/namespaces/%s/accounts/%s/streams/fake_stream/messages/1",
+		srv.Address(), server.APIPath, entity.VersionPath, op.NamespaceID, acc.ID,
+	)
+
+	res := testutil.Get[server.Response[*commandv1.StreamMessageContent]](t, url)
+	got := res.Data
+	require.NotEmpty(t, res.Data)
+	assert.NotZero(t, got.StreamSequence)
+	assert.NotZero(t, got.Timestamp)
+	assert.NotEmpty(t, got.Data)
 }
 
 func newStreamHTTPServer(t *testing.T, streams []*jetstream.StreamInfo, msgs <-chan *commandv1.ReplyMessage) (*server.Server, *entity.Store) {
@@ -94,7 +136,36 @@ func (s *streamerStub) ListStreams(_ context.Context, _ *entity.Account) ([]*jet
 	return s.streams, nil
 }
 
-func (s *streamerStub) ConsumeStream(_ *entity.Account, _ string, handler func(msg *commandv1.ReplyMessage)) (StreamConsumer, error) {
+func (s *streamerStub) GetStream(_ context.Context, _ *entity.Account, streamName string) (*jetstream.StreamInfo, error) {
+	return &jetstream.StreamInfo{
+		Config:  jetstream.StreamConfig{Name: streamName},
+		State:   jetstream.StreamState{Msgs: 100, Consumers: 5},
+		Created: time.Now(),
+	}, nil
+}
+
+func (s *streamerStub) FetchStreamMessages(_ context.Context, _ *entity.Account, _ string, startSeq uint64, batchSize uint32) (*commandv1.StreamMessageBatch, error) {
+	var msgs []*commandv1.StreamMessage
+	for i := 0; i < int(batchSize); i++ {
+		msgs = append(msgs, &commandv1.StreamMessage{
+			StreamSequence: uint64(i) + startSeq,
+			Timestamp:      time.Now().Unix(),
+		})
+	}
+	return &commandv1.StreamMessageBatch{
+		Messages: msgs,
+	}, nil
+}
+
+func (s *streamerStub) GetStreamMessageContent(_ context.Context, _ *entity.Account, _ string, seq uint64) (*commandv1.StreamMessageContent, error) {
+	return &commandv1.StreamMessageContent{
+		StreamSequence: seq,
+		Timestamp:      time.Now().Unix(),
+		Data:           []byte(testutil.RandName()),
+	}, nil
+}
+
+func (s *streamerStub) ConsumeStream(_ *entity.Account, _ string, _ uint64, handler func(msg *commandv1.ReplyMessage)) (StreamConsumer, error) {
 	return newStreamerConsumerStub(s.msgs, handler), nil
 }
 

@@ -92,7 +92,7 @@ func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool) 
 	srv.Register(brokerHandler)
 	srv.Register(command.NewProxyHTTPHandler(opTknIssuer, store, commander))
 	srv.Register(command.NewStreamHTTPHandler(store, commander))
-	srv.Register(command.NewStreamWebSocketHandler(store, commander))
+	srv.Register(command.NewStreamWebSocketHandler(store, commander, command.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
 
 	if withUI {
 		var uiHandler, err = uiserver.AssetsHandler()
@@ -194,7 +194,7 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig)
 		opTknIssuer := tkn.NewOperatorIssuer(opTknRW, tkn.OperatorTokenTypeProxy)
 		srv.Register(command.NewProxyHTTPHandler(opTknIssuer, store, commander))
 		srv.Register(command.NewStreamHTTPHandler(store, commander))
-		srv.Register(command.NewStreamWebSocketHandler(store, commander))
+		srv.Register(command.NewStreamWebSocketHandler(store, commander, command.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
 	}
 
 	srv.Register(entity.NewHTTPHandler(txer, store, entityHandlerOpts...))

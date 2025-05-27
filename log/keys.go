@@ -16,6 +16,10 @@ const (
 	KeyUserID       = "user.id"
 	KeySystemUserID = "system_user.id"
 
+	KeyStreamName             = "stream.name"
+	KeyConsumerStartSequence  = "consumer.start_sequence"
+	KeyConsumerFetchBatchSize = "consumer.fetch_batch_size"
+
 	KeyBrokerMessageID             = "broker_message.id"
 	KeyBrokerMessageReplyInbox     = "broker_message.reply_inbox"
 	KeyBrokerMessageOperation      = "broker_message.operation"
@@ -34,6 +38,10 @@ var HTTPKeys = []string{
 
 	KeyUserID,
 	KeySystemUserID,
+
+	KeyStreamName,
+	KeyConsumerStartSequence,
+	KeyConsumerFetchBatchSize,
 
 	KeyBrokerMessageID,
 	KeyBrokerMessageRequestSubject,

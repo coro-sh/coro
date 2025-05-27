@@ -14,6 +14,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/coro-sh/coro/embedns"
 	"github.com/coro-sh/coro/entity"
@@ -83,8 +84,11 @@ func TestListStreams(t *testing.T) {
 	assertEqualStreamInfo(stream2.CachedInfo(), got[1])
 }
 
-func TestStartConsumer(t *testing.T) {
-	const numMsgs = 10
+func TestFetchStreamMessages(t *testing.T) {
+	const numMsgsInStream = 100
+	const startSeq = uint64(2)
+	const batchSize = uint32(98)
+	startTime := time.Now()
 
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
@@ -108,27 +112,116 @@ func TestStartConsumer(t *testing.T) {
 	_, err = js.CreateOrUpdateStream(ctx, streamCfg)
 	require.NoError(t, err)
 
-	wantMsgs := make([][]byte, numMsgs)
-	for i := 0; i < numMsgs; i++ {
-		msg := []byte("test_msg_" + strconv.Itoa(i))
-		err = nc.Publish("test_subject.foo", msg)
+	for i := 0; i < numMsgsInStream; i++ {
+		err = nc.Publish("test_subject.foo", nil)
 		require.NoError(t, err)
-		wantMsgs[i] = msg
 	}
 
-	gotMsgsCh := make(chan *commandv1.ReplyMessage, numMsgs)
-	consumer, err := h.Commander.ConsumeStream(h.ExistingAccount, streamCfg.Name, func(msg *commandv1.ReplyMessage) {
-		gotMsgsCh <- msg
+	msgBatch, err := h.Commander.FetchStreamMessages(ctx, h.ExistingAccount, streamCfg.Name, startSeq, batchSize)
+	require.NoError(t, err)
+	require.Len(t, msgBatch.Messages, int(batchSize))
+	for i, msg := range msgBatch.Messages {
+		assert.Equal(t, uint64(i)+startSeq, msg.StreamSequence)
+		assert.GreaterOrEqual(t, msg.Timestamp, startTime.Unix())
+	}
+}
+
+func TestGetMessageContent(t *testing.T) {
+	const numMsgsInStream = 3
+	const seq = uint64(2)
+	startTime := time.Now()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+
+	h := NewEndToEndHarness(ctx, t)
+
+	user, err := entity.NewUser(testutil.RandName(), h.ExistingAccount)
+	require.NoError(t, err)
+
+	nc, err := nats.Connect(h.DownstreamNATS.ClientURL(), nats.UserJWTAndSeed(user.JWT(), string(user.NKey().Seed)))
+	require.NoError(t, err)
+	t.Cleanup(nc.Close)
+
+	js, err := jetstream.New(nc)
+	require.NoError(t, err)
+
+	streamCfg := jetstream.StreamConfig{
+		Name:     "test_stream",
+		Subjects: []string{"test_subject.*"},
+	}
+	_, err = js.CreateOrUpdateStream(ctx, streamCfg)
+	require.NoError(t, err)
+
+	wantMsgData := []byte("test_msg_0")
+	for i := 0; i < numMsgsInStream; i++ {
+		msgData := []byte("test_msg_" + strconv.Itoa(i))
+		if uint64(i) == seq-1 {
+			wantMsgData = msgData
+		}
+		err = nc.Publish("test_subject.foo", msgData)
+		require.NoError(t, err)
+	}
+
+	got, err := h.Commander.GetStreamMessageContent(ctx, h.ExistingAccount, streamCfg.Name, seq)
+	require.NoError(t, err)
+	assert.Equal(t, seq, got.StreamSequence)
+	assert.GreaterOrEqual(t, got.Timestamp, startTime.Unix())
+	assert.Equal(t, wantMsgData, got.Data)
+}
+
+func TestStartConsumer(t *testing.T) {
+	const numMsgs = 100
+	startTime := time.Now()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+
+	h := NewEndToEndHarness(ctx, t)
+
+	user, err := entity.NewUser(testutil.RandName(), h.ExistingAccount)
+	require.NoError(t, err)
+
+	nc, err := nats.Connect(h.DownstreamNATS.ClientURL(), nats.UserJWTAndSeed(user.JWT(), string(user.NKey().Seed)))
+	require.NoError(t, err)
+	t.Cleanup(nc.Close)
+
+	js, err := jetstream.New(nc)
+	require.NoError(t, err)
+
+	streamCfg := jetstream.StreamConfig{
+		Name:     "test_stream",
+		Subjects: []string{"test_subject.*"},
+	}
+	_, err = js.CreateOrUpdateStream(ctx, streamCfg)
+	require.NoError(t, err)
+
+	for i := 0; i < numMsgs; i++ {
+		err = nc.Publish("test_subject.foo", nil)
+		require.NoError(t, err)
+	}
+
+	repliesCh := make(chan *commandv1.ReplyMessage, numMsgs)
+	consumer, err := h.Commander.ConsumeStream(h.ExistingAccount, streamCfg.Name, 1, func(msg *commandv1.ReplyMessage) {
+		repliesCh <- msg
 	})
 	require.NoError(t, err)
 
-	got := recvCtx(t, ctx, gotMsgsCh).Data
-	require.Empty(t, got) // empty first reply indicates consumer started
+	// empty first reply indicates consumer started
+	reply := recvCtx(t, ctx, repliesCh)
+	require.Nil(t, reply.Error)
+	require.Empty(t, reply.Data)
 
 	for i := 0; i < numMsgs; i++ {
-		want := wantMsgs[i]
-		got = recvCtx(t, ctx, gotMsgsCh).Data
-		require.Equal(t, want, got)
+		reply = recvCtx(t, ctx, repliesCh)
+		got := &commandv1.StreamConsumerMessage{}
+		err = proto.Unmarshal(reply.Data, got)
+		require.NoError(t, err)
+
+		wantSeq := uint64(i) + 1
+		assert.Equal(t, wantSeq, got.StreamSequence)
+		assert.GreaterOrEqual(t, got.Timestamp, startTime.Unix())
+		assert.Equal(t, uint64(numMsgs)-wantSeq, got.MessagesPending)
 	}
 
 	err = consumer.Stop(ctx)
@@ -163,7 +256,7 @@ func TestConsumerHeartbeat(t *testing.T) {
 	require.NoError(t, err)
 
 	gotRepliesCh := make(chan *commandv1.ReplyMessage, 1)
-	consumer, err := h.Commander.ConsumeStream(h.ExistingAccount, streamCfg.Name, func(msg *commandv1.ReplyMessage) {
+	consumer, err := h.Commander.ConsumeStream(h.ExistingAccount, streamCfg.Name, 1, func(msg *commandv1.ReplyMessage) {
 		gotRepliesCh <- msg
 	})
 	require.NoError(t, err)

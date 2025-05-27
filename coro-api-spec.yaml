@@ -28,6 +28,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     $ref: '#/components/schemas/Namespace'
@@ -131,6 +133,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     $ref: '#/components/schemas/Operator'
@@ -207,6 +211,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     $ref: '#/components/schemas/Operator'
@@ -381,6 +387,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     $ref: '#/components/schemas/Account'
@@ -474,6 +482,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     $ref: '#/components/schemas/Account'
@@ -604,6 +614,9 @@ paths:
           content:
             application/json:
               schema:
+                type: object
+                required:
+                  - data
                 properties:
                   data:
                     $ref: '#/components/schemas/User'
@@ -612,7 +625,7 @@ paths:
           content:
             application/json:
               schema:
-                    $ref: '#/components/schemas/ResponseError'
+                $ref: '#/components/schemas/ResponseError'
         '404':
           description: Not Found
           content:
@@ -697,6 +710,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     $ref: '#/components/schemas/User'
@@ -741,6 +756,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     $ref: '#/components/schemas/User'
@@ -949,9 +966,222 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     $ref: '#/components/schemas/OperatorNATSStatus'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+  
+  ####################################
+  # JetStream endpoints
+  ####################################
+  /namespaces/{namespace_id}/accounts/{account_id}/streams:
+    get:
+      summary: List JetStream streams
+      operationId: listStreams
+      tags:
+        - Accounts
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of streams
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Stream'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+  /namespaces/{namespace_id}/accounts/{account_id}/streams/{stream_name}:
+    get:
+      summary: Get JetStream stream
+      operationId: getStream
+      tags:
+        - Accounts
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream_name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A stream
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Stream'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+  /namespaces/{namespace_id}/accounts/{account_id}/streams/{stream_name}/messages:
+    get:
+      summary: Fetch JetStream stream messages
+      operationId: fetchStreamMessages
+      tags:
+        - Accounts
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream_name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: start_sequence
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: uint64
+            default: 1
+          description: The sequence number to start reading messages from.
+        - name: batch_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: uint32
+            maximum: 1000
+            default: 100
+          description: The number of messages to fetch.
+      responses:
+        '200':
+          description: A list of stream messages
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StreamMessage'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+  /namespaces/{namespace_id}/accounts/{account_id}/streams/{stream_name}/messages/{stream_sequence}:
+    get:
+      summary: Get JetStream stream message content
+      operationId: getStreamMessageContent
+      tags:
+        - Accounts
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream_name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream_sequence
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: uint64
+          description: The stream sequence number of the message.
+      responses:
+        '200':
+          description: The message and its content.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StreamMessageContent'
         '400':
           description: Bad Request
           content:
@@ -1257,3 +1487,64 @@ components:
         active:
           type: boolean
           description: Indicates if the issued JWT is currently active.
+
+    Stream:
+      required:
+        - name
+        - subjects
+        - message_count
+        - consumer_count
+        - create_time
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the stream
+        subjects:
+          type: array
+          description: Stream subjects
+          items:
+            type: string
+        message_count:
+          type: integer
+          description: Number of messages published
+        consumer_count:
+          type: string
+          description: Number of consumers
+        create_time:
+          type: integer
+          description: Unix milli timestamp of when the stream was created
+      description: JetStream stream
+
+    StreamMessage:
+      required:
+        - stream_sequence
+        - timestamp
+      type: object
+      properties:
+        stream_sequence:
+          type: string
+          description: Stream sequence number of the message
+        timestamp:
+          type: integer
+          description: Time that the message was originally sent on the stream
+      description: JetStream stream message
+
+    StreamMessageContent:
+      required:
+        - stream_sequence
+        - timestamp
+        - data
+      type: object
+      properties:
+        stream_sequence:
+          type: string
+          description: Stream sequence number of the message
+        timestamp:
+          type: integer
+          description: Time that the message was originally sent on the stream
+        data:
+          type: string
+          format: byte
+          description: Content of the message
+      description: JetStream stream message content

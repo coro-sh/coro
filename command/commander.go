@@ -23,7 +23,10 @@ import (
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 )
 
-const accClaimsUpdateSubjectFormat = "$SYS.REQ.ACCOUNT.%s.CLAIMS.UPDATE"
+const (
+	accClaimsUpdateSubjectFormat        = "$SYS.REQ.ACCOUNT.%s.CLAIMS.UPDATE"
+	defaultFetchStreamMessagesBatchSize = 100
+)
 
 // CommanderOption configures a Commander.
 type CommanderOption func() (nats.Option, error)
@@ -115,13 +118,13 @@ func NewCommander(brokerNatsURL string, brokerSysUser *entity.User, opts ...Comm
 }
 
 // NotifyAccountClaimsUpdate sends a notification about an account claims update.
-func (p *Commander) NotifyAccountClaimsUpdate(ctx context.Context, account *entity.Account) error {
+func (c *Commander) NotifyAccountClaimsUpdate(ctx context.Context, account *entity.Account) error {
 	claims, err := account.Claims()
 	if err != nil {
 		return err
 	}
 	subject := fmt.Sprintf(accClaimsUpdateSubjectFormat, claims.Subject)
-	reply, err := p.request(ctx, account.OperatorID, subject, []byte(account.JWT))
+	reply, err := c.request(ctx, account.OperatorID, subject, []byte(account.JWT))
 	if err != nil {
 		return err
 	}
@@ -130,8 +133,8 @@ func (p *Commander) NotifyAccountClaimsUpdate(ctx context.Context, account *enti
 }
 
 // ListStreams lists all JetStream streams.
-func (p *Commander) ListStreams(ctx context.Context, account *entity.Account) ([]*jetstream.StreamInfo, error) {
-	result, err, _ := p.sf.Do(account.ID.String(), func() (any, error) {
+func (c *Commander) ListStreams(ctx context.Context, account *entity.Account) ([]*jetstream.StreamInfo, error) {
+	result, err, _ := c.sf.Do(account.ID.String(), func() (any, error) {
 		user, err := entity.NewUser(fmt.Sprintf("[%s] 'list streams' proxy user", constants.AppNameUpper), account)
 		if err != nil {
 			return nil, fmt.Errorf("create user for command: %w", err)
@@ -150,7 +153,7 @@ func (p *Commander) ListStreams(ctx context.Context, account *entity.Account) ([
 				},
 			},
 		}
-		replyData, err := command(ctx, p.nc, account.OperatorID, msg)
+		replyData, err := command(ctx, c.nc, account.OperatorID, msg)
 		if err != nil {
 			return nil, err
 		}
@@ -159,7 +162,6 @@ func (p *Commander) ListStreams(ctx context.Context, account *entity.Account) ([
 		if err = proto.Unmarshal(replyData, reply); err != nil {
 			return nil, fmt.Errorf("unmarshal reply message: %w", err)
 		}
-
 		if reply.Error != nil {
 			return nil, fmt.Errorf("error returned in reply message: %s", *reply.Error)
 		}
@@ -172,6 +174,160 @@ func (p *Commander) ListStreams(ctx context.Context, account *entity.Account) ([
 	return result.([]*jetstream.StreamInfo), nil
 }
 
+// GetStream gets a JetStream streams.
+func (c *Commander) GetStream(ctx context.Context, account *entity.Account, streamName string) (*jetstream.StreamInfo, error) {
+	sfKey := account.ID.String() + "." + streamName
+	result, err, _ := c.sf.Do(sfKey, func() (any, error) {
+		user, err := entity.NewUser(fmt.Sprintf("[%s] 'get stream' proxy user", constants.AppNameUpper), account)
+		if err != nil {
+			return nil, fmt.Errorf("create user for command: %w", err)
+		}
+		// TODO: update user claims to give least privilege permissions for the operation
+
+		msg := &commandv1.PublishMessage{
+			Id:                NewMessageID().String(),
+			CommandReplyInbox: nats.NewInbox(),
+			Command: &commandv1.PublishMessage_GetStream{
+				GetStream: &commandv1.PublishMessage_CommandGetStream{
+					StreamName: streamName,
+					UserCreds: &commandv1.Credentials{
+						Jwt:  user.JWT(),
+						Seed: string(user.NKey().Seed),
+					},
+				},
+			},
+		}
+		replyData, err := command(ctx, c.nc, account.OperatorID, msg)
+		if err != nil {
+			return nil, err
+		}
+
+		reply := &commandv1.ReplyMessage{}
+		if err = proto.Unmarshal(replyData, reply); err != nil {
+			return nil, fmt.Errorf("unmarshal reply message: %w", err)
+		}
+		if reply.Error != nil {
+			return nil, fmt.Errorf("error returned in reply message: %s", *reply.Error)
+		}
+
+		return unmarshalJSON[*jetstream.StreamInfo](reply.Data)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*jetstream.StreamInfo), nil
+}
+
+// FetchStreamMessages fetches a batch of messages that are currently available
+// in the stream. Does not wait for new messages to arrive, even if batch size
+// is not met.
+func (c *Commander) FetchStreamMessages(
+	ctx context.Context,
+	account *entity.Account,
+	streamName string,
+	startSeq uint64,
+	batchSize uint32,
+) (*commandv1.StreamMessageBatch, error) {
+	user, err := entity.NewUser(fmt.Sprintf("[%s] 'get stream' proxy user", constants.AppNameUpper), account)
+	if err != nil {
+		return nil, fmt.Errorf("create user for command: %w", err)
+	}
+	// TODO: update user claims to give least privilege permissions for the operation
+
+	if startSeq == 0 {
+		startSeq = 1
+	}
+	if batchSize == 0 {
+		batchSize = defaultFetchStreamMessagesBatchSize
+	}
+
+	msg := &commandv1.PublishMessage{
+		Id:                NewMessageID().String(),
+		CommandReplyInbox: nats.NewInbox(),
+		Command: &commandv1.PublishMessage_FetchStreamMessages{
+			FetchStreamMessages: &commandv1.PublishMessage_CommandFetchStreamMessages{
+				UserCreds: &commandv1.Credentials{
+					Jwt:  user.JWT(),
+					Seed: string(user.NKey().Seed),
+				},
+				StreamName:    streamName,
+				StartSequence: startSeq,
+				BatchSize:     batchSize,
+			},
+		},
+	}
+	replyData, err := command(ctx, c.nc, account.OperatorID, msg)
+	if err != nil {
+		return nil, err
+	}
+
+	reply := &commandv1.ReplyMessage{}
+	if err = proto.Unmarshal(replyData, reply); err != nil {
+		return nil, fmt.Errorf("unmarshal reply message: %w", err)
+	}
+	if reply.Error != nil {
+		return nil, fmt.Errorf("error returned in reply message: %s", *reply.Error)
+	}
+
+	batch := &commandv1.StreamMessageBatch{}
+	if err = proto.Unmarshal(reply.Data, batch); err != nil {
+		return nil, fmt.Errorf("unmarshal reply message data: %w", err)
+	}
+	return batch, nil
+}
+
+// GetStreamMessageContent gets the content of a message that is currently
+// available in the stream.
+func (c *Commander) GetStreamMessageContent(
+	ctx context.Context,
+	account *entity.Account,
+	streamName string,
+	seq uint64,
+) (*commandv1.StreamMessageContent, error) {
+	user, err := entity.NewUser(fmt.Sprintf("[%s] 'get stream' proxy user", constants.AppNameUpper), account)
+	if err != nil {
+		return nil, fmt.Errorf("create user for command: %w", err)
+	}
+	// TODO: update user claims to give least privilege permissions for the operation
+
+	if seq == 0 {
+		return nil, errors.New("sequence number must be greater than 0")
+	}
+
+	msg := &commandv1.PublishMessage{
+		Id:                NewMessageID().String(),
+		CommandReplyInbox: nats.NewInbox(),
+		Command: &commandv1.PublishMessage_GetStreamMessageContent{
+			GetStreamMessageContent: &commandv1.PublishMessage_CommandGetStreamMessageContent{
+				UserCreds: &commandv1.Credentials{
+					Jwt:  user.JWT(),
+					Seed: string(user.NKey().Seed),
+				},
+				StreamName: streamName,
+				Sequence:   seq,
+			},
+		},
+	}
+	replyData, err := command(ctx, c.nc, account.OperatorID, msg)
+	if err != nil {
+		return nil, err
+	}
+
+	reply := &commandv1.ReplyMessage{}
+	if err = proto.Unmarshal(replyData, reply); err != nil {
+		return nil, fmt.Errorf("unmarshal reply message: %w", err)
+	}
+	if reply.Error != nil {
+		return nil, fmt.Errorf("error returned in reply message: %s", *reply.Error)
+	}
+
+	streamMsg := &commandv1.StreamMessageContent{}
+	if err = proto.Unmarshal(reply.Data, streamMsg); err != nil {
+		return nil, fmt.Errorf("unmarshal reply message data: %w", err)
+	}
+	return streamMsg, nil
+}
+
 type StreamConsumer interface {
 	ID() string
 	SendHeartbeat(ctx context.Context) error
@@ -179,9 +335,10 @@ type StreamConsumer interface {
 }
 
 // ConsumeStream starts an ephemeral consumer on the specified JetStream stream.
-func (p *Commander) ConsumeStream(
+func (c *Commander) ConsumeStream(
 	account *entity.Account,
 	streamName string,
+	startSeq uint64,
 	handler func(msg *commandv1.ReplyMessage),
 ) (StreamConsumer, error) {
 	user, err := entity.NewUser(fmt.Sprintf("[%s] 'consume stream' proxy user", constants.AppNameUpper), account)
@@ -189,8 +346,8 @@ func (p *Commander) ConsumeStream(
 		return nil, fmt.Errorf("create user for command: %w", err)
 	}
 	// TODO: update user claims to give least privilege permissions for the operation
-	consumer := newStreamConsumer(p.nc, account.OperatorID, user, streamName)
-	if err = consumer.Start(handler); err != nil {
+	consumer := newStreamConsumer(c.nc, account.OperatorID, user, streamName)
+	if err = consumer.Start(startSeq, handler); err != nil {
 		return nil, fmt.Errorf("start stream consumer: %w", err)
 	}
 	return consumer, nil
@@ -198,9 +355,9 @@ func (p *Commander) ConsumeStream(
 
 // Ping checks if the Operator is subscribed to the Broker by sending a ping
 // and waiting for a pong reply. Returns true if successful or false if not.
-func (p *Commander) Ping(ctx context.Context, operatorID entity.OperatorID) (entity.OperatorNATSStatus, error) {
-	result, err, _ := p.sf.Do(operatorID.String(), func() (any, error) {
-		brokerPingReplyMsg, err := p.nc.RequestWithContext(ctx, sysServerPingSubject, nil)
+func (c *Commander) Ping(ctx context.Context, operatorID entity.OperatorID) (entity.OperatorNATSStatus, error) {
+	result, err, _ := c.sf.Do(operatorID.String(), func() (any, error) {
+		brokerPingReplyMsg, err := c.nc.RequestWithContext(ctx, sysServerPingSubject, nil)
 		if err != nil {
 			return entity.OperatorNATSStatus{}, err
 		}
@@ -211,8 +368,8 @@ func (p *Commander) Ping(ctx context.Context, operatorID entity.OperatorID) (ent
 
 		numNodes := brokerPingReply.Statsz.ActiveServers
 
-		pingReplyInbox := p.nc.NewInbox()
-		sub, err := p.nc.SubscribeSync(pingReplyInbox)
+		pingReplyInbox := c.nc.NewInbox()
+		sub, err := c.nc.SubscribeSync(pingReplyInbox)
 		if err != nil {
 			return entity.OperatorNATSStatus{}, fmt.Errorf("subscribe ping operator reply inbox: %w", err)
 		}
@@ -220,7 +377,7 @@ func (p *Commander) Ping(ctx context.Context, operatorID entity.OperatorID) (ent
 
 		subject := getPingOperatorSubject(operatorID)
 
-		if err = p.nc.PublishRequest(subject, pingReplyInbox, nil); err != nil {
+		if err = c.nc.PublishRequest(subject, pingReplyInbox, nil); err != nil {
 			return entity.OperatorNATSStatus{}, fmt.Errorf("publish ping operator message: %w", err)
 		}
 
@@ -252,7 +409,7 @@ func (p *Commander) Ping(ctx context.Context, operatorID entity.OperatorID) (ent
 // request publishes a message to the Operator's NATS subject and waits
 // for a reply. A reply is only possible if the Operator is subscribed to the
 // broker, which means this method will error if the Operator is not connected.
-func (p *Commander) request(ctx context.Context, operatorID entity.OperatorID, subject string, data []byte) (*commandv1.ReplyMessage, error) {
+func (c *Commander) request(ctx context.Context, operatorID entity.OperatorID, subject string, data []byte) (*commandv1.ReplyMessage, error) {
 	msg := &commandv1.PublishMessage{
 		Id:                NewMessageID().String(),
 		CommandReplyInbox: nats.NewInbox(),
@@ -264,7 +421,7 @@ func (p *Commander) request(ctx context.Context, operatorID entity.OperatorID, s
 		},
 	}
 
-	replyData, err := command(ctx, p.nc, operatorID, msg)
+	replyData, err := command(ctx, c.nc, operatorID, msg)
 	if err != nil {
 		return nil, err
 	}

@@ -1111,7 +1111,7 @@ func toUpdateUserParams(name string, limits *UserLimits) UpdateUserParams {
 
 func loadUserLimits(userData UserData, claims *jwt.UserClaims) UserLimits {
 	limits := UserLimits{
-		Subscriptions: parseLimit(claims.Limits.Subs),
+		Subscriptions: parseLimit(claims.Subs),
 		PayloadSize:   parseLimit(claims.Limits.Payload),
 	}
 	if userData.JWTDuration != nil {
