@@ -53,7 +53,7 @@ func TestStreamHTTPHandler_ListStreams(t *testing.T) {
 	err = entityStore.CreateAccount(t.Context(), acc)
 	require.NoError(t, err)
 
-	url := fmt.Sprintf("%s%s%s/namespaces/%s/accounts/%s/streams", srv.Address(), server.APIPath, entity.VersionPath, op.NamespaceID, acc.ID)
+	url := fmt.Sprintf("%s%s%s/namespaces/%s/accounts/%s/streams", srv.Address(), server.DefaultPathPrefix, entity.VersionPath, op.NamespaceID, acc.ID)
 
 	res := testutil.Get[server.ResponseList[StreamResponse]](t, url)
 	got := res.Data
@@ -72,7 +72,7 @@ func TestStreamHTTPHandler_FetchStreamMessages(t *testing.T) {
 
 	url := fmt.Sprintf(
 		"%s%s%s/namespaces/%s/accounts/%s/streams/fake_stream/messages?start_sequence=1&batch_size=10",
-		srv.Address(), server.APIPath, entity.VersionPath, op.NamespaceID, acc.ID,
+		srv.Address(), server.DefaultPathPrefix, entity.VersionPath, op.NamespaceID, acc.ID,
 	)
 
 	res := testutil.Get[server.ResponseList[*commandv1.StreamMessage]](t, url)
@@ -95,7 +95,7 @@ func TestStreamHTTPHandler_GetStreamMessageContent(t *testing.T) {
 
 	url := fmt.Sprintf(
 		"%s%s%s/namespaces/%s/accounts/%s/streams/fake_stream/messages/1",
-		srv.Address(), server.APIPath, entity.VersionPath, op.NamespaceID, acc.ID,
+		srv.Address(), server.DefaultPathPrefix, entity.VersionPath, op.NamespaceID, acc.ID,
 	)
 
 	res := testutil.Get[server.Response[*commandv1.StreamMessageContent]](t, url)
