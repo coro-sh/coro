@@ -18,7 +18,7 @@ import (
 
 const (
 	DefaultRequestTimeout = 100 * time.Second
-	APIPath               = "/api"
+	DefaultPathPrefix     = "/api"
 )
 
 // Option optionally configures a Server.
@@ -57,6 +57,15 @@ func WithMiddleware(middlewares ...echo.MiddlewareFunc) Option {
 	}
 }
 
+// WithPathPrefix overrides the path prefix for the server which normally
+// defaults to DefaultPathPrefix.
+func WithPathPrefix(prefix string) Option {
+	return func(opts *options) error {
+		opts.pathPrefix = prefix
+		return nil
+	}
+}
+
 type tlsConfig struct {
 	cert   string
 	key    string
@@ -83,6 +92,7 @@ type options struct {
 	corsOrigins []string
 	middlewares []echo.MiddlewareFunc
 	tlsConfig   *tlsConfig // nil to disable
+	pathPrefix  string
 }
 
 // Server serves an API for managing NATS operators, accounts, and users.
@@ -97,7 +107,8 @@ type Server struct {
 // NewServer creates a new Server with the given options.
 func NewServer(port int, opts ...Option) (*Server, error) {
 	srvOpts := options{
-		logger: log.NewLogger(),
+		logger:     log.NewLogger(),
+		pathPrefix: DefaultPathPrefix,
 	}
 
 	for _, opt := range opts {
@@ -147,7 +158,7 @@ func NewServer(port int, opts ...Option) (*Server, error) {
 		})
 	})
 
-	srv.apiGroup = srv.echo.Group(APIPath)
+	srv.apiGroup = srv.echo.Group(srvOpts.pathPrefix)
 
 	return srv, nil
 }

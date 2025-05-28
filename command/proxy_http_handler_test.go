@@ -35,7 +35,7 @@ func TestHTTPHandler_GenerateToken(t *testing.T) {
 	err = entityStore.CreateOperator(ctx, op)
 	require.NoError(t, err)
 
-	url := fmt.Sprintf("%s%s%s/namespaces/%s/operators/%s/proxy/token", srv.Address(), server.APIPath, entity.VersionPath, op.NamespaceID, op.ID)
+	url := fmt.Sprintf("%s%s%s/namespaces/%s/operators/%s/proxy/token", srv.Address(), server.DefaultPathPrefix, entity.VersionPath, op.NamespaceID, op.ID)
 
 	res := testutil.Post[server.Response[GenerateProxyTokenResponse]](t, url, nil)
 	got := res.Data
@@ -65,7 +65,7 @@ func TestHTTPHandler_GetStatus(t *testing.T) {
 	err = entityStore.CreateOperator(ctx, op)
 	require.NoError(t, err)
 
-	url := fmt.Sprintf("%s%s%s/namespaces/%s/operators/%s/proxy/status", srv.Address(), server.APIPath, entity.VersionPath, op.NamespaceID, op.ID)
+	url := fmt.Sprintf("%s%s%s/namespaces/%s/operators/%s/proxy/status", srv.Address(), server.DefaultPathPrefix, entity.VersionPath, op.NamespaceID, op.ID)
 
 	res := testutil.Get[server.Response[GetProxyStatusResponse]](t, url)
 	got := res.Data
