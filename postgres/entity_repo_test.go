@@ -717,7 +717,7 @@ func setupTestDB(t *testing.T) *pgxpool.Pool {
 	pool, err := Dial(ctx, "postgres", "postgres", "localhost:5432", AppDBName)
 	require.NoError(t, err)
 
-	err = migrations.MigrateDatabase(pool)
+	err = MigrateDatabase(pool, migrations.FS)
 	require.NoError(t, err)
 
 	t.Cleanup(func() {

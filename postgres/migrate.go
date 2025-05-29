@@ -1,8 +1,8 @@
-package migrations
+package postgres
 
 import (
-	"embed"
 	"errors"
+	"io/fs"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -12,28 +12,25 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
-//go:embed *.sql
-var fs embed.FS
-
-type options struct {
+type migrationOptions struct {
 	version *uint
 }
 
-type Option func(opts *options)
+type MigrateOption func(opts *migrationOptions)
 
-func WithVersion(version uint) Option {
-	return func(opts *options) {
+func WithMigrationVersion(version uint) MigrateOption {
+	return func(opts *migrationOptions) {
 		opts.version = &version
 	}
 }
 
-func MigrateDatabase(pool *pgxpool.Pool, opts ...Option) error {
-	var mopts options
+func MigrateDatabase(pool *pgxpool.Pool, fsys fs.FS, opts ...MigrateOption) error {
+	var mopts migrationOptions
 	for _, opt := range opts {
 		opt(&mopts)
 	}
 
-	sd, err := iofs.New(fs, ".")
+	sd, err := iofs.New(fsys, ".")
 	if err != nil {
 		return err
 	}
