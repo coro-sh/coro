@@ -63,7 +63,7 @@ func recreateDB(ctx context.Context, cfg config, logger log.Logger) (*pgxpool.Po
 	}
 
 	logger.Info("migrating app database")
-	if err = migrations.MigrateDatabase(pgConn); err != nil {
+	if err = postgres.MigrateDatabase(pgConn, migrations.FS); err != nil {
 		return nil, err
 	}
 

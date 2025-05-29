@@ -14,6 +14,7 @@ import (
 	"github.com/coro-sh/coro/client"
 	"github.com/coro-sh/coro/internal/valgoutil"
 	"github.com/coro-sh/coro/log"
+	"github.com/coro-sh/coro/postgres"
 	"github.com/coro-sh/coro/postgres/migrations"
 )
 
@@ -146,7 +147,7 @@ func cmdRun(ctx context.Context, logger log.Logger, cfg config) error {
 	}
 
 	logger.Info("migrating database")
-	if err = migrations.MigrateDatabase(pg); err != nil {
+	if err = postgres.MigrateDatabase(pg, migrations.FS); err != nil {
 		return err
 	}
 

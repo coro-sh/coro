@@ -178,7 +178,7 @@ func cmdMigrate(ctx context.Context, cfg config, _ *cli.Context) error {
 		return err
 	}
 	defer conn.Close()
-	return migrations.MigrateDatabase(conn)
+	return postgres.MigrateDatabase(conn, migrations.FS)
 }
 
 func cmdMigrateVersion(ctx context.Context, cfg config, c *cli.Context) error {
@@ -194,7 +194,7 @@ func cmdMigrateVersion(ctx context.Context, cfg config, c *cli.Context) error {
 		return err
 	}
 	defer conn.Close()
-	return migrations.MigrateDatabase(conn, migrations.WithVersion(version))
+	return postgres.MigrateDatabase(conn, migrations.FS, postgres.WithMigrationVersion(version))
 }
 
 func cmdInit(ctx context.Context, cfg config, c *cli.Context) error {
