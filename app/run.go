@@ -25,7 +25,7 @@ import (
 	"github.com/coro-sh/coro/tkn"
 )
 
-func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool) error {
+func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool, opts ...server.Option) error {
 	pgDialOps := getPostgresDialOpts(cfg.Postgres)
 	pg, err := postgres.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
 	if err != nil {
@@ -73,6 +73,9 @@ func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool) 
 	if cfg.TLS != nil {
 		srvOpts = append(srvOpts, server.WithTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile, cfg.TLS.CACertFile))
 	}
+	for _, opt := range opts {
+		srvOpts = append(srvOpts, opt)
+	}
 	srv, err := server.NewServer(cfg.Port, srvOpts...)
 	if err != nil {
 		return err
@@ -105,10 +108,13 @@ func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool) 
 	return serve(ctx, srv, logger)
 }
 
-func RunUI(ctx context.Context, logger log.Logger, cfg UIConfig) error {
+func RunUI(ctx context.Context, logger log.Logger, cfg UIConfig, opts ...server.Option) error {
 	srvOpts := []server.Option{server.WithLogger(logger)}
 	if cfg.TLS != nil {
 		srvOpts = append(srvOpts, server.WithTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile, cfg.TLS.CACertFile))
+	}
+	for _, opt := range opts {
+		srvOpts = append(srvOpts, opt)
 	}
 	srv, err := server.NewServer(cfg.Port, srvOpts...)
 	if err != nil {
@@ -129,7 +135,7 @@ func RunUI(ctx context.Context, logger log.Logger, cfg UIConfig) error {
 	return serve(ctx, srv, logger)
 }
 
-func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig) error {
+func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig, opts ...server.Option) error {
 	pgDialOps := getPostgresDialOpts(cfg.Postgres)
 	pg, err := postgres.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
 	if err != nil {
@@ -163,6 +169,9 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig)
 	}
 	if cfg.TLS != nil {
 		srvOpts = append(srvOpts, server.WithTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile, cfg.TLS.CACertFile))
+	}
+	for _, opt := range opts {
+		srvOpts = append(srvOpts, opt)
 	}
 	srv, err := server.NewServer(cfg.Port, srvOpts...)
 	if err != nil {
@@ -202,7 +211,7 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig)
 	return serve(ctx, srv, logger)
 }
 
-func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig) error {
+func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ...server.Option) error {
 	pgDialOps := getPostgresDialOpts(cfg.Postgres)
 	pg, err := postgres.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
 	if err != nil {
@@ -245,7 +254,6 @@ func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig) error {
 	}
 
 	srvOpts := []server.Option{server.WithLogger(logger)}
-
 	if cfg.TLS != nil {
 		srvOpts = append(srvOpts, server.WithTLS(
 			cfg.TLS.CertFile,
@@ -253,7 +261,9 @@ func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig) error {
 			cfg.TLS.CACertFile,
 		))
 	}
-
+	for _, opt := range opts {
+		srvOpts = append(srvOpts, opt)
+	}
 	srv, err := server.NewServer(cfg.Port, srvOpts...)
 	if err != nil {
 		return err
