@@ -78,4 +78,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
+tool (
+	github.com/sqlc-dev/sqlc/cmd/sqlc
+	github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
+)

@@ -100,7 +100,6 @@ type Server struct {
 	hostPort  string
 	echo      *echo.Echo
 	tlsConfig *tlsConfig
-	apiGroup  *echo.Group
 	logger    log.Logger
 }
 
@@ -157,8 +156,6 @@ func NewServer(port int, opts ...Option) (*Server, error) {
 			Status: http.StatusText(http.StatusOK),
 		})
 	})
-
-	srv.apiGroup = srv.echo.Group(srvOpts.pathPrefix)
 
 	return srv, nil
 }
@@ -259,8 +256,8 @@ type Handler interface {
 	Register(g *echo.Group)
 }
 
-func (s *Server) Register(h Handler) {
-	h.Register(s.apiGroup)
+func (s *Server) Register(pathPrefix string, h Handler) {
+	h.Register(s.echo.Group(pathPrefix))
 }
 
 func (s *Server) Add(method string, path string, handler echo.HandlerFunc) {
