@@ -7,7 +7,7 @@ import (
 
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/internal/testutil"
+	"github.com/coro-sh/coro/testutil"
 )
 
 var errFakeNotFound = errtag.NewTagged[errtag.NotFound]("not found")

@@ -10,8 +10,8 @@ import (
 	"github.com/cohesivestack/valgo"
 	"gopkg.in/yaml.v3"
 
-	"github.com/coro-sh/coro/internal/valgoutil"
 	"github.com/coro-sh/coro/log"
+	"github.com/coro-sh/coro/valgoutil"
 )
 
 const (

@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/coro-sh/coro/internal/constants"
-	"github.com/coro-sh/coro/internal/testutil"
+	"github.com/coro-sh/coro/constants"
+	"github.com/coro-sh/coro/testutil"
 )
 
 func TestNewUser(t *testing.T) {

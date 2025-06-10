@@ -41,9 +41,8 @@ func NewProxyHTTPHandler(iss *tkn.OperatorIssuer, operators OperatorReader, ping
 }
 
 func (h *ProxyHTTPHandler) Register(g *echo.Group) {
-	v1 := g.Group(entity.VersionPath)
-	v1.POST(fmt.Sprintf("/namespaces/:%s/operators/:%s/proxy/token", entity.PathParamNamespaceID, entity.PathParamOperatorID), h.GenerateProxyToken)
-	v1.GET(fmt.Sprintf("/namespaces/:%s/operators/:%s/proxy/status", entity.PathParamNamespaceID, entity.PathParamOperatorID), h.GetProxyStatus)
+	g.POST(fmt.Sprintf("/namespaces/:%s/operators/:%s/proxy/token", entity.PathParamNamespaceID, entity.PathParamOperatorID), h.GenerateProxyToken)
+	g.GET(fmt.Sprintf("/namespaces/:%s/operators/:%s/proxy/status", entity.PathParamNamespaceID, entity.PathParamOperatorID), h.GetProxyStatus)
 }
 
 // GenerateProxyToken handles POST requests to generate a Proxy token for an

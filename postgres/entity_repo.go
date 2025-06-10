@@ -10,6 +10,7 @@ import (
 
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/errtag"
+	"github.com/coro-sh/coro/paginate"
 	"github.com/coro-sh/coro/postgres/sqlc"
 	"github.com/coro-sh/coro/tx"
 )
@@ -42,6 +43,18 @@ func (r *EntityRepository) ReadNamespace(ctx context.Context, id entity.Namespac
 	return unmarshalNamespace(ns), nil
 }
 
+func (r *EntityRepository) BatchReadNamespaces(ctx context.Context, ids []entity.NamespaceID) ([]*entity.Namespace, error) {
+	idStrs := make([]string, len(ids))
+	for i, id := range ids {
+		idStrs[i] = id.String()
+	}
+	namespaces, err := r.db.BatchReadNamespaces(ctx, idStrs)
+	if err != nil {
+		return nil, tagEntityErr[entity.Namespace](err)
+	}
+	return unmarshalList(namespaces, unmarshalNamespace), nil
+}
+
 func (r *EntityRepository) ReadNamespaceByName(ctx context.Context, name string) (*entity.Namespace, error) {
 	ns, err := r.db.ReadNamespaceByName(ctx, name)
 	if err != nil {
@@ -50,20 +63,19 @@ func (r *EntityRepository) ReadNamespaceByName(ctx context.Context, name string)
 	return unmarshalNamespace(ns), nil
 }
 
-func (r *EntityRepository) ListNamespaces(ctx context.Context, filter entity.PageFilter[entity.NamespaceID]) ([]*entity.Namespace, error) {
+func (r *EntityRepository) ListNamespaces(ctx context.Context, filter paginate.PageFilter[entity.NamespaceID]) ([]*entity.Namespace, error) {
 	params := sqlc.ListNamespacesParams{
 		Size: filter.Size,
 	}
 	if filter.Cursor != nil {
 		params.Cursor = ptr(filter.Cursor.String())
 	}
-
-	ops, err := r.db.ListNamespaces(ctx, params)
+	namespaces, err := r.db.ListNamespaces(ctx, params)
 	if err != nil {
 		return nil, err
 	}
 
-	return unmarshalList(ops, unmarshalNamespace), nil
+	return unmarshalList(namespaces, unmarshalNamespace), nil
 }
 
 func (r *EntityRepository) DeleteNamespace(ctx context.Context, id entity.NamespaceID) error {
@@ -118,7 +130,7 @@ func (r *EntityRepository) ReadOperatorByPublicKey(ctx context.Context, pubKey s
 	return unmarshalOperator(op), nil
 }
 
-func (r *EntityRepository) ListOperators(ctx context.Context, namespaceID entity.NamespaceID, filter entity.PageFilter[entity.OperatorID]) ([]entity.OperatorData, error) {
+func (r *EntityRepository) ListOperators(ctx context.Context, namespaceID entity.NamespaceID, filter paginate.PageFilter[entity.OperatorID]) ([]entity.OperatorData, error) {
 	params := sqlc.ListOperatorsParams{
 		NamespaceID: namespaceID.String(),
 		Size:        filter.Size,
@@ -179,7 +191,7 @@ func (r *EntityRepository) ReadAccountByPublicKey(ctx context.Context, pubKey st
 	return unmarshalAccount(acc), nil
 }
 
-func (r *EntityRepository) ListAccounts(ctx context.Context, operatorID entity.OperatorID, filter entity.PageFilter[entity.AccountID]) ([]entity.AccountData, error) {
+func (r *EntityRepository) ListAccounts(ctx context.Context, operatorID entity.OperatorID, filter paginate.PageFilter[entity.AccountID]) ([]entity.AccountData, error) {
 	params := sqlc.ListAccountsParams{
 		OperatorID: operatorID.String(),
 		Size:       filter.Size,
@@ -249,7 +261,7 @@ func (r *EntityRepository) ReadUserByName(ctx context.Context, operatorID entity
 	return unmarshalUser(usr), nil
 }
 
-func (r *EntityRepository) ListUsers(ctx context.Context, accountID entity.AccountID, filter entity.PageFilter[entity.UserID]) ([]entity.UserData, error) {
+func (r *EntityRepository) ListUsers(ctx context.Context, accountID entity.AccountID, filter paginate.PageFilter[entity.UserID]) ([]entity.UserData, error) {
 	params := sqlc.ListUsersParams{
 		AccountID: accountID.String(),
 		Size:      filter.Size,
@@ -282,7 +294,7 @@ func (r *EntityRepository) CreateUserJWTIssuance(ctx context.Context, userID ent
 	})
 }
 
-func (r *EntityRepository) ListUserJWTIssuances(ctx context.Context, userID entity.UserID, filter entity.PageFilter[int64]) ([]entity.UserJWTIssuance, error) {
+func (r *EntityRepository) ListUserJWTIssuances(ctx context.Context, userID entity.UserID, filter paginate.PageFilter[int64]) ([]entity.UserJWTIssuance, error) {
 	issuances, err := r.db.ListUserJWTIssuances(ctx, sqlc.ListUserJWTIssuancesParams{
 		UserID: userID.String(),
 		Cursor: filter.Cursor,

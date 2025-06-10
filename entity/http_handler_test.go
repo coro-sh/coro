@@ -16,8 +16,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/internal/testutil"
+	"github.com/coro-sh/coro/paginate"
 	"github.com/coro-sh/coro/server"
+	"github.com/coro-sh/coro/testutil"
 )
 
 func TestServer_CreateNamespace(t *testing.T) {
@@ -69,13 +70,13 @@ func TestHTTPHandler_ListNamespaces(t *testing.T) {
 	}
 
 	// Page 1
-	url := fmt.Sprintf("%s?%s=%d", fixture.NamespacesURL(), pageSizeQueryParam, pageSize)
+	url := fmt.Sprintf("%s?%s=%d", fixture.NamespacesURL(), paginate.PageSizeQueryParam, pageSize)
 	res := testutil.Get[server.ResponseList[NamespaceResponse]](t, url)
 	assert.Equal(t, wantResps[:pageSize], res.Data)
 	assert.NotEmpty(t, res.NextPageCursor)
 
 	// Page 2
-	url = fmt.Sprintf("%s&%s=%s", url, pageCursorQueryParam, *res.NextPageCursor)
+	url = fmt.Sprintf("%s&%s=%s", url, paginate.PageCursorQueryParam, *res.NextPageCursor)
 	res = testutil.Get[server.ResponseList[NamespaceResponse]](t, url)
 	assert.Equal(t, wantResps[pageSize:], res.Data)
 	assert.Nil(t, res.NextPageCursor)
@@ -172,13 +173,13 @@ func TestHTTPHandler_ListOperators(t *testing.T) {
 	}
 
 	// Page 1
-	url := fmt.Sprintf("%s?%s=%d", fixture.OperatorsURL(nsID), pageSizeQueryParam, pageSize)
+	url := fmt.Sprintf("%s?%s=%d", fixture.OperatorsURL(nsID), paginate.PageSizeQueryParam, pageSize)
 	res := testutil.Get[server.ResponseList[OperatorResponse]](t, url)
 	assert.Equal(t, wantResps[:pageSize], res.Data)
 	assert.NotEmpty(t, res.NextPageCursor)
 
 	// Page 2
-	url = fmt.Sprintf("%s&%s=%s", url, pageCursorQueryParam, *res.NextPageCursor)
+	url = fmt.Sprintf("%s&%s=%s", url, paginate.PageCursorQueryParam, *res.NextPageCursor)
 	res = testutil.Get[server.ResponseList[OperatorResponse]](t, url)
 	assert.Equal(t, wantResps[pageSize:], res.Data)
 	assert.Nil(t, res.NextPageCursor)
@@ -338,13 +339,13 @@ func TestHTTPHandler_ListAccounts(t *testing.T) {
 	}
 
 	// Page 1
-	url := fmt.Sprintf("%s?%s=%d", fixture.AccountsURL(op.NamespaceID, op.ID), pageSizeQueryParam, pageSize)
+	url := fmt.Sprintf("%s?%s=%d", fixture.AccountsURL(op.NamespaceID, op.ID), paginate.PageSizeQueryParam, pageSize)
 	res := testutil.Get[server.ResponseList[AccountResponse]](t, url)
 	assert.Equal(t, wantResps[:pageSize], res.Data)
 	assert.NotEmpty(t, res.NextPageCursor)
 
 	// Page 2
-	url = fmt.Sprintf("%s&%s=%s", url, pageCursorQueryParam, *res.NextPageCursor)
+	url = fmt.Sprintf("%s&%s=%s", url, paginate.PageCursorQueryParam, *res.NextPageCursor)
 	res = testutil.Get[server.ResponseList[AccountResponse]](t, url)
 	assert.Equal(t, wantResps[pageSize:], res.Data)
 	assert.Nil(t, res.NextPageCursor)
@@ -598,13 +599,13 @@ func TestHTTPHandler_ListUsers(t *testing.T) {
 	}
 
 	// Page 1
-	url := fmt.Sprintf("%s?%s=%d", fixture.UsersURL(acc.NamespaceID, acc.ID), pageSizeQueryParam, pageSize)
+	url := fmt.Sprintf("%s?%s=%d", fixture.UsersURL(acc.NamespaceID, acc.ID), paginate.PageSizeQueryParam, pageSize)
 	res := testutil.Get[server.ResponseList[UserResponse]](t, url)
 	assert.Equal(t, wantResps[:pageSize], res.Data)
 	assert.NotEmpty(t, res.NextPageCursor)
 
 	// Page 2
-	url = fmt.Sprintf("%s&%s=%s", url, pageCursorQueryParam, *res.NextPageCursor)
+	url = fmt.Sprintf("%s&%s=%s", url, paginate.PageCursorQueryParam, *res.NextPageCursor)
 	res = testutil.Get[server.ResponseList[UserResponse]](t, url)
 	assert.Equal(t, wantResps[pageSize:], res.Data)
 	assert.Nil(t, res.NextPageCursor)

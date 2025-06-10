@@ -19,11 +19,11 @@ import (
 )
 
 const (
-	serverCertFile = "../internal/testutil/testdata/certs/server-cert.pem"
-	serverKeyFile  = "../internal/testutil/testdata/certs/server-key.pem"
-	clientCertFile = "../internal/testutil/testdata/certs/client-cert.pem"
-	clientKeyFile  = "../internal/testutil/testdata/certs/client-key.pem"
-	caCertFile     = "../internal/testutil/testdata/certs/ca-cert.pem"
+	serverCertFile = "../testutil/testdata/certs/server-cert.pem"
+	serverKeyFile  = "../testutil/testdata/certs/server-key.pem"
+	clientCertFile = "../testutil/testdata/certs/client-cert.pem"
+	clientKeyFile  = "../testutil/testdata/certs/client-key.pem"
+	caCertFile     = "../testutil/testdata/certs/ca-cert.pem"
 )
 
 func TestServer_NewServer(t *testing.T) {

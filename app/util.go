@@ -9,17 +9,17 @@ import (
 	natserver "github.com/nats-io/nats-server/v2/server"
 	"go.jetify.com/typeid"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/embedns"
 	"github.com/coro-sh/coro/encrypt"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/internal/constants"
 	"github.com/coro-sh/coro/log"
 	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/tx"
 )
 
-func newEntityStore(txer tx.Txer, rw entity.Repository, encKey *string) (*entity.Store, error) {
+func NewEntityStore(txer tx.Txer, rw entity.Repository, encKey *string) (*entity.Store, error) {
 	var storeOpts []entity.StoreOption
 	if encKey != nil {
 		enc, err := encrypt.NewAES(*encKey)
@@ -31,7 +31,7 @@ func newEntityStore(txer tx.Txer, rw entity.Repository, encKey *string) (*entity
 	return entity.NewStore(txer, rw, storeOpts...), nil
 }
 
-func serve(ctx context.Context, srv *server.Server, logger log.Logger) error {
+func Serve(ctx context.Context, srv *server.Server, logger log.Logger) error {
 	errs := make(chan error)
 
 	logger.Info("starting server", "address", srv.Address())
@@ -58,7 +58,7 @@ func serve(ctx context.Context, srv *server.Server, logger log.Logger) error {
 	}
 }
 
-func initNamespace(ctx context.Context, store *entity.Store, logger log.Logger, name string) (*entity.Namespace, error) {
+func InitNamespace(ctx context.Context, store *entity.Store, logger log.Logger, name string) (*entity.Namespace, error) {
 	ns, err := store.ReadNamespaceByName(ctx, name)
 	if err != nil {
 		if errtag.HasTag[errtag.NotFound](err) {
@@ -81,7 +81,7 @@ func initNamespace(ctx context.Context, store *entity.Store, logger log.Logger, 
 	return ns, nil
 }
 
-func initBrokerNATSEntities(
+func InitBrokerNATSEntities(
 	ctx context.Context,
 	txer tx.Txer,
 	store *entity.Store,
@@ -165,7 +165,7 @@ func initBrokerNATSEntities(
 	return op, sysAcc, sysUser, nil
 }
 
-func startEmbeddedNATS(logger log.Logger, op *entity.Operator, sysAcc *entity.Account, cfg *EmbeddedNATSConfig, tlsConfig *TLSConfig) (*natserver.Server, error) {
+func StartEmbeddedNATS(logger log.Logger, op *entity.Operator, sysAcc *entity.Account, cfg *EmbeddedNATSConfig, tlsConfig *TLSConfig) (*natserver.Server, error) {
 	nodeID, err := typeid.WithPrefix("node")
 	if err != nil {
 		return nil, err

@@ -4,23 +4,19 @@ import (
 	"context"
 	"time"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/encrypt"
-	"github.com/coro-sh/coro/internal/constants"
+	"github.com/coro-sh/coro/paginate"
 	"github.com/coro-sh/coro/tx"
 )
-
-// PageFilter is used to paginate list queries.
-type PageFilter[C comparable] struct {
-	Size   int32
-	Cursor *C
-}
 
 // Repository is the interface for performing CRUD operations on Nkeys,
 // Operators, Accounts, and Users.
 type Repository interface {
 	CreateNamespace(ctx context.Context, namespace *Namespace) error
 	ReadNamespaceByName(ctx context.Context, name string) (*Namespace, error)
-	ListNamespaces(ctx context.Context, filter PageFilter[NamespaceID]) ([]*Namespace, error)
+	BatchReadNamespaces(ctx context.Context, ids []NamespaceID) ([]*Namespace, error)
+	ListNamespaces(ctx context.Context, filter paginate.PageFilter[NamespaceID]) ([]*Namespace, error)
 	DeleteNamespace(ctx context.Context, id NamespaceID) error // must cascade delete
 
 	CreateOperator(ctx context.Context, operator OperatorData) error
@@ -28,25 +24,25 @@ type Repository interface {
 	ReadOperator(ctx context.Context, id OperatorID) (OperatorData, error)
 	ReadOperatorByName(ctx context.Context, name string) (OperatorData, error)
 	ReadOperatorByPublicKey(ctx context.Context, pubKey string) (OperatorData, error)
-	ListOperators(ctx context.Context, namespaceID NamespaceID, filter PageFilter[OperatorID]) ([]OperatorData, error)
+	ListOperators(ctx context.Context, namespaceID NamespaceID, filter paginate.PageFilter[OperatorID]) ([]OperatorData, error)
 	DeleteOperator(ctx context.Context, id OperatorID) error // must cascade delete
 
 	CreateAccount(ctx context.Context, account AccountData) error
 	UpdateAccount(ctx context.Context, account AccountData) error
 	ReadAccount(ctx context.Context, id AccountID) (AccountData, error)
 	ReadAccountByPublicKey(ctx context.Context, pubKey string) (AccountData, error)
-	ListAccounts(ctx context.Context, operatorID OperatorID, filter PageFilter[AccountID]) ([]AccountData, error)
+	ListAccounts(ctx context.Context, operatorID OperatorID, filter paginate.PageFilter[AccountID]) ([]AccountData, error)
 	DeleteAccount(ctx context.Context, id AccountID) error // must cascade delete
 
 	CreateUser(ctx context.Context, user UserData) error
 	UpdateUser(ctx context.Context, user UserData) error
 	ReadUser(ctx context.Context, id UserID) (UserData, error)
 	ReadUserByName(ctx context.Context, operatorID OperatorID, accountID AccountID, name string) (UserData, error)
-	ListUsers(ctx context.Context, accountID AccountID, filter PageFilter[UserID]) ([]UserData, error)
+	ListUsers(ctx context.Context, accountID AccountID, filter paginate.PageFilter[UserID]) ([]UserData, error)
 	DeleteUser(ctx context.Context, id UserID) error // must cascade delete
 
 	CreateUserJWTIssuance(ctx context.Context, userID UserID, iss UserJWTIssuance) error
-	ListUserJWTIssuances(ctx context.Context, userID UserID, filter PageFilter[int64]) ([]UserJWTIssuance, error)
+	ListUserJWTIssuances(ctx context.Context, userID UserID, filter paginate.PageFilter[int64]) ([]UserJWTIssuance, error)
 
 	ReadNkey(ctx context.Context, id string, signingKey bool) (NkeyData, error)
 	CreateNkey(ctx context.Context, nkey NkeyData) error
@@ -96,8 +92,13 @@ func (s *Store) ReadNamespaceByName(ctx context.Context, name string) (*Namespac
 	return s.repo.ReadNamespaceByName(ctx, name)
 }
 
+// BatchReadNamespaces reads a batch of Namespaces by IDs.
+func (s *Store) BatchReadNamespaces(ctx context.Context, ids []NamespaceID) ([]*Namespace, error) {
+	return s.repo.BatchReadNamespaces(ctx, ids)
+}
+
 // ListNamespaces reads a list of Namespaces matching the provided PageFilter.
-func (s *Store) ListNamespaces(ctx context.Context, filter PageFilter[NamespaceID]) ([]*Namespace, error) {
+func (s *Store) ListNamespaces(ctx context.Context, filter paginate.PageFilter[NamespaceID]) ([]*Namespace, error) {
 	return s.repo.ListNamespaces(ctx, filter)
 }
 
@@ -180,7 +181,7 @@ func (s *Store) ReadOperatorByPublicKey(ctx context.Context, pubKey string) (*Op
 
 // ListOperators reads a list of Operators for a specific Namespace, matching the
 // provided PageFilter.
-func (s *Store) ListOperators(ctx context.Context, namespaceID NamespaceID, filter PageFilter[OperatorID]) ([]*Operator, error) {
+func (s *Store) ListOperators(ctx context.Context, namespaceID NamespaceID, filter paginate.PageFilter[OperatorID]) ([]*Operator, error) {
 	data, err := s.repo.ListOperators(ctx, namespaceID, filter)
 	if err != nil {
 		return nil, err
@@ -266,7 +267,7 @@ func (s *Store) ReadAccountByPublicKey(ctx context.Context, pubKey string) (*Acc
 
 // ListAccounts reads a list of Accounts for a specific Operator, matching
 // the provided PageFilter.
-func (s *Store) ListAccounts(ctx context.Context, operatorID OperatorID, filter PageFilter[AccountID]) ([]*Account, error) {
+func (s *Store) ListAccounts(ctx context.Context, operatorID OperatorID, filter paginate.PageFilter[AccountID]) ([]*Account, error) {
 	data, err := s.repo.ListAccounts(ctx, operatorID, filter)
 	if err != nil {
 		return nil, err
@@ -349,7 +350,7 @@ func (s *Store) ReadSystemUser(ctx context.Context, operatorID OperatorID, sysAc
 
 // ListUsers reads a list of Users for a specific Account ID, matching the
 // provided PageFilter.
-func (s *Store) ListUsers(ctx context.Context, accountID AccountID, filter PageFilter[UserID]) ([]*User, error) {
+func (s *Store) ListUsers(ctx context.Context, accountID AccountID, filter paginate.PageFilter[UserID]) ([]*User, error) {
 	data, err := s.repo.ListUsers(ctx, accountID, filter)
 	if err != nil {
 		return nil, err
@@ -395,7 +396,7 @@ func (u UserJWTIssuance) IsActive() bool {
 	return time.Now().Unix() < u.ExpireTime
 }
 
-func (s *Store) ListUserJWTIssuances(ctx context.Context, userID UserID, filter PageFilter[int64]) ([]UserJWTIssuance, error) {
+func (s *Store) ListUserJWTIssuances(ctx context.Context, userID UserID, filter paginate.PageFilter[int64]) ([]UserJWTIssuance, error) {
 	return s.repo.ListUserJWTIssuances(ctx, userID, filter)
 }
 

@@ -18,7 +18,7 @@ const namespaceContextKey = "req_namespace"
 func NamespaceContextMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			if !isNamespacePath(c) {
+			if !IsNamespacePath(c) {
 				return next(c) // skip if path is not scoped to a namespace
 			}
 			nsIDStr := c.Param(PathParamNamespaceID)
@@ -38,7 +38,7 @@ func NamespaceContextMiddleware() echo.MiddlewareFunc {
 func InternalNamespaceMiddleware(internalNamespaceID NamespaceID) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			if !isNamespacePath(c) {
+			if !IsNamespacePath(c) {
 				return next(c) // skip if path is not scoped to a namespace
 			}
 			nsID, err := NamespaceIDFromContext(c)
@@ -62,6 +62,6 @@ func NamespaceIDFromContext(c echo.Context) (NamespaceID, error) {
 	return nsID, nil
 }
 
-func isNamespacePath(c echo.Context) bool {
-	return strings.HasPrefix(c.Path(), fmt.Sprintf("/api%s/namespaces/:%s", VersionPath, PathParamNamespaceID))
+func IsNamespacePath(c echo.Context) bool {
+	return strings.Contains(c.Path(), fmt.Sprintf("/namespaces/:%s", PathParamNamespaceID))
 }

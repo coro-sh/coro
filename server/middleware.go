@@ -13,8 +13,8 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/internal/valgoutil"
 	"github.com/coro-sh/coro/log"
+	"github.com/coro-sh/coro/valgoutil"
 )
 
 // RequestLoggerConfigFunc configures request logging middleware on a Server.

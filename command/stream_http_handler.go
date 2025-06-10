@@ -49,7 +49,7 @@ func NewStreamHTTPHandler(accounts AccountReader, streams StreamReader) *StreamH
 }
 
 func (h *StreamHTTPHandler) Register(g *echo.Group) {
-	account := g.Group(fmt.Sprintf("%s/namespaces/:%s/accounts/:%s", entity.VersionPath, entity.PathParamNamespaceID, entity.PathParamAccountID))
+	account := g.Group(fmt.Sprintf("/namespaces/:%s/accounts/:%s", entity.PathParamNamespaceID, entity.PathParamAccountID))
 	account.GET("/streams", h.ListStreams)
 	account.GET(fmt.Sprintf("/streams/:%s", PathParamStreamName), h.GetStream)
 	account.GET(fmt.Sprintf("/streams/:%s/messages", PathParamStreamName), h.FetchStreamMessages)

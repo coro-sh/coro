@@ -9,7 +9,7 @@ import (
 	"github.com/nats-io/nkeys"
 	"go.jetify.com/typeid"
 
-	"github.com/coro-sh/coro/internal/constants"
+	"github.com/coro-sh/coro/constants"
 )
 
 type accountPrefix struct{}

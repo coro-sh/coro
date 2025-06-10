@@ -10,14 +10,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/encrypt"
-	"github.com/coro-sh/coro/internal/testutil"
 	"github.com/coro-sh/coro/log"
 	"github.com/coro-sh/coro/server"
+	"github.com/coro-sh/coro/testutil"
 )
 
 const (
 	testTimeout                = 5 * time.Second
-	apiPrefix                  = "/api/v1"
 	stubNotifConnectTime int64 = 1738931738
 )
 
@@ -41,7 +40,7 @@ func SetupTestFixture(t *testing.T) *TestFixture {
 		server.WithMiddleware(NamespaceContextMiddleware()),
 	)
 	require.NoError(t, err)
-	srv.Register(NewHTTPHandler(txer, store, WithCommander(new(commanderStub))))
+	srv.Register("", NewHTTPHandler(txer, store, WithCommander(new(commanderStub))))
 
 	go srv.Start()
 	err = srv.WaitHealthy(10, time.Millisecond)
@@ -57,7 +56,7 @@ func SetupTestFixture(t *testing.T) *TestFixture {
 }
 
 func (t *TestFixture) NamespacesURL() string {
-	return t.URLForPath(fmt.Sprintf("%s/namespaces", apiPrefix))
+	return t.URLForPath("/namespaces")
 }
 
 func (t *TestFixture) NamespaceURL(namespaceID NamespaceID) string {
@@ -105,7 +104,7 @@ func (t *TestFixture) UserCredsURL(namespaceID NamespaceID, userID UserID) strin
 }
 
 func (t *TestFixture) OperatorJwtURL(operatorPubKey string) string {
-	return t.URLForPath(fmt.Sprintf("%s/jwt/operators/%s", apiPrefix, operatorPubKey))
+	return t.URLForPath(fmt.Sprintf("/jwt/operators/%s", operatorPubKey))
 }
 
 func (t *TestFixture) AccountJwtURL(operatorPubKey string, accountPubKey string) string {
