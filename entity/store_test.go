@@ -9,7 +9,7 @@ import (
 
 	"github.com/coro-sh/coro/encrypt"
 	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/internal/testutil"
+	"github.com/coro-sh/coro/testutil"
 )
 
 func TestStore_Namespace(t *testing.T) {

@@ -14,9 +14,9 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/internal/testutil"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 	"github.com/coro-sh/coro/server"
+	"github.com/coro-sh/coro/testutil"
 )
 
 func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {
@@ -38,7 +38,7 @@ func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {
 
 	srv, err := server.NewServer(testutil.GetFreePort(t), server.WithMiddleware(entity.NamespaceContextMiddleware()))
 	require.NoError(t, err)
-	srv.Register(handler)
+	srv.Register("", handler)
 	go srv.Start()
 	err = srv.WaitHealthy(10, time.Millisecond)
 	require.NoError(t, err)
@@ -46,7 +46,7 @@ func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {
 
 	streamName := testutil.RandName()
 
-	url := fmt.Sprintf("%s/api%s/namespaces/%s/accounts/%s/streams/%s/consume", srv.WebsSocketAddress(), entity.VersionPath, acc.NamespaceID, acc.ID, streamName)
+	url := fmt.Sprintf("%s/namespaces/%s/accounts/%s/streams/%s/consume", srv.WebsSocketAddress(), acc.NamespaceID, acc.ID, streamName)
 	ws, _, err := websocket.Dial(ctx, url, &websocket.DialOptions{
 		HTTPClient:   http.DefaultClient,
 		Subprotocols: []string{streamWebSocketSubprotocol},

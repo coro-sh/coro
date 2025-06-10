@@ -18,10 +18,12 @@ sqlc-gen:
 
 # Postgres
 
+.PHONY: start-postgres
 start-postgres:
 	docker run --name coro-postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:17
 	go run cmd/pgtool/main.go --user postgres --password postgres init
 
+.PHONY: stop-postgres
 stop-postgres:
 	docker stop coro-postgres && docker rm -f coro-postgres
 

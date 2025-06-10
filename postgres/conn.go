@@ -12,7 +12,7 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/coro-sh/coro/internal/constants"
+	"github.com/coro-sh/coro/constants"
 )
 
 const (

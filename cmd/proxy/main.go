@@ -14,8 +14,8 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/coro-sh/coro/command"
-	"github.com/coro-sh/coro/internal/valgoutil"
 	"github.com/coro-sh/coro/log"
+	"github.com/coro-sh/coro/valgoutil"
 )
 
 func main() {

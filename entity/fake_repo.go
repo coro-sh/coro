@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/internal/testutil"
+	"github.com/coro-sh/coro/paginate"
+	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tx"
 )
 
@@ -77,7 +78,19 @@ func (r *FakeEntityRepository) ReadNamespaceByName(_ context.Context, name strin
 	return ns, nil
 }
 
-func (r *FakeEntityRepository) ListNamespaces(_ context.Context, filter PageFilter[NamespaceID]) ([]*Namespace, error) {
+func (r *FakeEntityRepository) BatchReadNamespaces(_ context.Context, ids []NamespaceID) ([]*Namespace, error) {
+	namespaces := make([]*Namespace, 0, len(ids))
+	for _, id := range ids {
+		ns, ok := r.namespaces.Get(id)
+		if !ok {
+			return nil, errFakeNotFound
+		}
+		namespaces = append(namespaces, ns)
+	}
+	return namespaces, nil
+}
+
+func (r *FakeEntityRepository) ListNamespaces(_ context.Context, filter paginate.PageFilter[NamespaceID]) ([]*Namespace, error) {
 	kvFilter := testutil.PageFilter{
 		Size:   filter.Size,
 		Cursor: filter.Cursor,
@@ -161,7 +174,7 @@ func (r *FakeEntityRepository) DeleteOperator(ctx context.Context, id OperatorID
 	return nil
 }
 
-func (r *FakeEntityRepository) ListOperators(_ context.Context, namespaceID NamespaceID, filter PageFilter[OperatorID]) ([]OperatorData, error) {
+func (r *FakeEntityRepository) ListOperators(_ context.Context, namespaceID NamespaceID, filter paginate.PageFilter[OperatorID]) ([]OperatorData, error) {
 	kvFilter := testutil.PageFilter{
 		Size:   filter.Size,
 		Cursor: filter.Cursor,
@@ -204,7 +217,7 @@ func (r *FakeEntityRepository) ReadAccountByPublicKey(_ context.Context, pubKey 
 	return acc, nil
 }
 
-func (r *FakeEntityRepository) ListAccounts(_ context.Context, operatorID OperatorID, filter PageFilter[AccountID]) ([]AccountData, error) {
+func (r *FakeEntityRepository) ListAccounts(_ context.Context, operatorID OperatorID, filter paginate.PageFilter[AccountID]) ([]AccountData, error) {
 	kvFilter := testutil.PageFilter{
 		Size:   filter.Size,
 		Cursor: filter.Cursor,
@@ -265,7 +278,7 @@ func (r *FakeEntityRepository) ReadUserByName(_ context.Context, operatorID Oper
 	return usr, nil
 }
 
-func (r *FakeEntityRepository) ListUsers(_ context.Context, accountID AccountID, filter PageFilter[UserID]) ([]UserData, error) {
+func (r *FakeEntityRepository) ListUsers(_ context.Context, accountID AccountID, filter paginate.PageFilter[UserID]) ([]UserData, error) {
 	kvFilter := testutil.PageFilter{
 		Size:   filter.Size,
 		Cursor: filter.Cursor,
@@ -301,7 +314,7 @@ func (r *FakeEntityRepository) CreateUserJWTIssuance(_ context.Context, userID U
 	return nil
 }
 
-func (r *FakeEntityRepository) ListUserJWTIssuances(_ context.Context, userID UserID, filter PageFilter[int64]) ([]UserJWTIssuance, error) {
+func (r *FakeEntityRepository) ListUserJWTIssuances(_ context.Context, userID UserID, filter paginate.PageFilter[int64]) ([]UserJWTIssuance, error) {
 	kvFilter := testutil.PageFilter{
 		Size:   filter.Size,
 		Cursor: filter.Cursor,

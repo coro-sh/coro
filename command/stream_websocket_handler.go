@@ -13,8 +13,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/internal/constants"
 	"github.com/coro-sh/coro/log"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 	"github.com/coro-sh/coro/server"
@@ -63,7 +63,7 @@ func NewStreamWebSocketHandler(accounts AccountReader, consumerStarter ConsumerS
 }
 
 func (s *StreamWebSocketHandler) Register(g *echo.Group) {
-	account := g.Group(fmt.Sprintf("%s/namespaces/:%s/accounts/:%s", entity.VersionPath, entity.PathParamNamespaceID, entity.PathParamAccountID))
+	account := g.Group(fmt.Sprintf("/namespaces/:%s/accounts/:%s", entity.PathParamNamespaceID, entity.PathParamAccountID))
 	account.GET(fmt.Sprintf("/streams/:%s/consume", PathParamStreamName), s.HandleConsume)
 }
 

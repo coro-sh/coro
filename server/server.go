@@ -16,10 +16,7 @@ import (
 	"github.com/coro-sh/coro/log"
 )
 
-const (
-	DefaultRequestTimeout = 100 * time.Second
-	DefaultPathPrefix     = "/api"
-)
+const DefaultRequestTimeout = 100 * time.Second
 
 // Option optionally configures a Server.
 type Option func(opts *options) error
@@ -57,15 +54,6 @@ func WithMiddleware(middlewares ...echo.MiddlewareFunc) Option {
 	}
 }
 
-// WithPathPrefix overrides the path prefix for the server which normally
-// defaults to DefaultPathPrefix.
-func WithPathPrefix(prefix string) Option {
-	return func(opts *options) error {
-		opts.pathPrefix = prefix
-		return nil
-	}
-}
-
 type tlsConfig struct {
 	cert   string
 	key    string
@@ -92,7 +80,6 @@ type options struct {
 	corsOrigins []string
 	middlewares []echo.MiddlewareFunc
 	tlsConfig   *tlsConfig // nil to disable
-	pathPrefix  string
 }
 
 // Server serves an API for managing NATS operators, accounts, and users.
@@ -100,15 +87,13 @@ type Server struct {
 	hostPort  string
 	echo      *echo.Echo
 	tlsConfig *tlsConfig
-	apiGroup  *echo.Group
 	logger    log.Logger
 }
 
 // NewServer creates a new Server with the given options.
 func NewServer(port int, opts ...Option) (*Server, error) {
 	srvOpts := options{
-		logger:     log.NewLogger(),
-		pathPrefix: DefaultPathPrefix,
+		logger: log.NewLogger(),
 	}
 
 	for _, opt := range opts {
@@ -133,7 +118,9 @@ func NewServer(port int, opts ...Option) (*Server, error) {
 	srv.echo.HTTPErrorHandler = httpErrorHandlerFunc(srv.logger)
 	if len(srvOpts.corsOrigins) > 0 {
 		srv.echo.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-			AllowOrigins: srvOpts.corsOrigins,
+			AllowOrigins:     srvOpts.corsOrigins,
+			AllowCredentials: true,
+			AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
 		}))
 	}
 
@@ -157,8 +144,6 @@ func NewServer(port int, opts ...Option) (*Server, error) {
 			Status: http.StatusText(http.StatusOK),
 		})
 	})
-
-	srv.apiGroup = srv.echo.Group(srvOpts.pathPrefix)
 
 	return srv, nil
 }
@@ -259,8 +244,8 @@ type Handler interface {
 	Register(g *echo.Group)
 }
 
-func (s *Server) Register(h Handler) {
-	h.Register(s.apiGroup)
+func (s *Server) Register(pathPrefix string, h Handler) {
+	h.Register(s.echo.Group(pathPrefix))
 }
 
 func (s *Server) Add(method string, path string, handler echo.HandlerFunc) {

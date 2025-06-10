@@ -12,6 +12,11 @@ SELECT *
 FROM namespace
 WHERE id = $1;
 
+-- name: BatchReadNamespaces :many
+SELECT *
+FROM namespace
+WHERE id = ANY(sqlc.arg('ids')::text[]);
+
 -- name: ListNamespaces :many
 SELECT *
 FROM namespace

@@ -12,10 +12,10 @@ import (
 
 	"github.com/coro-sh/coro/app"
 	"github.com/coro-sh/coro/client"
-	"github.com/coro-sh/coro/internal/valgoutil"
 	"github.com/coro-sh/coro/log"
 	"github.com/coro-sh/coro/postgres"
 	"github.com/coro-sh/coro/postgres/migrations"
+	"github.com/coro-sh/coro/valgoutil"
 )
 
 const (

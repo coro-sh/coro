@@ -14,8 +14,8 @@ import (
 
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/internal/testutil"
 	"github.com/coro-sh/coro/postgres/migrations"
+	"github.com/coro-sh/coro/testutil"
 )
 
 const timeout = 5 * time.Second
@@ -61,7 +61,7 @@ func TestEntityRepository_ListNamespaces(t *testing.T) {
 	}
 
 	// First page
-	filter := entity.PageFilter[entity.NamespaceID]{Size: pageSize}
+	filter := paginate.PageFilter[entity.NamespaceID]{Size: pageSize}
 	gotPage1, err := repo.ListNamespaces(ctx, filter)
 	require.NoError(t, err)
 	assert.Len(t, gotPage1, int(pageSize))
@@ -196,7 +196,7 @@ func TestEntityRepository_ListOperators(t *testing.T) {
 	}
 
 	// First page
-	filter := entity.PageFilter[entity.OperatorID]{Size: pageSize}
+	filter := paginate.PageFilter[entity.OperatorID]{Size: pageSize}
 	gotPage1, err := repo.ListOperators(ctx, ns.ID, filter)
 	require.NoError(t, err)
 	assert.Len(t, gotPage1, int(pageSize))
@@ -339,7 +339,7 @@ func TestEntityRepository_ListAccounts(t *testing.T) {
 	}
 
 	// First page
-	filter := entity.PageFilter[entity.AccountID]{Size: pageSize}
+	filter := paginate.PageFilter[entity.AccountID]{Size: pageSize}
 	gotPage1, err := repo.ListAccounts(ctx, op.ID, filter)
 	require.NoError(t, err)
 	assert.Len(t, gotPage1, int(pageSize))
@@ -493,7 +493,7 @@ func TestEntityRepository_ListUsers(t *testing.T) {
 	}
 
 	// First page
-	filter := entity.PageFilter[entity.UserID]{Size: pageSize}
+	filter := paginate.PageFilter[entity.UserID]{Size: pageSize}
 	gotPage1, err := repo.ListUsers(ctx, acc.ID, filter)
 	require.NoError(t, err)
 	assert.Len(t, gotPage1, int(pageSize))
@@ -697,7 +697,7 @@ func assertUserDeleted(t *testing.T, repo *EntityRepository, userID entity.UserI
 	_, err := repo.ReadUser(t.Context(), userID)
 	assert.True(t, errtag.HasTag[errtag.NotFound](err))
 	assertNkeysDeleted(t, repo, userID.String())
-	gotUserIss, err := repo.ListUserJWTIssuances(t.Context(), userID, entity.PageFilter[int64]{Size: 1})
+	gotUserIss, err := repo.ListUserJWTIssuances(t.Context(), userID, paginate.PageFilter[int64]{Size: 1})
 	assert.NoError(t, err)
 	assert.Len(t, gotUserIss, 0)
 }

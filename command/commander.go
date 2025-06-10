@@ -17,9 +17,9 @@ import (
 	"golang.org/x/sync/singleflight"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/internal/constants"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 )
 

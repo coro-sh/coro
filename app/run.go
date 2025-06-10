@@ -17,8 +17,8 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/coro-sh/coro/command"
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/internal/constants"
 	"github.com/coro-sh/coro/log"
 	"github.com/coro-sh/coro/postgres"
 	"github.com/coro-sh/coro/server"
@@ -34,25 +34,25 @@ func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool, 
 	defer pg.Close()
 
 	txer := postgres.NewTxer(pg)
-	store, err := newEntityStore(txer, postgres.NewEntityRepository(pg), cfg.EncryptionSecretKey)
+	store, err := NewEntityStore(txer, postgres.NewEntityRepository(pg), cfg.EncryptionSecretKey)
 	if err != nil {
 		return err
 	}
 
-	intNS, err := initNamespace(ctx, store, logger, constants.InternalNamespaceName)
+	intNS, err := InitNamespace(ctx, store, logger, constants.InternalNamespaceName)
 	if err != nil {
 		return err
 	}
-	if _, err = initNamespace(ctx, store, logger, constants.DefaultNamespaceName); err != nil {
+	if _, err = InitNamespace(ctx, store, logger, constants.DefaultNamespaceName); err != nil {
 		return err
 	}
 
-	bOp, bSysAcc, bSysUsr, err := initBrokerNATSEntities(ctx, txer, store, logger, intNS.ID)
+	bOp, bSysAcc, bSysUsr, err := InitBrokerNATSEntities(ctx, txer, store, logger, intNS.ID)
 	if err != nil {
 		return err
 	}
 
-	brokerNats, err := startEmbeddedNATS(logger, bOp, bSysAcc, nil, cfg.TLS)
+	brokerNats, err := StartEmbeddedNATS(logger, bOp, bSysAcc, nil, cfg.TLS)
 	if err != nil {
 		return fmt.Errorf("create broker embedded nats server: %w", err)
 	}
@@ -73,9 +73,7 @@ func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool, 
 	if cfg.TLS != nil {
 		srvOpts = append(srvOpts, server.WithTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile, cfg.TLS.CACertFile))
 	}
-	for _, opt := range opts {
-		srvOpts = append(srvOpts, opt)
-	}
+	srvOpts = append(srvOpts, opts...)
 	srv, err := server.NewServer(cfg.Port, srvOpts...)
 	if err != nil {
 		return err
@@ -91,11 +89,11 @@ func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool, 
 		return fmt.Errorf("dial broker publisher: %w", err)
 	}
 
-	srv.Register(entity.NewHTTPHandler(txer, store, entity.WithCommander(commander)))
-	srv.Register(brokerHandler)
-	srv.Register(command.NewProxyHTTPHandler(opTknIssuer, store, commander))
-	srv.Register(command.NewStreamHTTPHandler(store, commander))
-	srv.Register(command.NewStreamWebSocketHandler(store, commander, command.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
+	srv.Register("/api/v1", entity.NewHTTPHandler(txer, store, entity.WithCommander(commander)))
+	srv.Register("/api/v1", brokerHandler)
+	srv.Register("/api/v1", command.NewProxyHTTPHandler(opTknIssuer, store, commander))
+	srv.Register("/api/v1", command.NewStreamHTTPHandler(store, commander))
+	srv.Register("/api/v1", command.NewStreamWebSocketHandler(store, commander, command.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
 
 	if withUI {
 		var uiHandler, err = uiserver.AssetsHandler()
@@ -105,7 +103,7 @@ func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool, 
 		srv.Add(echo.GET, "/*", uiHandler)
 	}
 
-	return serve(ctx, srv, logger)
+	return Serve(ctx, srv, logger)
 }
 
 func RunUI(ctx context.Context, logger log.Logger, cfg UIConfig, opts ...server.Option) error {
@@ -113,9 +111,7 @@ func RunUI(ctx context.Context, logger log.Logger, cfg UIConfig, opts ...server.
 	if cfg.TLS != nil {
 		srvOpts = append(srvOpts, server.WithTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile, cfg.TLS.CACertFile))
 	}
-	for _, opt := range opts {
-		srvOpts = append(srvOpts, opt)
-	}
+	srvOpts = append(srvOpts, opts...)
 	srv, err := server.NewServer(cfg.Port, srvOpts...)
 	if err != nil {
 		return err
@@ -126,13 +122,13 @@ func RunUI(ctx context.Context, logger log.Logger, cfg UIConfig, opts ...server.
 		return err
 	}
 	srv.Add(echo.GET, "/*", uiHandler)
-	httpClient, err := createHTTPClient(cfg.TLS)
+	httpClient, err := NewHTTPClient(cfg.TLS)
 	if err != nil {
 		return err
 	}
 	srv.Any("/api/*", apiProxyHandler(httpClient, cfg.APIAddress))
 
-	return serve(ctx, srv, logger)
+	return Serve(ctx, srv, logger)
 }
 
 func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig, opts ...server.Option) error {
@@ -144,16 +140,16 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 	defer pg.Close()
 
 	txer := postgres.NewTxer(pg)
-	store, err := newEntityStore(txer, postgres.NewEntityRepository(pg), cfg.EncryptionSecretKey)
+	store, err := NewEntityStore(txer, postgres.NewEntityRepository(pg), cfg.EncryptionSecretKey)
 	if err != nil {
 		return err
 	}
 
-	intNS, err := initNamespace(ctx, store, logger, constants.InternalNamespaceName)
+	intNS, err := InitNamespace(ctx, store, logger, constants.InternalNamespaceName)
 	if err != nil {
 		return err
 	}
-	if _, err = initNamespace(ctx, store, logger, constants.DefaultNamespaceName); err != nil {
+	if _, err = InitNamespace(ctx, store, logger, constants.DefaultNamespaceName); err != nil {
 		return err
 	}
 
@@ -170,9 +166,7 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 	if cfg.TLS != nil {
 		srvOpts = append(srvOpts, server.WithTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile, cfg.TLS.CACertFile))
 	}
-	for _, opt := range opts {
-		srvOpts = append(srvOpts, opt)
-	}
+	srvOpts = append(srvOpts, opts...)
 	srv, err := server.NewServer(cfg.Port, srvOpts...)
 	if err != nil {
 		return err
@@ -180,7 +174,7 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 
 	var entityHandlerOpts []entity.HTTPHandlerOption
 	if cfg.Broker != nil {
-		_, _, bSysUsr, err := initBrokerNATSEntities(ctx, txer, store, logger, intNS.ID)
+		_, _, bSysUsr, err := InitBrokerNATSEntities(ctx, txer, store, logger, intNS.ID)
 		if err != nil {
 			return err
 		}
@@ -201,14 +195,14 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 		entityHandlerOpts = append(entityHandlerOpts, entity.WithCommander(commander))
 		opTknRW := postgres.NewOperatorTokenReadWriter(pg)
 		opTknIssuer := tkn.NewOperatorIssuer(opTknRW, tkn.OperatorTokenTypeProxy)
-		srv.Register(command.NewProxyHTTPHandler(opTknIssuer, store, commander))
-		srv.Register(command.NewStreamHTTPHandler(store, commander))
-		srv.Register(command.NewStreamWebSocketHandler(store, commander, command.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
+		srv.Register("/api/v1", command.NewProxyHTTPHandler(opTknIssuer, store, commander))
+		srv.Register("/api/v1", command.NewStreamHTTPHandler(store, commander))
+		srv.Register("/api/v1", command.NewStreamWebSocketHandler(store, commander, command.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
 	}
 
-	srv.Register(entity.NewHTTPHandler(txer, store, entityHandlerOpts...))
+	srv.Register("/api/v1", entity.NewHTTPHandler(txer, store, entityHandlerOpts...))
 
-	return serve(ctx, srv, logger)
+	return Serve(ctx, srv, logger)
 }
 
 func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ...server.Option) error {
@@ -220,23 +214,23 @@ func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ..
 	defer pg.Close()
 
 	txer := postgres.NewTxer(pg)
-	store, err := newEntityStore(txer, postgres.NewEntityRepository(pg), cfg.EncryptionSecretKey)
+	store, err := NewEntityStore(txer, postgres.NewEntityRepository(pg), cfg.EncryptionSecretKey)
 	if err != nil {
 		return fmt.Errorf("create entity store: %w", err)
 	}
 
-	intNS, err := initNamespace(ctx, store, logger, constants.InternalNamespaceName)
+	intNS, err := InitNamespace(ctx, store, logger, constants.InternalNamespaceName)
 	if err != nil {
 		return err
 	}
-	bOp, bSysAcc, bSysUsr, err := initBrokerNATSEntities(ctx, txer, store, logger, intNS.ID)
+	bOp, bSysAcc, bSysUsr, err := InitBrokerNATSEntities(ctx, txer, store, logger, intNS.ID)
 	if err != nil {
 		return err
 	}
 
 	opTknIssuer := tkn.NewOperatorIssuer(postgres.NewOperatorTokenReadWriter(pg), tkn.OperatorTokenTypeProxy)
 
-	brokerNats, err := startEmbeddedNATS(logger, bOp, bSysAcc, &cfg.EmbeddedNats, cfg.TLS)
+	brokerNats, err := StartEmbeddedNATS(logger, bOp, bSysAcc, &cfg.EmbeddedNats, cfg.TLS)
 	if err != nil {
 		return fmt.Errorf("create broker embedded nats server: %w", err)
 	}
@@ -261,20 +255,18 @@ func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ..
 			cfg.TLS.CACertFile,
 		))
 	}
-	for _, opt := range opts {
-		srvOpts = append(srvOpts, opt)
-	}
+	srvOpts = append(srvOpts, opts...)
 	srv, err := server.NewServer(cfg.Port, srvOpts...)
 	if err != nil {
 		return err
 	}
 
-	srv.Register(handler)
+	srv.Register("/api/v1", handler)
 
-	return serve(ctx, srv, logger)
+	return Serve(ctx, srv, logger)
 }
 
-func createHTTPClient(tlsCfg *TLSConfig) (*http.Client, error) {
+func NewHTTPClient(tlsCfg *TLSConfig) (*http.Client, error) {
 	client := http.DefaultClient
 	client.Timeout = 60 * time.Second
 

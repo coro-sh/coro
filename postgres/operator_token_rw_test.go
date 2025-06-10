@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/coro-sh/coro/internal/testutil"
+	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tkn"
 )
 

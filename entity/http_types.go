@@ -9,16 +9,14 @@ import (
 	"github.com/nats-io/nkeys"
 	"go.jetify.com/typeid"
 
-	"github.com/coro-sh/coro/internal/constants"
+	"github.com/coro-sh/coro/constants"
 )
 
 const (
-	defaultPageSize = maxPageSize
-	maxPageSize     = int32(500)
-	maxNameLength   = 100
-	maxLimit        = math.MaxInt
-	maxSeconds      = int64(time.Hour * time.Duration(290*365*24)) // 290 years
-	noLimit         = -1
+	maxNameLength = 100
+	maxLimit      = math.MaxInt
+	maxSeconds    = int64(time.Hour * time.Duration(290*365*24)) // 290 years
+	noLimit       = -1
 )
 
 type CreateNamespaceRequest struct {

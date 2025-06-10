@@ -18,9 +18,9 @@ import (
 
 	"github.com/coro-sh/coro/embedns"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/internal/testutil"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 	"github.com/coro-sh/coro/server"
+	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tkn"
 )
 
@@ -330,7 +330,7 @@ func NewEndToEndHarness(ctx context.Context, t *testing.T) *EndToEndHarness {
 
 	srv, err := server.NewServer(testutil.GetFreePort(t))
 	require.NoError(t, err)
-	srv.Register(brokerHandler)
+	srv.Register("", brokerHandler)
 
 	go srv.Start()
 	err = srv.WaitHealthy(10, time.Millisecond)
@@ -341,7 +341,7 @@ func NewEndToEndHarness(ctx context.Context, t *testing.T) *EndToEndHarness {
 
 	// Setup proxy
 
-	brokerAddr := srv.WebsSocketAddress() + "/api/v1/broker"
+	brokerAddr := srv.WebsSocketAddress() + "/broker"
 	proxy, err := NewProxy(ctx, downstreamNS.ClientURL(), brokerAddr, token)
 	require.NoError(t, err)
 	go proxy.Start(ctx)

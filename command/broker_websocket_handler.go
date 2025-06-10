@@ -20,9 +20,9 @@ import (
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/internal/constants"
 	"github.com/coro-sh/coro/log"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 )
@@ -126,8 +126,7 @@ func NewBrokerWebSocketHandler(
 // Register adds the BrokerWebSocketHandler endpoints to the provided Echo router
 // group.
 func (b *BrokerWebSocketHandler) Register(g *echo.Group) {
-	v1 := g.Group(entity.VersionPath)
-	v1.GET("/broker", b.Handle)
+	g.GET("/broker", b.Handle)
 }
 
 func (b *BrokerWebSocketHandler) NumConnections() int64 {

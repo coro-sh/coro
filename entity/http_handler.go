@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	VersionPath          = "/v1"
 	PathParamNamespaceID = "namespace_id"
 	PathParamOperatorID  = "operator_id"
 	PathParamAccountID   = "account_id"
@@ -63,9 +62,7 @@ func NewHTTPHandler(txer tx.Txer, store *Store, opts ...HTTPHandlerOption) *HTTP
 
 // Register adds the HTTPHandler endpoints to the provided Echo router group.
 func (h *HTTPHandler) Register(g *echo.Group) {
-	v1 := g.Group(VersionPath)
-
-	namespaces := v1.Group("/namespaces")
+	namespaces := g.Group("/namespaces")
 	namespaces.POST("", h.CreateNamespace)
 	namespaces.GET("", h.ListNamespaces)
 

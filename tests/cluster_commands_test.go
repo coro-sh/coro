@@ -17,17 +17,14 @@ import (
 	"github.com/coro-sh/coro/embedns"
 	"github.com/coro-sh/coro/encrypt"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/internal/testutil"
 	"github.com/coro-sh/coro/log"
 	"github.com/coro-sh/coro/server"
+	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tkn"
 	"github.com/coro-sh/coro/tx"
 )
 
-const (
-	testTimeout = 5 * time.Second
-	apiPrefix   = "/api/v1"
-)
+const testTimeout = 5 * time.Second
 
 func TestClusteredNotifications(t *testing.T) {
 	t.Helper()
@@ -102,7 +99,7 @@ func TestClusteredNotifications(t *testing.T) {
 	ns := newTestNATS(t, op, sysAcc)
 	defer ns.Shutdown()
 	// Create a proxy between the 'user facing' NATS server and broker 1
-	brokerAddr1 := srv1.WebsSocketAddress() + apiPrefix + "/broker"
+	brokerAddr1 := srv1.WebsSocketAddress() + "/broker"
 	logger := log.NewLogger(log.WithDevelopment())
 	pxy, err := command.NewProxy(ctx, ns.ClientURL(), brokerAddr1, proxyTkn, command.WithProxyLogger(logger))
 	require.NoError(t, err)
@@ -111,7 +108,7 @@ func TestClusteredNotifications(t *testing.T) {
 
 	// Create a new account via server 1
 	req := entity.CreateAccountRequest{Name: testutil.RandName()}
-	accSrv1URL := fmt.Sprintf("%s%s/namespaces/%s/operators/%s/accounts", srv1.Address(), apiPrefix, namespace.ID, op.ID)
+	accSrv1URL := fmt.Sprintf("%s/namespaces/%s/operators/%s/accounts", srv1.Address(), namespace.ID, op.ID)
 	createRes := testutil.Post[server.Response[entity.AccountResponse]](t, accSrv1URL, req)
 	gotCreated := createRes.Data
 	assert.False(t, gotCreated.ID.IsZero())
@@ -124,7 +121,7 @@ func TestClusteredNotifications(t *testing.T) {
 	assert.True(t, opClaims.SigningKeys.Contains(gotNatsAcc.Issuer))
 
 	// Update the account via server 2
-	accSrv2URL := fmt.Sprintf("%s%s/namespaces/%s/accounts/%s", srv2.Address(), apiPrefix, namespace.ID, gotCreated.ID)
+	accSrv2URL := fmt.Sprintf("%s/namespaces/%s/accounts/%s", srv2.Address(), namespace.ID, gotCreated.ID)
 	updateReq := entity.UpdateAccountRequest{
 		Name:   gotCreated.Name,
 		Limits: &entity.AccountLimits{Subscriptions: ptr(rand.Int64N(100))},
@@ -184,9 +181,9 @@ func SetupTestServer(
 	brokerHandler, err := command.NewBrokerWebSocketHandler(bSysUser, brokerNats, tknIssuer, store, command.WithBrokerWebsocketLogger(logger))
 	require.NoError(t, err)
 
-	srv.Register(entity.NewHTTPHandler(txer, store, entity.WithCommander(commander)))
-	srv.Register(command.NewProxyHTTPHandler(tknIssuer, store, commander))
-	srv.Register(brokerHandler)
+	srv.Register("", entity.NewHTTPHandler(txer, store, entity.WithCommander(commander)))
+	srv.Register("", command.NewProxyHTTPHandler(tknIssuer, store, commander))
+	srv.Register("", brokerHandler)
 
 	go srv.Start()
 	err = srv.WaitHealthy(10, time.Millisecond)
