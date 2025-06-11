@@ -21,7 +21,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    image: corosh/coro-pgtool
+    image: corosh/coro-pgtool:latest
     ports:
       - "5400:5400"
     command: [ "--user", "postgres", "--password", "postgres", "--host", "db", "--port", "5432", "init" ]
@@ -34,7 +34,7 @@ services:
         condition: service_healthy
       coro-pgtool:
         condition: service_completed_successfully
-    image: corosh/coro
+    image: corosh/coro:latest
     ports:
       - "5400:5400"
     volumes:

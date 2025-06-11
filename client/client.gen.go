@@ -238,7 +238,7 @@ type FetchStreamMessagesParams struct {
 	// StartSequence The sequence number to start reading messages from.
 	StartSequence *uint64 `form:"start_sequence,omitempty" json:"start_sequence,omitempty"`
 
-	// BatchSize The number of messages to fetch (max 1000).
+	// BatchSize The number of messages to fetch.
 	BatchSize *uint32 `form:"batch_size,omitempty" json:"batch_size,omitempty"`
 }
 
@@ -400,7 +400,7 @@ type clientInterface interface {
 	FetchStreamMessages(ctx context.Context, namespaceId string, accountId string, streamName string, params *FetchStreamMessagesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetStreamMessageContent request
-	GetStreamMessageContent(ctx context.Context, namespaceId string, accountId string, streamName string, sequence uint64, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetStreamMessageContent(ctx context.Context, namespaceId string, accountId string, streamName string, streamSequence uint64, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListUsers request
 	ListUsers(ctx context.Context, namespaceId string, accountId string, params *ListUsersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -596,8 +596,8 @@ func (c *oapiClient) FetchStreamMessages(ctx context.Context, namespaceId string
 	return c.Client.Do(req)
 }
 
-func (c *oapiClient) GetStreamMessageContent(ctx context.Context, namespaceId string, accountId string, streamName string, sequence uint64, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := newGetStreamMessageContentRequest(c.Server, namespaceId, accountId, streamName, sequence)
+func (c *oapiClient) GetStreamMessageContent(ctx context.Context, namespaceId string, accountId string, streamName string, streamSequence uint64, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := newGetStreamMessageContentRequest(c.Server, namespaceId, accountId, streamName, streamSequence)
 	if err != nil {
 		return nil, err
 	}
@@ -1323,7 +1323,7 @@ func newFetchStreamMessagesRequest(server string, namespaceId string, accountId 
 }
 
 // newGetStreamMessageContentRequest generates requests for GetStreamMessageContent
-func newGetStreamMessageContentRequest(server string, namespaceId string, accountId string, streamName string, sequence uint64) (*http.Request, error) {
+func newGetStreamMessageContentRequest(server string, namespaceId string, accountId string, streamName string, streamSequence uint64) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1349,7 +1349,7 @@ func newGetStreamMessageContentRequest(server string, namespaceId string, accoun
 
 	var pathParam3 string
 
-	pathParam3, err = runtime.StyleParamWithLocation("simple", false, "sequence", runtime.ParamLocationPath, sequence)
+	pathParam3, err = runtime.StyleParamWithLocation("simple", false, "stream_sequence", runtime.ParamLocationPath, streamSequence)
 	if err != nil {
 		return nil, err
 	}
@@ -2312,7 +2312,7 @@ type clientWithResponsesInterface interface {
 	FetchStreamMessagesWithResponse(ctx context.Context, namespaceId string, accountId string, streamName string, params *FetchStreamMessagesParams, reqEditors ...RequestEditorFn) (*FetchStreamMessagesResponse, error)
 
 	// GetStreamMessageContentWithResponse request
-	GetStreamMessageContentWithResponse(ctx context.Context, namespaceId string, accountId string, streamName string, sequence uint64, reqEditors ...RequestEditorFn) (*GetStreamMessageContentResponse, error)
+	GetStreamMessageContentWithResponse(ctx context.Context, namespaceId string, accountId string, streamName string, streamSequence uint64, reqEditors ...RequestEditorFn) (*GetStreamMessageContentResponse, error)
 
 	// ListUsersWithResponse request
 	ListUsersWithResponse(ctx context.Context, namespaceId string, accountId string, params *ListUsersParams, reqEditors ...RequestEditorFn) (*ListUsersResponse, error)
@@ -3416,8 +3416,8 @@ func (c *clientWithResponses) FetchStreamMessagesWithResponse(ctx context.Contex
 }
 
 // GetStreamMessageContentWithResponse request returning *GetStreamMessageContentResponse
-func (c *clientWithResponses) GetStreamMessageContentWithResponse(ctx context.Context, namespaceId string, accountId string, streamName string, sequence uint64, reqEditors ...RequestEditorFn) (*GetStreamMessageContentResponse, error) {
-	rsp, err := c.GetStreamMessageContent(ctx, namespaceId, accountId, streamName, sequence, reqEditors...)
+func (c *clientWithResponses) GetStreamMessageContentWithResponse(ctx context.Context, namespaceId string, accountId string, streamName string, streamSequence uint64, reqEditors ...RequestEditorFn) (*GetStreamMessageContentResponse, error) {
+	rsp, err := c.GetStreamMessageContent(ctx, namespaceId, accountId, streamName, streamSequence, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
