@@ -38,7 +38,7 @@ type UIConfig struct {
 	Port       int          `yaml:"port" env:"PORT"` // default: 8400
 	Logger     LoggerConfig `yaml:"logger" envPrefix:"LOGGER_"`
 	APIAddress string       `yaml:"apiAddress" env:"API_ADDRESS"` // default: http://localhost:5400
-	TLS        *TLSConfig   `yaml:"tls" envPrefix:"TLS"`
+	TLS        *TLSConfig   `yaml:"tls" envPrefix:"TLS_"`
 }
 
 func (c *UIConfig) InitDefaults() {
@@ -104,7 +104,7 @@ func (c *BrokerConfig) Validation() *valgo.Validation {
 type BaseConfig struct {
 	Port   int          `yaml:"port" env:"PORT"` // default: 5400
 	Logger LoggerConfig `yaml:"logger" envPrefix:"LOGGER_"`
-	TLS    *TLSConfig   `yaml:"tls" envPrefix:"TLS"`
+	TLS    *TLSConfig   `yaml:"tls" envPrefix:"TLS_"`
 	// EncryptionSecretKey (optional):
 	// Enables encryption for sensitive data like nkeys and proxy tokens.
 	// The key must be one of the following lengths: 16, 24, or 32 bytes,
@@ -174,7 +174,7 @@ type PostgresConfig struct {
 	HostPort string     `yaml:"hostPort"  env:"HOST_PORT"`
 	User     string     `yaml:"user"  env:"USER"`
 	Password string     `yaml:"password"  env:"PASSWORD"`
-	TLS      *TLSConfig `yaml:"tls" envPrefix:"TLS"`
+	TLS      *TLSConfig `yaml:"tls" envPrefix:"TLS_"`
 }
 
 func (c PostgresConfig) Validation() *valgo.Validation {
