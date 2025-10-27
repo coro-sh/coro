@@ -179,7 +179,7 @@ type PostgresConfig struct {
 
 func (c PostgresConfig) Validation() *valgo.Validation {
 	v := valgo.Is(
-		valgoutil.HostPortValidator(c.HostPort, "hostPort"),
+		valgo.String(c.HostPort, "hostPort").Not().Blank(),
 		valgo.String(c.User, "user").Not().Blank(),
 	)
 	if c.TLS != nil {
