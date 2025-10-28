@@ -23,7 +23,7 @@ func TestNewUser(t *testing.T) {
 	name := "test_user"
 	user, err := NewUser(name, acc)
 	require.NoError(t, err)
-	assertNewUser(t, accSKPubKey, name, user)
+	AssertNewUser(t, accSKPubKey, name, user)
 	isSysUser, err := user.IsSystemUser()
 	require.NoError(t, err)
 	assert.False(t, isSysUser)
@@ -41,7 +41,7 @@ func TestNewSystemUser(t *testing.T) {
 
 		user, err := NewSystemUser(acc)
 		require.NoError(t, err)
-		assertNewUser(t, accSKPubKey, constants.SysUserName, user)
+		AssertNewUser(t, accSKPubKey, constants.SysUserName, user)
 		gotIsSys, err := user.IsSystemUser()
 		require.NoError(t, err)
 		assert.True(t, gotIsSys)
@@ -71,7 +71,7 @@ func TestNewUserFromData(t *testing.T) {
 		require.NoError(t, err)
 		got, err := NewUserFromData(user.NKey(), data)
 		require.NoError(t, err)
-		assertEqualUser(t, user, got)
+		AssertEqualUser(t, user, got)
 	})
 
 	t.Run("invalid jwt in user data", func(t *testing.T) {
@@ -148,7 +148,7 @@ func TestUser_RefreshJWT(t *testing.T) {
 	assert.Greater(t, newClaims.Expires, oldClaims.Expires)
 }
 
-func assertNewUser(t *testing.T, wantIssuer string, wantName string, user *User) {
+func AssertNewUser(t *testing.T, wantIssuer string, wantName string, user *User) {
 	t.Helper()
 	assert.False(t, user.ID.IsZero())
 	assert.False(t, user.OperatorID.IsZero())
@@ -179,7 +179,7 @@ func assertNewUser(t *testing.T, wantIssuer string, wantName string, user *User)
 // UserLimits.Src decodes to jwt.CIDRList(nil) instead of jwt.CIDRList{}.
 // To Work around this we assert fields individually and compare a JSON
 // stringified version of the account claims instead.
-func assertEqualUser(t *testing.T, got *User, want *User) {
+func AssertEqualUser(t *testing.T, got *User, want *User) {
 	t.Helper()
 	wantData, err := got.Data()
 	require.NoError(t, err)

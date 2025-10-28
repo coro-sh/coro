@@ -13,8 +13,6 @@ import (
 	"github.com/coro-sh/coro/app"
 	"github.com/coro-sh/coro/client"
 	"github.com/coro-sh/coro/log"
-	"github.com/coro-sh/coro/postgres"
-	"github.com/coro-sh/coro/postgres/migrations"
 	"github.com/coro-sh/coro/valgoutil"
 )
 
@@ -36,37 +34,26 @@ func main() {
 }
 
 type config struct {
-	port             int
-	postgresHostPort string
-	postgresUser     string
-	postgresPassword string
-	enableUI         bool
-	corsOrigins      []string
+	port        int
+	enableUI    bool
+	corsOrigins []string
 }
 
 func (c config) validate() *valgo.Validation {
 	v := valgo.New()
-
 	for i, origin := range c.corsOrigins {
 		v.InRow("corsOrigins", i, valgo.Is(valgoutil.CORSValidator(origin, "origin")))
 	}
-
 	return v.Is(
 		valgo.Int(c.port, "port").Not().Zero(),
-		valgoutil.HostPortValidator(c.postgresHostPort, "postgres-hostport"),
-		valgo.String(c.postgresUser, "postgres-user").Not().Blank(),
-		valgo.String(c.postgresPassword, "postgres-password").Not().Blank(),
 	)
 }
 
 func loadConfig(c *cli.Context) config {
 	cfg := config{
-		port:             c.Int("port"),
-		postgresHostPort: c.String("postgres-hostport"),
-		postgresUser:     c.String("postgres-user"),
-		postgresPassword: c.String("postgres-password"),
-		enableUI:         c.Bool("server-ui"),
-		corsOrigins:      c.StringSlice("cors-origin"),
+		port:        c.Int("port"),
+		enableUI:    c.Bool("server-ui"),
+		corsOrigins: c.StringSlice("cors-origin"),
 	}
 	exitOnInvalidFlags(c, cfg.validate())
 	return cfg
@@ -84,27 +71,6 @@ func run(ctx context.Context, args []string, logger log.Logger) error {
 			Value:   6400,
 			Usage:   "port to run the server on",
 			EnvVars: []string{"PORT"},
-		},
-		&cli.StringFlag{
-			Name:    "postgres-hostport",
-			Aliases: []string{"ph"},
-			Value:   "127.0.0.1:5432",
-			Usage:   "hostport of postgres",
-			EnvVars: []string{"POSTGRES_HOST_PORT"},
-		},
-		&cli.StringFlag{
-			Name:    "postgres-user",
-			Aliases: []string{"pu"},
-			Value:   "postgres",
-			Usage:   "username for auth when connecting to postgres",
-			EnvVars: []string{"POSTGRES_USER"},
-		},
-		&cli.StringFlag{
-			Name:    "postgres-password",
-			Aliases: []string{"pw"},
-			Value:   "postgres",
-			Usage:   "password for auth when connecting to postgres",
-			EnvVars: []string{"POSTGRES_PASSWORD"},
 		},
 		&cli.BoolFlag{
 			Name:    "server-ui",
@@ -139,39 +105,12 @@ func run(ctx context.Context, args []string, logger log.Logger) error {
 }
 
 func cmdRun(ctx context.Context, logger log.Logger, cfg config) error {
-	errCh := make(chan error)
-
-	pg, err := recreateDB(ctx, cfg, logger)
-	if err != nil {
-		return err
-	}
-
-	logger.Info("migrating database")
-	if err = postgres.MigrateDatabase(pg, migrations.FS); err != nil {
-		return err
-	}
-
-	appCfg := app.AllConfig{
-		BaseConfig: app.BaseConfig{
-			Port: cfg.port,
-			Logger: app.LoggerConfig{
-				Level:      "debug",
-				Structured: false,
-			},
-			Postgres: app.PostgresConfig{
-				HostPort: cfg.postgresHostPort,
-				User:     cfg.postgresUser,
-				Password: cfg.postgresPassword,
-			},
-		},
-		CorsOrigins: cfg.corsOrigins,
-	}
-
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	errCh := make(chan error)
 	go func() {
-		if err = app.RunAll(ctx, logger, appCfg, cfg.enableUI); err != nil {
+		if err := app.RunDevServer(ctx, logger, cfg.port, cfg.enableUI); err != nil {
 			errCh <- err
 		}
 	}()
@@ -183,9 +122,9 @@ func cmdRun(ctx context.Context, logger log.Logger, cfg config) error {
 	herrCh := waitForClientConnectionHealthy(ctx, cfg.port, clientMaxReconnectAttempts, clientReconnectDelay)
 
 	select {
-	case err = <-errCh:
+	case err := <-errCh:
 		return err
-	case err = <-herrCh:
+	case err := <-herrCh:
 		if err != nil {
 			return err
 		}

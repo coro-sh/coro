@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/cohesivestack/valgo"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/jwt/v2"
 	natsrv "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
@@ -22,8 +21,6 @@ import (
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/log"
 	"github.com/coro-sh/coro/natsutil"
-	"github.com/coro-sh/coro/postgres"
-	"github.com/coro-sh/coro/postgres/migrations"
 	"github.com/coro-sh/coro/testutil"
 )
 
@@ -39,40 +36,6 @@ func exitOnInvalidFlags(c *cli.Context, v *valgo.Validation) {
 
 	fmt.Fprintln(os.Stdout) //nolint:errcheck
 	cli.ShowAppHelpAndExit(c, 1)
-}
-
-func recreateDB(ctx context.Context, cfg config, logger log.Logger) (*pgxpool.Pool, error) {
-	logger.Info("connecting to default postgres database")
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	pgConn, err := postgres.Dial(ctx, cfg.postgresUser, cfg.postgresPassword, cfg.postgresHostPort, "postgres")
-	if err != nil {
-		return nil, err
-	}
-	defer pgConn.Close()
-	if err = pgConn.Ping(ctx); err != nil {
-		return nil, err
-	}
-
-	logger.Info("dropping and recreating app database")
-	if _, err = pgConn.Exec(ctx, "DROP DATABASE IF EXISTS "+postgres.AppDBName); err != nil {
-		return nil, err
-	}
-	if _, err = pgConn.Exec(ctx, "CREATE DATABASE "+postgres.AppDBName); err != nil {
-		return nil, err
-	}
-
-	logger.Info("migrating app database")
-	if err = postgres.MigrateDatabase(pgConn, migrations.FS); err != nil {
-		return nil, err
-	}
-
-	logger.Info("connecting to app database")
-	appConn, err := postgres.Dial(ctx, cfg.postgresUser, cfg.postgresPassword, cfg.postgresHostPort, postgres.AppDBName)
-	if err != nil {
-		return nil, err
-	}
-	return appConn, nil
 }
 
 func waitForClientConnectionHealthy(ctx context.Context, port int, maxRetries int, interval time.Duration) <-chan error {
@@ -253,9 +216,9 @@ func connectNATS(ns *natsrv.Server, logger log.Logger, user client.User, userJWT
 }
 
 func createStreamAndPublisher(ctx context.Context, js jetstream.JetStream, logger log.Logger, errCh chan error) error {
-	streamSubject := "dev_server.*"
+	streamSubject := "dev-server.*"
 	_, err := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
-		Name:        "stream_" + testutil.RandName(),
+		Name:        "stream-" + testutil.RandName(),
 		Description: "A test stream created by the dev server",
 		Subjects:    []string{streamSubject},
 		Retention:   jetstream.LimitsPolicy,

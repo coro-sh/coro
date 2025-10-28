@@ -16,6 +16,7 @@ import (
 	"github.com/coro-sh/coro/entity"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 	"github.com/coro-sh/coro/server"
+	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/testutil"
 )
 
@@ -23,10 +24,19 @@ func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
-	op, err := entity.NewOperator(testutil.RandName(), entity.NewID[entity.NamespaceID]())
+	store, _ := sqlite.NewTestEntityStore(t)
+
+	ns := entity.NewNamespace(testutil.RandName())
+	err := store.CreateNamespace(ctx, ns)
 	require.NoError(t, err)
+
+	op, err := entity.NewOperator(testutil.RandName(), ns.ID)
+	require.NoError(t, err)
+	err = store.CreateOperator(ctx, op)
+	require.NoError(t, err)
+
 	acc, err := entity.NewAccount(testutil.RandName(), op)
-	store := entity.NewStore(new(testutil.FakeTxer), entity.NewFakeEntityRepository(t))
+	require.NoError(t, err)
 	err = store.CreateAccount(ctx, acc)
 	require.NoError(t, err)
 

@@ -15,10 +15,10 @@ import (
 
 	"github.com/coro-sh/coro/command"
 	"github.com/coro-sh/coro/embedns"
-	"github.com/coro-sh/coro/encrypt"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/log"
 	"github.com/coro-sh/coro/server"
+	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tkn"
 	"github.com/coro-sh/coro/tx"
@@ -31,16 +31,16 @@ func TestClusteredNotifications(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
-	enc, err := encrypt.NewAES(testutil.RandString(32))
-	require.NoError(t, err)
-	txer := new(testutil.FakeTxer)
-	entityRW := entity.NewFakeEntityRepository(t)
-	tknRW := tkn.NewFakeOperatorTokenReadWriter(t)
-	store := entity.NewStore(txer, entityRW, entity.WithEncryption(enc))
+	db := sqlite.NewTestDB(t)
+	repo := sqlite.NewEntityRepository(db)
+	txer := sqlite.NewTxer(db)
+	store := entity.NewStore(txer, repo)
+
+	tknRW := sqlite.NewOperatorTokenReadWriter(db)
 	tknIssuer := tkn.NewOperatorIssuer(tknRW, tkn.OperatorTokenTypeProxy)
 
 	namespace := entity.NewNamespace(testutil.RandName())
-	err = store.CreateNamespace(ctx, namespace)
+	err := store.CreateNamespace(ctx, namespace)
 	require.NoError(t, err)
 
 	// Add operator, sys account, and sys user to the store
