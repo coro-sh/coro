@@ -20,6 +20,13 @@ var typeNames = map[Type]string{
 	TypeUser:        "user",
 }
 
+var nameTypes = map[string]Type{
+	"unspecified": TypeUnspecified,
+	"operator":    TypeOperator,
+	"account":     TypeAccount,
+	"user":        TypeUser,
+}
+
 // String returns the string representation of the Type.
 // Defaults to "unspecified" if unrecognized.
 func (t Type) String() string {
@@ -64,4 +71,11 @@ func GetTypeNameFromID[T ID]() string {
 	default:
 		panic(fmt.Sprintf("failed to get entity type name from id: unknown id type %T", v))
 	}
+}
+
+func ParseTypeFromString(typeName string) Type {
+	if t, ok := nameTypes[typeName]; ok {
+		return t
+	}
+	return TypeUnspecified
 }

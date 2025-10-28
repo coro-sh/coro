@@ -14,10 +14,14 @@ import (
 	"github.com/coro-sh/coro/entity"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 	"github.com/coro-sh/coro/server"
+	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/testutil"
 )
 
 func TestStreamHTTPHandler_ListStreams(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	defer cancel()
+
 	now := time.Now()
 	want := []StreamResponse{
 		{
@@ -47,10 +51,16 @@ func TestStreamHTTPHandler_ListStreams(t *testing.T) {
 
 	srv, entityStore := newStreamHTTPServer(t, streams, nil)
 
-	op, err := entity.NewOperator(testutil.RandName(), entity.NewID[entity.NamespaceID]())
+	ns := entity.NewNamespace(testutil.RandName())
+	err := entityStore.CreateNamespace(ctx, ns)
 	require.NoError(t, err)
+
+	op, err := entity.NewOperator(testutil.RandName(), ns.ID)
+	err = entityStore.CreateOperator(ctx, op)
+	require.NoError(t, err)
+
 	acc, err := entity.NewAccount(testutil.RandName(), op)
-	err = entityStore.CreateAccount(t.Context(), acc)
+	err = entityStore.CreateAccount(ctx, acc)
 	require.NoError(t, err)
 
 	url := fmt.Sprintf("%s/namespaces/%s/accounts/%s/streams", srv.Address(), op.NamespaceID, acc.ID)
@@ -62,12 +72,22 @@ func TestStreamHTTPHandler_ListStreams(t *testing.T) {
 }
 
 func TestStreamHTTPHandler_FetchStreamMessages(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	defer cancel()
+
 	srv, entityStore := newStreamHTTPServer(t, nil, nil)
 
-	op, err := entity.NewOperator(testutil.RandName(), entity.NewID[entity.NamespaceID]())
+	ns := entity.NewNamespace(testutil.RandName())
+	err := entityStore.CreateNamespace(t.Context(), ns)
 	require.NoError(t, err)
+
+	op, err := entity.NewOperator(testutil.RandName(), ns.ID)
+	require.NoError(t, err)
+	err = entityStore.CreateOperator(ctx, op)
+	require.NoError(t, err)
+
 	acc, err := entity.NewAccount(testutil.RandName(), op)
-	err = entityStore.CreateAccount(t.Context(), acc)
+	err = entityStore.CreateAccount(ctx, acc)
 	require.NoError(t, err)
 
 	url := fmt.Sprintf(
@@ -85,12 +105,22 @@ func TestStreamHTTPHandler_FetchStreamMessages(t *testing.T) {
 }
 
 func TestStreamHTTPHandler_GetStreamMessageContent(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	defer cancel()
+
 	srv, entityStore := newStreamHTTPServer(t, nil, nil)
 
-	op, err := entity.NewOperator(testutil.RandName(), entity.NewID[entity.NamespaceID]())
+	ns := entity.NewNamespace(testutil.RandName())
+	err := entityStore.CreateNamespace(t.Context(), ns)
 	require.NoError(t, err)
+
+	op, err := entity.NewOperator(testutil.RandName(), ns.ID)
+	require.NoError(t, err)
+	err = entityStore.CreateOperator(ctx, op)
+	require.NoError(t, err)
+
 	acc, err := entity.NewAccount(testutil.RandName(), op)
-	err = entityStore.CreateAccount(t.Context(), acc)
+	err = entityStore.CreateAccount(ctx, acc)
 	require.NoError(t, err)
 
 	url := fmt.Sprintf(
@@ -107,11 +137,11 @@ func TestStreamHTTPHandler_GetStreamMessageContent(t *testing.T) {
 }
 
 func newStreamHTTPServer(t *testing.T, streams []*jetstream.StreamInfo, msgs <-chan *commandv1.ReplyMessage) (*server.Server, *entity.Store) {
-	entityStore := entity.NewStore(new(testutil.FakeTxer), entity.NewFakeEntityRepository(t))
+	store, _ := sqlite.NewTestEntityStore(t)
 
 	srv, err := server.NewServer(testutil.GetFreePort(t), server.WithMiddleware(entity.NamespaceContextMiddleware()))
 	require.NoError(t, err)
-	srv.Register("", NewStreamHTTPHandler(entityStore, newStreamerStub(streams, msgs)))
+	srv.Register("", NewStreamHTTPHandler(store, newStreamerStub(streams, msgs)))
 
 	go srv.Start()
 	err = srv.WaitHealthy(10, time.Millisecond)
@@ -120,7 +150,7 @@ func newStreamHTTPServer(t *testing.T, streams []*jetstream.StreamInfo, msgs <-c
 		assert.NoError(t, srv.Stop(t.Context()))
 	})
 
-	return srv, entityStore
+	return srv, store
 }
 
 type streamerStub struct {

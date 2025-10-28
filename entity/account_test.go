@@ -21,7 +21,7 @@ func TestNewAccount(t *testing.T) {
 	name := "test_account"
 	got, err := NewAccount(name, op)
 	require.NoError(t, err)
-	assertNewAccount(t, opSKPubKey, name, got)
+	AssertNewAccount(t, opSKPubKey, name, got)
 	gotIsSys, err := got.IsSystemAccount()
 	require.NoError(t, err)
 	assert.False(t, gotIsSys)
@@ -35,7 +35,7 @@ func TestNewSystemAccount(t *testing.T) {
 
 	got, err := NewSystemAccount(op)
 	require.NoError(t, err)
-	assertNewAccount(t, opSKPubKey, constants.SysAccountName, got)
+	AssertNewAccount(t, opSKPubKey, constants.SysAccountName, got)
 	gotIsSys, err := got.IsSystemAccount()
 	require.NoError(t, err)
 	assert.True(t, gotIsSys)
@@ -54,7 +54,7 @@ func TestNewAccountFromData(t *testing.T) {
 		require.NoError(t, err)
 		got, err := NewAccountFromData(acc.NKey(), acc.SigningKey(), data)
 		require.NoError(t, err)
-		assertEqualAccount(t, acc, got)
+		AssertEqualAccount(t, acc, got)
 	})
 
 	t.Run("invalid jwt in account data", func(t *testing.T) {
@@ -155,7 +155,7 @@ func TestAccount_Validate(t *testing.T) {
 	}
 }
 
-func assertNewAccount(t *testing.T, wantIssuer string, wantName string, account *Account) {
+func AssertNewAccount(t *testing.T, wantIssuer string, wantName string, account *Account) {
 	t.Helper()
 	assert.False(t, account.ID.IsZero())
 	assert.False(t, account.OperatorID.IsZero())
@@ -190,7 +190,7 @@ func assertNewAccount(t *testing.T, wantIssuer string, wantName string, account 
 // Account.Mappings decodes to jwt.Mapping(nil) instead of jwt.Mapping{}.
 // To Work around this we assert fields individually and compare a JSON
 // stringified version of the account claims instead.
-func assertEqualAccount(t *testing.T, want *Account, got *Account) {
+func AssertEqualAccount(t *testing.T, want *Account, got *Account) {
 	t.Helper()
 	wantData, err := got.Data()
 	require.NoError(t, err)

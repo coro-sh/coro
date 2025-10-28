@@ -1,4 +1,4 @@
-package entity
+package entity_test // avoid import cycle with sqlite package
 
 import (
 	"context"
@@ -7,16 +7,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/coro-sh/coro/encrypt"
+	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/errtag"
+	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/testutil"
 )
 
 func TestStore_Namespace(t *testing.T) {
-	ctx := context.Background()
-	s, _ := NewTestStore(t)
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
+	s, _ := sqlite.NewTestEntityStore(t)
 
-	want := NewNamespace(testutil.RandName())
+	want := entity.NewNamespace(testutil.RandName())
 
 	// create
 	err := s.CreateNamespace(ctx, want)
@@ -36,10 +38,15 @@ func TestStore_Namespace(t *testing.T) {
 }
 
 func TestStore_Operator(t *testing.T) {
-	ctx := context.Background()
-	s, _ := NewTestStore(t)
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
+	s, _ := sqlite.NewTestEntityStore(t)
 
-	want, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
+	ns := entity.NewNamespace(testutil.RandName())
+	err := s.CreateNamespace(ctx, ns)
+	require.NoError(t, err)
+
+	want, err := entity.NewOperator(testutil.RandName(), ns.ID)
 	require.NoError(t, err)
 
 	// create
@@ -76,13 +83,20 @@ func TestStore_Operator(t *testing.T) {
 }
 
 func TestStore_Account(t *testing.T) {
-	ctx := context.Background()
-	s, _ := NewTestStore(t)
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
+	s, _ := sqlite.NewTestEntityStore(t)
 
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
+	ns := entity.NewNamespace(testutil.RandName())
+	err := s.CreateNamespace(ctx, ns)
 	require.NoError(t, err)
 
-	want, err := NewAccount(testutil.RandName(), op)
+	op, err := entity.NewOperator(testutil.RandName(), ns.ID)
+	require.NoError(t, err)
+	err = s.CreateOperator(ctx, op)
+	require.NoError(t, err)
+
+	want, err := entity.NewAccount(testutil.RandName(), op)
 	require.NoError(t, err)
 
 	// create
@@ -92,17 +106,17 @@ func TestStore_Account(t *testing.T) {
 	// read
 	got, err := s.ReadAccount(ctx, want.ID)
 	require.NoError(t, err)
-	assertEqualAccount(t, want, got)
+	entity.AssertEqualAccount(t, want, got)
 
 	wantData, err := want.Data()
 	require.NoError(t, err)
 
 	got, err = s.ReadAccountByPublicKey(ctx, wantData.PublicKey)
 	require.NoError(t, err)
-	assertEqualAccount(t, want, got)
+	entity.AssertEqualAccount(t, want, got)
 
 	// update
-	err = want.Update(op, UpdateAccountParams{
+	err = want.Update(op, entity.UpdateAccountParams{
 		Subscriptions: 10,
 	})
 	require.NoError(t, err)
@@ -112,7 +126,7 @@ func TestStore_Account(t *testing.T) {
 
 	got, err = s.ReadAccount(ctx, want.ID)
 	require.NoError(t, err)
-	assertEqualAccount(t, want, got)
+	entity.AssertEqualAccount(t, want, got)
 
 	// delete
 	err = s.DeleteAccount(ctx, want.ID)
@@ -123,22 +137,33 @@ func TestStore_Account(t *testing.T) {
 }
 
 func TestStore_User(t *testing.T) {
-	ctx := context.Background()
-	s, _ := NewTestStore(t)
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
+	s, _ := sqlite.NewTestEntityStore(t)
 
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
+	ns := entity.NewNamespace(testutil.RandName())
+	err := s.CreateNamespace(ctx, ns)
 	require.NoError(t, err)
 
-	acc, err := NewAccount(testutil.RandName(), op)
+	op, err := entity.NewOperator(testutil.RandName(), ns.ID)
+	require.NoError(t, err)
+	err = s.CreateOperator(ctx, op)
 	require.NoError(t, err)
 
-	sysAcc, err := NewSystemAccount(op)
+	acc, err := entity.NewAccount(testutil.RandName(), op)
+	require.NoError(t, err)
+	err = s.CreateAccount(ctx, acc)
 	require.NoError(t, err)
 
-	want, err := NewUser(testutil.RandName(), acc)
+	sysAcc, err := entity.NewSystemAccount(op)
+	require.NoError(t, err)
+	err = s.CreateAccount(ctx, sysAcc)
 	require.NoError(t, err)
 
-	wantSysUser, err := NewSystemUser(sysAcc)
+	want, err := entity.NewUser(testutil.RandName(), acc)
+	require.NoError(t, err)
+
+	wantSysUser, err := entity.NewSystemUser(sysAcc)
 	require.NoError(t, err)
 
 	// create
@@ -151,12 +176,12 @@ func TestStore_User(t *testing.T) {
 	// read
 	got, err := s.ReadUser(ctx, want.ID)
 	require.NoError(t, err)
-	assertEqualUser(t, want, got)
+	entity.AssertEqualUser(t, want, got)
 
 	// read system user
 	gotSysUser, err := s.ReadSystemUser(ctx, op.ID, sysAcc.ID)
 	require.NoError(t, err)
-	assertEqualUser(t, wantSysUser, gotSysUser)
+	entity.AssertEqualUser(t, wantSysUser, gotSysUser)
 
 	// delete
 	err = s.DeleteUser(ctx, want.ID)
@@ -167,10 +192,11 @@ func TestStore_User(t *testing.T) {
 }
 
 func TestStore_Nkey(t *testing.T) {
-	ctx := context.Background()
-	s, _ := NewTestStore(t)
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
+	s, _ := sqlite.NewTestEntityStore(t)
 
-	want, err := NewNkey(testutil.RandString(10), TypeOperator, false)
+	want, err := entity.NewNkey(testutil.RandString(10), entity.TypeOperator, false)
 	require.NoError(t, err)
 
 	err = s.CreateNkey(ctx, want)
@@ -180,14 +206,4 @@ func TestStore_Nkey(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, want, got)
-}
-
-func NewTestStore(t *testing.T) (*Store, *FakeEntityRepository) {
-	enc, err := encrypt.NewAES(testutil.RandString(32))
-	require.NoError(t, err)
-
-	rw := NewFakeEntityRepository(t)
-	txer := new(testutil.FakeTxer)
-
-	return NewStore(txer, rw, WithEncryption(enc)), rw
 }

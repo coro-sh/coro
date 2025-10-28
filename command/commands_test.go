@@ -20,6 +20,7 @@ import (
 	"github.com/coro-sh/coro/entity"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 	"github.com/coro-sh/coro/server"
+	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tkn"
 )
@@ -301,7 +302,10 @@ type EndToEndHarness struct {
 
 func NewEndToEndHarness(ctx context.Context, t *testing.T) *EndToEndHarness {
 	t.Helper()
-	store := entity.NewStore(new(testutil.FakeTxer), entity.NewFakeEntityRepository(t))
+	db := sqlite.NewTestDB(t)
+	repo := sqlite.NewEntityRepository(db)
+	store := entity.NewStore(sqlite.NewTxer(db), repo)
+	tknIss := tkn.NewOperatorIssuer(sqlite.NewOperatorTokenReadWriter(db), tkn.OperatorTokenTypeProxy)
 
 	// Setup downstream nats
 
@@ -315,7 +319,6 @@ func NewEndToEndHarness(ctx context.Context, t *testing.T) *EndToEndHarness {
 
 	// Generate proxy token
 
-	tknIss := tkn.NewOperatorIssuer(tkn.NewFakeOperatorTokenReadWriter(t), tkn.OperatorTokenTypeProxy)
 	token, err := tknIss.Generate(ctx, op.ID)
 	require.NoError(t, err)
 
@@ -375,7 +378,10 @@ func setupEntities(
 	t *testing.T,
 	store *entity.Store,
 ) (*entity.Operator, *entity.Account, *entity.User) {
-	op, err := entity.NewOperator(testutil.RandName(), entity.NewID[entity.NamespaceID]())
+	ns := entity.NewNamespace(testutil.RandName())
+	require.NoError(t, store.CreateNamespace(ctx, ns))
+
+	op, err := entity.NewOperator(testutil.RandName(), ns.ID)
 	require.NoError(t, err)
 	sysAcc, sysUsr, err := op.SetNewSystemAccountAndUser()
 	require.NoError(t, err)

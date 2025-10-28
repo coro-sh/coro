@@ -1,17 +1,15 @@
-package postgres
+package sqlite
 
 import (
 	"context"
+	"database/sql"
 	"errors"
-
-	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/errtag"
 	"github.com/coro-sh/coro/paginate"
-	"github.com/coro-sh/coro/postgres/sqlc"
+	"github.com/coro-sh/coro/postgres"
+	"github.com/coro-sh/coro/sqlite/sqlc"
 	"github.com/coro-sh/coro/tx"
 )
 
@@ -65,7 +63,7 @@ func (r *EntityRepository) ReadNamespaceByName(ctx context.Context, name string)
 
 func (r *EntityRepository) ListNamespaces(ctx context.Context, filter paginate.PageFilter[entity.NamespaceID]) ([]*entity.Namespace, error) {
 	params := sqlc.ListNamespacesParams{
-		Size: filter.Size,
+		Size: int64(filter.Size),
 	}
 	if filter.Cursor != nil {
 		params.Cursor = ptr(filter.Cursor.String())
@@ -133,7 +131,7 @@ func (r *EntityRepository) ReadOperatorByPublicKey(ctx context.Context, pubKey s
 func (r *EntityRepository) ListOperators(ctx context.Context, namespaceID entity.NamespaceID, filter paginate.PageFilter[entity.OperatorID]) ([]entity.OperatorData, error) {
 	params := sqlc.ListOperatorsParams{
 		NamespaceID: namespaceID.String(),
-		Size:        filter.Size,
+		Size:        int64(filter.Size),
 	}
 	if filter.Cursor != nil {
 		params.Cursor = ptr(filter.Cursor.String())
@@ -153,25 +151,31 @@ func (r *EntityRepository) DeleteOperator(ctx context.Context, id entity.Operato
 }
 
 func (r *EntityRepository) CreateAccount(ctx context.Context, account entity.AccountData) error {
-	err := r.db.CreateAccount(ctx, sqlc.CreateAccountParams{
-		ID:              account.ID.String(),
-		NamespaceID:     account.NamespaceID.String(),
-		OperatorID:      account.OperatorID.String(),
-		Name:            account.Name,
-		PublicKey:       account.PublicKey,
-		Jwt:             account.JWT,
-		UserJwtDuration: account.UserJWTDuration,
-	})
+	params := sqlc.CreateAccountParams{
+		ID:          account.ID.String(),
+		NamespaceID: account.NamespaceID.String(),
+		OperatorID:  account.OperatorID.String(),
+		Name:        account.Name,
+		PublicKey:   account.PublicKey,
+		Jwt:         account.JWT,
+	}
+	if account.UserJWTDuration != nil {
+		params.UserJwtDuration = ptr(int64(account.UserJWTDuration.Seconds()))
+	}
+	err := r.db.CreateAccount(ctx, params)
 	return tagEntityErr[entity.Account](err)
 }
 
 func (r *EntityRepository) UpdateAccount(ctx context.Context, account entity.AccountData) error {
-	err := r.db.UpdateAccount(ctx, sqlc.UpdateAccountParams{
-		ID:              account.ID.String(),
-		Name:            account.Name,
-		Jwt:             account.JWT,
-		UserJwtDuration: account.UserJWTDuration,
-	})
+	params := sqlc.UpdateAccountParams{
+		ID:   account.ID.String(),
+		Name: account.Name,
+		Jwt:  account.JWT,
+	}
+	if account.UserJWTDuration != nil {
+		params.UserJwtDuration = ptr(int64(account.UserJWTDuration.Seconds()))
+	}
+	err := r.db.UpdateAccount(ctx, params)
 	return tagEntityErr[entity.Account](err)
 }
 
@@ -194,7 +198,7 @@ func (r *EntityRepository) ReadAccountByPublicKey(ctx context.Context, pubKey st
 func (r *EntityRepository) ListAccounts(ctx context.Context, operatorID entity.OperatorID, filter paginate.PageFilter[entity.AccountID]) ([]entity.AccountData, error) {
 	params := sqlc.ListAccountsParams{
 		OperatorID: operatorID.String(),
-		Size:       filter.Size,
+		Size:       int64(filter.Size),
 	}
 	if filter.Cursor != nil {
 		params.Cursor = ptr(filter.Cursor.String())
@@ -214,27 +218,31 @@ func (r *EntityRepository) DeleteAccount(ctx context.Context, id entity.AccountI
 }
 
 func (r *EntityRepository) CreateUser(ctx context.Context, user entity.UserData) error {
-	err := r.db.CreateUser(ctx, sqlc.CreateUserParams{
+	params := sqlc.CreateUserParams{
 		ID:          user.ID.String(),
 		NamespaceID: user.NamespaceID.String(),
 		OperatorID:  user.OperatorID.String(),
 		AccountID:   user.AccountID.String(),
 		Name:        user.Name,
 		Jwt:         user.JWT,
-		JwtDuration: user.JWTDuration,
-	})
-
+	}
+	if user.JWTDuration != nil {
+		params.JwtDuration = ptr(int64(user.JWTDuration.Seconds()))
+	}
+	err := r.db.CreateUser(ctx, params)
 	return tagEntityErr[entity.User](err)
 }
 
 func (r *EntityRepository) UpdateUser(ctx context.Context, user entity.UserData) error {
-	err := r.db.UpdateUser(ctx, sqlc.UpdateUserParams{
-		ID:          user.ID.String(),
-		Name:        user.Name,
-		Jwt:         user.JWT,
-		JwtDuration: user.JWTDuration,
-	})
-
+	params := sqlc.UpdateUserParams{
+		ID:   user.ID.String(),
+		Name: user.Name,
+		Jwt:  user.JWT,
+	}
+	if user.JWTDuration != nil {
+		params.JwtDuration = ptr(int64(user.JWTDuration.Seconds()))
+	}
+	err := r.db.UpdateUser(ctx, params)
 	return tagEntityErr[entity.User](err)
 }
 
@@ -261,7 +269,7 @@ func (r *EntityRepository) ReadUserByName(ctx context.Context, operatorID entity
 func (r *EntityRepository) ListUsers(ctx context.Context, accountID entity.AccountID, filter paginate.PageFilter[entity.UserID]) ([]entity.UserData, error) {
 	params := sqlc.ListUsersParams{
 		AccountID: accountID.String(),
-		Size:      filter.Size,
+		Size:      int64(filter.Size),
 	}
 	if filter.Cursor != nil {
 		params.Cursor = ptr(filter.Cursor.String())
@@ -292,7 +300,7 @@ func (r *EntityRepository) ListUserJWTIssuances(ctx context.Context, userID enti
 	issuances, err := r.db.ListUserJWTIssuances(ctx, sqlc.ListUserJWTIssuancesParams{
 		UserID: userID.String(),
 		Cursor: filter.Cursor,
-		Size:   filter.Size,
+		Size:   int64(filter.Size),
 	})
 	if err != nil {
 		return nil, tagEntityErr[entity.User](err)
@@ -301,19 +309,17 @@ func (r *EntityRepository) ListUserJWTIssuances(ctx context.Context, userID enti
 }
 
 func (r *EntityRepository) CreateNkey(ctx context.Context, nkey entity.NkeyData) error {
-	nkeyType := marshalNkeyType(nkey.Type)
-
 	if nkey.SigningKey {
 		return r.db.CreateSigningKey(ctx, sqlc.CreateSigningKeyParams{
 			ID:   nkey.ID,
-			Type: nkeyType,
+			Type: nkey.Type.String(),
 			Seed: nkey.Seed,
 		})
 	}
 
 	return r.db.CreateNkey(ctx, sqlc.CreateNkeyParams{
 		ID:   nkey.ID,
-		Type: nkeyType,
+		Type: nkey.Type.String(),
 		Seed: nkey.Seed,
 	})
 }
@@ -344,11 +350,11 @@ func tagNkeyErr(err error, signingKey bool) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, sql.ErrNoRows) {
 		if signingKey {
-			return errtag.Tag[SigningKeyNotFound](err)
+			return errtag.Tag[postgres.SigningKeyNotFound](err)
 		}
-		return errtag.Tag[NkeyNotFound](err)
+		return errtag.Tag[postgres.NkeyNotFound](err)
 	}
 	return err
 }
@@ -357,14 +363,8 @@ func tagEntityErr[T entity.Entity](err error) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, pgx.ErrNoRows) {
-		return errtag.Tag[EntityNotFound[T]](err)
-	}
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
-		if pgErr.Code == pgerrcode.UniqueViolation {
-			return errtag.Tag[EntityConflict[T]](err)
-		}
+	if errors.Is(err, sql.ErrNoRows) {
+		return errtag.Tag[postgres.EntityNotFound[T]](err)
 	}
 	return err
 }

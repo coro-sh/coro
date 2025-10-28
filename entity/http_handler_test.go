@@ -1,10 +1,11 @@
-package entity
+package entity_test // avoid import cycle with sqlite package
 
 import (
 	"context"
 	"fmt"
 	"math/rand/v2"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -15,82 +16,86 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/errtag"
 	"github.com/coro-sh/coro/paginate"
+	"github.com/coro-sh/coro/ref"
 	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/testutil"
 )
 
 func TestServer_CreateNamespace(t *testing.T) {
-	fixture := SetupTestFixture(t)
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 
-	req := CreateNamespaceRequest{
+	req := entity.CreateNamespaceRequest{
 		Name: testutil.RandName(),
 	}
 
-	res := testutil.Post[server.Response[NamespaceResponse]](t, fixture.NamespacesURL(), req)
+	res := testutil.Post[server.Response[entity.NamespaceResponse]](t, fixture.NamespacesURL(), req)
 	got := res.Data
 	assert.False(t, got.ID.IsZero())
 	assert.Equal(t, req.Name, got.Name)
 }
 
 func TestServer_DeleteNamespace(t *testing.T) {
-	fixture := SetupTestFixture(t)
-	defer fixture.Stop()
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
 
-	ns := NewNamespace(testutil.RandName())
-	err := fixture.Store.CreateNamespace(t.Context(), ns)
-	require.NoError(t, err)
+	fixture := NewHTTPHandlerTestFixture(t)
+	defer fixture.Stop()
+	ns := fixture.AddNamespace(ctx)
 
 	testutil.Delete(t, fixture.NamespaceURL(ns.ID))
 
-	_, err = fixture.Store.ReadNamespaceByName(t.Context(), ns.Name)
+	_, err := fixture.Store.ReadNamespaceByName(t.Context(), ns.Name)
 	assert.True(t, errtag.HasTag[errtag.NotFound](err))
 }
 
 func TestHTTPHandler_ListNamespaces(t *testing.T) {
-	ctx := context.Background()
-	fixture := SetupTestFixture(t)
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 
 	numNS := 15
 	pageSize := 10
 
-	wantResps := make([]NamespaceResponse, numNS)
+	wantResps := make([]entity.NamespaceResponse, numNS)
 
 	for i := range numNS {
-		ns := NewNamespace(testutil.RandName())
-		err := fixture.Store.CreateNamespace(ctx, ns)
-		require.NoError(t, err)
+		ns := fixture.AddNamespace(ctx)
 
-		wantResps[i] = NamespaceResponse{
+		wantResps[i] = entity.NamespaceResponse{
 			Namespace: *ns,
 		}
 	}
 
+	slices.Reverse(wantResps) // expect order by newest to oldest
+
 	// Page 1
 	url := fmt.Sprintf("%s?%s=%d", fixture.NamespacesURL(), paginate.PageSizeQueryParam, pageSize)
-	res := testutil.Get[server.ResponseList[NamespaceResponse]](t, url)
+	res := testutil.Get[server.ResponseList[entity.NamespaceResponse]](t, url)
 	assert.Equal(t, wantResps[:pageSize], res.Data)
 	assert.NotEmpty(t, res.NextPageCursor)
 
 	// Page 2
 	url = fmt.Sprintf("%s&%s=%s", url, paginate.PageCursorQueryParam, *res.NextPageCursor)
-	res = testutil.Get[server.ResponseList[NamespaceResponse]](t, url)
+	res = testutil.Get[server.ResponseList[entity.NamespaceResponse]](t, url)
 	assert.Equal(t, wantResps[pageSize:], res.Data)
 	assert.Nil(t, res.NextPageCursor)
 }
 
 func TestServer_CreateOperator(t *testing.T) {
-	fixture := SetupTestFixture(t)
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
+	ns := fixture.AddNamespace(t.Context())
 
-	req := CreateOperatorRequest{
+	req := entity.CreateOperatorRequest{
 		Name: testutil.RandName(),
 	}
 
-	res := testutil.Post[server.Response[OperatorResponse]](t, fixture.OperatorsURL(NewID[NamespaceID]()), req)
+	res := testutil.Post[server.Response[entity.OperatorResponse]](t, fixture.OperatorsURL(ns.ID), req)
 	got := res.Data
 	assert.False(t, got.ID.IsZero())
 	assert.NotEmpty(t, got.JWT)
@@ -99,20 +104,18 @@ func TestServer_CreateOperator(t *testing.T) {
 }
 
 func TestServer_UpdateOperator(t *testing.T) {
-	ctx := context.Background()
-	fixture := SetupTestFixture(t)
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
+
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
+	op := fixture.AddOperator(ctx)
 
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
-	require.NoError(t, err)
-	err = fixture.Store.CreateOperator(ctx, op)
-	require.NoError(t, err)
-
-	req := UpdateOperatorRequest{
+	req := entity.UpdateOperatorRequest{
 		Name: testutil.RandName(),
 	}
 
-	res := testutil.Put[server.Response[OperatorResponse]](t, fixture.OperatorURL(op.NamespaceID, op.ID), req)
+	res := testutil.Put[server.Response[entity.OperatorResponse]](t, fixture.OperatorURL(op.NamespaceID, op.ID), req)
 	got := res.Data
 
 	opData, err := op.Data()
@@ -127,16 +130,14 @@ func TestServer_UpdateOperator(t *testing.T) {
 }
 
 func TestServer_GetOperator(t *testing.T) {
-	ctx := context.Background()
-	fixture := SetupTestFixture(t)
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
+
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
+	op := fixture.AddOperator(ctx)
 
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
-	require.NoError(t, err)
-	err = fixture.Store.CreateOperator(ctx, op)
-	require.NoError(t, err)
-
-	res := testutil.Get[server.Response[OperatorResponse]](t, fixture.OperatorURL(op.NamespaceID, op.ID))
+	res := testutil.Get[server.Response[entity.OperatorResponse]](t, fixture.OperatorURL(op.NamespaceID, op.ID))
 	got := res.Data
 	opData, err := op.Data()
 	require.NoError(t, err)
@@ -144,18 +145,19 @@ func TestServer_GetOperator(t *testing.T) {
 }
 
 func TestHTTPHandler_ListOperators(t *testing.T) {
-	ctx := context.Background()
-	fixture := SetupTestFixture(t)
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
+
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
+	ns := fixture.AddNamespace(ctx)
 
 	numOps := 15
 	pageSize := 10
-
-	nsID := NewID[NamespaceID]()
-	wantResps := make([]OperatorResponse, numOps)
+	wantResps := make([]entity.OperatorResponse, numOps)
 
 	for i := range numOps {
-		op, err := NewOperator(testutil.RandName(), nsID)
+		op, err := entity.NewOperator(testutil.RandName(), ns.ID)
 		require.NoError(t, err)
 		err = fixture.Store.CreateOperator(ctx, op)
 		require.NoError(t, err)
@@ -163,42 +165,41 @@ func TestHTTPHandler_ListOperators(t *testing.T) {
 		wantData, err := op.Data()
 		require.NoError(t, err)
 
-		wantResps[i] = OperatorResponse{
+		wantResps[i] = entity.OperatorResponse{
 			OperatorData: wantData,
-			Status: OperatorNATSStatus{
+			Status: entity.OperatorNATSStatus{
 				Connected:   true,
-				ConnectTime: ptr(stubNotifConnectTime),
+				ConnectTime: ref.Ptr(stubNotifConnectTime),
 			},
 		}
 	}
 
+	slices.Reverse(wantResps) // expect order by newest to oldest
+
 	// Page 1
-	url := fmt.Sprintf("%s?%s=%d", fixture.OperatorsURL(nsID), paginate.PageSizeQueryParam, pageSize)
-	res := testutil.Get[server.ResponseList[OperatorResponse]](t, url)
+	url := fmt.Sprintf("%s?%s=%d", fixture.OperatorsURL(ns.ID), paginate.PageSizeQueryParam, pageSize)
+	res := testutil.Get[server.ResponseList[entity.OperatorResponse]](t, url)
 	assert.Equal(t, wantResps[:pageSize], res.Data)
 	assert.NotEmpty(t, res.NextPageCursor)
 
 	// Page 2
 	url = fmt.Sprintf("%s&%s=%s", url, paginate.PageCursorQueryParam, *res.NextPageCursor)
-	res = testutil.Get[server.ResponseList[OperatorResponse]](t, url)
+	res = testutil.Get[server.ResponseList[entity.OperatorResponse]](t, url)
 	assert.Equal(t, wantResps[pageSize:], res.Data)
 	assert.Nil(t, res.NextPageCursor)
 }
 
 func TestServer_DeleteOperator(t *testing.T) {
-	fixture := SetupTestFixture(t)
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
+
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
+	op := fixture.AddOperator(ctx)
 
-	nsID := NewID[NamespaceID]()
-	op, err := NewOperator(testutil.RandName(), nsID)
-	require.NoError(t, err)
+	testutil.Delete(t, fixture.OperatorURL(op.NamespaceID, op.ID))
 
-	err = fixture.Store.CreateOperator(t.Context(), op)
-	require.NoError(t, err)
-
-	testutil.Delete(t, fixture.OperatorURL(nsID, op.ID))
-
-	_, err = fixture.Store.ReadOperator(t.Context(), op.ID)
+	_, err := fixture.Store.ReadOperator(t.Context(), op.ID)
 	assert.True(t, errtag.HasTag[errtag.NotFound](err))
 }
 
@@ -206,27 +207,23 @@ func TestServer_CreateAccount(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	fixture := SetupTestFixture(t)
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
+	op := fixture.AddOperator(ctx)
 
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
-	require.NoError(t, err)
-	err = fixture.Store.CreateOperator(ctx, op)
-	require.NoError(t, err)
-
-	req := CreateAccountRequest{
+	req := entity.CreateAccountRequest{
 		Name: testutil.RandName(),
-		Limits: &AccountLimits{
-			Subscriptions:       ptr(rand.Int64N(100)),
-			PayloadSize:         ptr(rand.Int64N(100)),
-			Imports:             ptr(rand.Int64N(100)),
-			Exports:             ptr(rand.Int64N(100)),
-			Connections:         ptr(rand.Int64N(100)),
-			UserJWTDurationSecs: ptr(rand.Int64N(100000)),
+		Limits: &entity.AccountLimits{
+			Subscriptions:       ref.Ptr(rand.Int64N(100)),
+			PayloadSize:         ref.Ptr(rand.Int64N(100)),
+			Imports:             ref.Ptr(rand.Int64N(100)),
+			Exports:             ref.Ptr(rand.Int64N(100)),
+			Connections:         ref.Ptr(rand.Int64N(100)),
+			UserJWTDurationSecs: ref.Ptr(rand.Int64N(100000)),
 		},
 	}
 
-	res := testutil.Post[server.Response[AccountResponse]](t, fixture.OperatorAccountsURL(op.NamespaceID, op.ID), req)
+	res := testutil.Post[server.Response[entity.AccountResponse]](t, fixture.OperatorAccountsURL(op.NamespaceID, op.ID), req)
 	got := res.Data
 
 	assert.False(t, got.ID.IsZero())
@@ -241,31 +238,22 @@ func TestServer_UpdateAccount(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
-	fixture := SetupTestFixture(t)
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
+	acc := fixture.AddAccount(ctx)
 
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
-	require.NoError(t, err)
-	err = fixture.Store.CreateOperator(ctx, op)
-	require.NoError(t, err)
-
-	acc, err := NewAccount(testutil.RandName(), op)
-	require.NoError(t, err)
-	err = fixture.Store.CreateAccount(ctx, acc)
-	require.NoError(t, err)
-
-	req := UpdateAccountRequest{
+	req := entity.UpdateAccountRequest{
 		Name: testutil.RandName(),
-		Limits: &AccountLimits{
-			Subscriptions: ptr(rand.Int64N(100)),
-			PayloadSize:   ptr(rand.Int64N(100)),
-			Imports:       ptr(rand.Int64N(100)),
-			Exports:       ptr(rand.Int64N(100)),
-			Connections:   ptr(rand.Int64N(100)),
+		Limits: &entity.AccountLimits{
+			Subscriptions: ref.Ptr(rand.Int64N(100)),
+			PayloadSize:   ref.Ptr(rand.Int64N(100)),
+			Imports:       ref.Ptr(rand.Int64N(100)),
+			Exports:       ref.Ptr(rand.Int64N(100)),
+			Connections:   ref.Ptr(rand.Int64N(100)),
 		},
 	}
 
-	res := testutil.Put[server.Response[AccountResponse]](t, fixture.AccountURL(acc.NamespaceID, acc.ID), req)
+	res := testutil.Put[server.Response[entity.AccountResponse]](t, fixture.AccountURL(acc.NamespaceID, acc.ID), req)
 	got := res.Data
 
 	accData, err := acc.Data()
@@ -282,19 +270,14 @@ func TestServer_UpdateAccount(t *testing.T) {
 }
 
 func TestServer_GetAccount(t *testing.T) {
-	ctx := context.Background()
-	fixture := SetupTestFixture(t)
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
+
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
+	acc := fixture.AddAccount(ctx)
 
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
-	require.NoError(t, err)
-	accName := testutil.RandName()
-	acc, err := NewAccount(accName, op)
-	require.NoError(t, err)
-	err = fixture.Store.CreateAccount(ctx, acc)
-	require.NoError(t, err)
-
-	res := testutil.Get[server.Response[AccountResponse]](t, fixture.AccountURL(acc.NamespaceID, acc.ID))
+	res := testutil.Get[server.Response[entity.AccountResponse]](t, fixture.AccountURL(acc.NamespaceID, acc.ID))
 	got := res.Data
 
 	accData, err := acc.Data()
@@ -303,26 +286,24 @@ func TestServer_GetAccount(t *testing.T) {
 	accClaims, err := acc.Claims()
 	require.NoError(t, err)
 
-	assert.Equal(t, loadAccountLimits(accData, accClaims), got.Limits)
+	assert.Equal(t, entity.LoadAccountLimits(accData, accClaims), got.Limits)
 }
 
 func TestHTTPHandler_ListAccounts(t *testing.T) {
-	ctx := context.Background()
-	fixture := SetupTestFixture(t)
-	defer fixture.Stop()
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
 
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
-	require.NoError(t, err)
-	err = fixture.Store.CreateOperator(ctx, op)
-	require.NoError(t, err)
+	fixture := NewHTTPHandlerTestFixture(t)
+	defer fixture.Stop()
+	op := fixture.AddOperator(ctx)
 
 	numOps := 15
 	pageSize := 10
 
-	wantResps := make([]AccountResponse, numOps)
+	wantResps := make([]entity.AccountResponse, numOps)
 
 	for i := range numOps {
-		acc, err := NewAccount(testutil.RandName(), op)
+		acc, err := entity.NewAccount(testutil.RandName(), op)
 		require.NoError(t, err)
 		err = fixture.Store.CreateAccount(ctx, acc)
 		require.NoError(t, err)
@@ -332,54 +313,51 @@ func TestHTTPHandler_ListAccounts(t *testing.T) {
 		accClaims, err := acc.Claims()
 		require.NoError(t, err)
 
-		wantResps[i] = AccountResponse{
+		wantResps[i] = entity.AccountResponse{
 			AccountData: wantData,
-			Limits:      loadAccountLimits(wantData, accClaims),
+			Limits:      entity.LoadAccountLimits(wantData, accClaims),
 		}
 	}
 
+	slices.Reverse(wantResps) // expect order by newest to oldest
+
 	// Page 1
 	url := fmt.Sprintf("%s?%s=%d", fixture.AccountsURL(op.NamespaceID, op.ID), paginate.PageSizeQueryParam, pageSize)
-	res := testutil.Get[server.ResponseList[AccountResponse]](t, url)
+	res := testutil.Get[server.ResponseList[entity.AccountResponse]](t, url)
 	assert.Equal(t, wantResps[:pageSize], res.Data)
 	assert.NotEmpty(t, res.NextPageCursor)
 
 	// Page 2
 	url = fmt.Sprintf("%s&%s=%s", url, paginate.PageCursorQueryParam, *res.NextPageCursor)
-	res = testutil.Get[server.ResponseList[AccountResponse]](t, url)
+	res = testutil.Get[server.ResponseList[entity.AccountResponse]](t, url)
 	assert.Equal(t, wantResps[pageSize:], res.Data)
 	assert.Nil(t, res.NextPageCursor)
 }
 
 func TestServer_DeleteAccount(t *testing.T) {
-	fixture := SetupTestFixture(t)
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
+
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
-
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
-	require.NoError(t, err)
-	acc, err := NewAccount(testutil.RandName(), op)
-	require.NoError(t, err)
-
-	err = fixture.Store.CreateAccount(t.Context(), acc)
-	require.NoError(t, err)
+	acc := fixture.AddAccount(ctx)
 
 	testutil.Delete(t, fixture.AccountURL(acc.NamespaceID, acc.ID))
 
-	_, err = fixture.Store.ReadAccount(t.Context(), acc.ID)
+	_, err := fixture.Store.ReadAccount(t.Context(), acc.ID)
 	assert.True(t, errtag.HasTag[errtag.NotFound](err))
 }
 
-func setupNewTestSysOperator(ctx context.Context, t *testing.T, testStore *Store) (*Operator, *Account) {
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
+func setupNewTestSysOperator(ctx context.Context, t *testing.T, store *entity.Store) (*entity.Operator, *entity.Account) {
+	ns := entity.NewNamespace(testutil.RandName())
+	require.NoError(t, store.CreateNamespace(ctx, ns))
+	op, err := entity.NewOperator(testutil.RandName(), ns.ID)
 	require.NoError(t, err)
 	sysAcc, sysUser, err := op.SetNewSystemAccountAndUser()
 	require.NoError(t, err)
-	err = testStore.CreateOperator(ctx, op)
-	require.NoError(t, err)
-	err = testStore.CreateAccount(ctx, sysAcc)
-	require.NoError(t, err)
-	err = testStore.CreateUser(ctx, sysUser)
-	require.NoError(t, err)
+	require.NoError(t, store.CreateOperator(ctx, op))
+	require.NoError(t, store.CreateAccount(ctx, sysAcc))
+	require.NoError(t, store.CreateUser(ctx, sysUser))
 	return op, sysAcc
 }
 
@@ -387,30 +365,24 @@ func TestServer_CreateUser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
-	fixture := SetupTestFixture(t)
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
+	acc := fixture.AddAccount(ctx)
 
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
-	require.NoError(t, err)
-	acc, err := NewAccount(testutil.RandName(), op)
-	require.NoError(t, err)
-	err = fixture.Store.CreateAccount(ctx, acc)
-	require.NoError(t, err)
-
-	req := CreateUserRequest{
+	req := entity.CreateUserRequest{
 		Name: testutil.RandName(),
-		Limits: &UserLimits{
-			Subscriptions:   ptr(rand.Int64N(100)),
-			PayloadSize:     ptr(rand.Int64N(100)),
-			JWTDurationSecs: ptr(rand.Int64N(100000)),
+		Limits: &entity.UserLimits{
+			Subscriptions:   ref.Ptr(rand.Int64N(100)),
+			PayloadSize:     ref.Ptr(rand.Int64N(100)),
+			JWTDurationSecs: ref.Ptr(rand.Int64N(100000)),
 		},
 	}
 
-	res := testutil.Post[server.Response[UserResponse]](t, fixture.AccountUsersURL(acc.NamespaceID, acc.ID), req)
+	res := testutil.Post[server.Response[entity.UserResponse]](t, fixture.AccountUsersURL(acc.NamespaceID, acc.ID), req)
 	got := res.Data
 
 	assert.False(t, got.ID.IsZero())
-	assert.Equal(t, op.ID, got.OperatorID)
+	assert.Equal(t, acc.OperatorID, got.OperatorID)
 	assert.Equal(t, acc.ID, got.AccountID)
 	assert.Equal(t, req.Name, got.Name)
 	assert.NotEmpty(t, got.JWT)
@@ -421,44 +393,30 @@ func TestServer_UpdateUser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
-	fixture := SetupTestFixture(t)
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
+	usr := fixture.AddUser(ctx)
 
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
-	require.NoError(t, err)
-	err = fixture.Store.CreateOperator(ctx, op)
-	require.NoError(t, err)
-
-	acc, err := NewAccount(testutil.RandName(), op)
-	require.NoError(t, err)
-	err = fixture.Store.CreateAccount(ctx, acc)
-	require.NoError(t, err)
-
-	user, err := NewUser(testutil.RandName(), acc)
-	require.NoError(t, err)
-	err = fixture.Store.CreateUser(ctx, user)
-	require.NoError(t, err)
-
-	req := UpdateUserRequest{
+	req := entity.UpdateUserRequest{
 		Name: testutil.RandName(),
-		Limits: &UserLimits{
-			Subscriptions:   ptr(rand.Int64N(100)),
-			PayloadSize:     ptr(rand.Int64N(100)),
-			JWTDurationSecs: ptr(rand.Int64N(100000)),
+		Limits: &entity.UserLimits{
+			Subscriptions:   ref.Ptr(rand.Int64N(100)),
+			PayloadSize:     ref.Ptr(rand.Int64N(100)),
+			JWTDurationSecs: ref.Ptr(rand.Int64N(100000)),
 		},
 	}
 
-	res := testutil.Put[server.Response[UserResponse]](t, fixture.UserURL(user.NamespaceID, user.ID), req)
+	res := testutil.Put[server.Response[entity.UserResponse]](t, fixture.UserURL(usr.NamespaceID, usr.ID), req)
 	got := res.Data
 
-	userData, err := user.Data()
+	userData, err := usr.Data()
 	require.NoError(t, err)
 	assert.Equal(t, userData.ID, got.ID)
 	assert.Equal(t, userData.OperatorID, got.OperatorID)
 
 	// Updated fields
 	assert.NotEmpty(t, got.JWT)
-	assert.NotEqual(t, user.JWT(), got.JWT)
+	assert.NotEqual(t, usr.JWT(), got.JWT)
 	assert.Equal(t, req.Name, got.Name)
 	assert.Equal(t, *req.Limits, got.Limits)
 }
@@ -467,50 +425,30 @@ func TestServer_GetUser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
-	fixture := SetupTestFixture(t)
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
-
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
-	require.NoError(t, err)
-	acc, err := NewAccount(testutil.RandName(), op)
-	require.NoError(t, err)
-	usr, err := NewUser(testutil.RandName(), acc)
-	err = fixture.Store.CreateUser(ctx, usr)
-	require.NoError(t, err)
+	usr := fixture.AddUser(ctx)
 
 	usrData, err := usr.Data()
 	require.NoError(t, err)
 	usrClaims, err := usr.Claims()
 	require.NoError(t, err)
 
-	res := testutil.Get[server.Response[UserResponse]](t, fixture.UserURL(usr.NamespaceID, usr.ID))
+	res := testutil.Get[server.Response[entity.UserResponse]](t, fixture.UserURL(usr.NamespaceID, usr.ID))
 	got := res.Data
 	assert.Equal(t, usrData, got.UserData)
 	assert.Equal(t, usr.JWT(), got.JWT)
 
-	assert.Equal(t, loadUserLimits(usrData, usrClaims), got.Limits)
+	assert.Equal(t, entity.LoadUserLimits(usrData, usrClaims), got.Limits)
 }
 
 func TestServer_GetUserCreds(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
-	fixture := SetupTestFixture(t)
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
-
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
-	require.NoError(t, err)
-	err = fixture.Store.CreateOperator(ctx, op)
-	require.NoError(t, err)
-
-	acc, err := NewAccount(testutil.RandName(), op)
-	require.NoError(t, err)
-	err = fixture.Store.CreateAccount(ctx, acc)
-	require.NoError(t, err)
-
-	usr, err := NewUser(testutil.RandName(), acc)
-	err = fixture.Store.CreateUser(ctx, usr)
-	require.NoError(t, err)
+	usr := fixture.AddUser(ctx)
 
 	res := testutil.GetText(t, fixture.UserCredsURL(usr.NamespaceID, usr.ID))
 
@@ -523,7 +461,7 @@ func TestServer_GetServerConfig(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
-	fixture := SetupTestFixture(t)
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 
 	op, sysAcc := setupNewTestSysOperator(ctx, t, fixture.Store)
@@ -560,26 +498,20 @@ func TestServer_GetServerConfig(t *testing.T) {
 }
 
 func TestHTTPHandler_ListUsers(t *testing.T) {
-	ctx := context.Background()
-	fixture := SetupTestFixture(t)
-	defer fixture.Stop()
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
 
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
-	require.NoError(t, err)
-	err = fixture.Store.CreateOperator(ctx, op)
-	require.NoError(t, err)
-	acc, err := NewAccount(testutil.RandName(), op)
-	require.NoError(t, err)
-	err = fixture.Store.CreateAccount(ctx, acc)
-	require.NoError(t, err)
+	fixture := NewHTTPHandlerTestFixture(t)
+	defer fixture.Stop()
+	acc := fixture.AddAccount(ctx)
 
 	numOps := 15
 	pageSize := 10
 
-	wantResps := make([]UserResponse, numOps)
+	wantResps := make([]entity.UserResponse, numOps)
 
 	for i := range numOps {
-		user, err := NewUser(testutil.RandName(), acc)
+		user, err := entity.NewUser(testutil.RandName(), acc)
 		require.NoError(t, err)
 		err = fixture.Store.CreateUser(ctx, user)
 		require.NoError(t, err)
@@ -591,51 +523,47 @@ func TestHTTPHandler_ListUsers(t *testing.T) {
 		wantPubKey, err := user.NKey().KeyPair().PublicKey()
 		require.NoError(t, err)
 
-		wantResps[i] = UserResponse{
+		wantResps[i] = entity.UserResponse{
 			UserData:  wantData,
 			PublicKey: wantPubKey,
-			Limits:    loadUserLimits(wantData, usrClaims),
+			Limits:    entity.LoadUserLimits(wantData, usrClaims),
 		}
 	}
 
+	slices.Reverse(wantResps) // expect order by newest to oldest
+
 	// Page 1
 	url := fmt.Sprintf("%s?%s=%d", fixture.UsersURL(acc.NamespaceID, acc.ID), paginate.PageSizeQueryParam, pageSize)
-	res := testutil.Get[server.ResponseList[UserResponse]](t, url)
+	res := testutil.Get[server.ResponseList[entity.UserResponse]](t, url)
 	assert.Equal(t, wantResps[:pageSize], res.Data)
 	assert.NotEmpty(t, res.NextPageCursor)
 
 	// Page 2
 	url = fmt.Sprintf("%s&%s=%s", url, paginate.PageCursorQueryParam, *res.NextPageCursor)
-	res = testutil.Get[server.ResponseList[UserResponse]](t, url)
+	res = testutil.Get[server.ResponseList[entity.UserResponse]](t, url)
 	assert.Equal(t, wantResps[pageSize:], res.Data)
 	assert.Nil(t, res.NextPageCursor)
 }
 
 func TestServer_DeleteUser(t *testing.T) {
-	fixture := SetupTestFixture(t)
+	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
+	defer cancel()
+
+	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
-
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
-	require.NoError(t, err)
-	acc, err := NewAccount(testutil.RandName(), op)
-	require.NoError(t, err)
-	usr, err := NewUser(testutil.RandName(), acc)
-	require.NoError(t, err)
-
-	err = fixture.Store.CreateUser(t.Context(), usr)
-	require.NoError(t, err)
+	usr := fixture.AddUser(ctx)
 
 	testutil.Delete(t, fixture.UserURL(usr.NamespaceID, usr.ID))
 
-	_, err = fixture.Store.ReadUser(t.Context(), usr.ID)
+	_, err := fixture.Store.ReadUser(t.Context(), usr.ID)
 	assert.True(t, errtag.HasTag[errtag.NotFound](err))
 }
 
-func assertNATSAccountAuth(t *testing.T, natsURL string, operator *Operator, authorizedAcc *Account) {
+func assertNATSAccountAuth(t *testing.T, natsURL string, operator *entity.Operator, authorizedAcc *entity.Account) {
 	t.Helper()
-	unauthorizedAcc, err := NewAccount(testutil.RandName(), operator)
+	unauthorizedAcc, err := entity.NewAccount(testutil.RandName(), operator)
 	require.NoError(t, err)
-	unauthorizedUser, err := NewUser(testutil.RandName(), unauthorizedAcc)
+	unauthorizedUser, err := entity.NewUser(testutil.RandName(), unauthorizedAcc)
 	require.NoError(t, err)
 
 	// Unauthorized user rejected
@@ -646,7 +574,7 @@ func assertNATSAccountAuth(t *testing.T, natsURL string, operator *Operator, aut
 	)
 	assert.ErrorContains(t, err, "i/o timeout")
 
-	authorizedUsr, err := NewUser(testutil.RandName(), authorizedAcc)
+	authorizedUsr, err := entity.NewUser(testutil.RandName(), authorizedAcc)
 	require.NoError(t, err)
 
 	// Authorized user accepted
@@ -678,5 +606,5 @@ func assertNATSAccountAuth(t *testing.T, natsURL string, operator *Operator, aut
 
 // Hack: overwrite resolver dir path to avoid unwanted items in the current dir
 func sanitizeNATSConfig(t *testing.T, cfgContent string) string {
-	return strings.ReplaceAll(cfgContent, DefaultResolverDir, t.TempDir())
+	return strings.ReplaceAll(cfgContent, entity.DefaultResolverDir, t.TempDir())
 }

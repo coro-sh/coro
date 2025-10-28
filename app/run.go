@@ -22,7 +22,10 @@ import (
 	"github.com/coro-sh/coro/log"
 	"github.com/coro-sh/coro/postgres"
 	"github.com/coro-sh/coro/server"
+	"github.com/coro-sh/coro/sqlite"
+	"github.com/coro-sh/coro/sqlite/migrations"
 	"github.com/coro-sh/coro/tkn"
+	"github.com/coro-sh/coro/tx"
 )
 
 func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool, opts ...server.Option) error {
@@ -32,78 +35,8 @@ func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool, 
 		return err
 	}
 	defer pg.Close()
-
 	txer := postgres.NewTxer(pg)
-	store, err := NewEntityStore(txer, postgres.NewEntityRepository(pg), cfg.EncryptionSecretKey)
-	if err != nil {
-		return err
-	}
-
-	intNS, err := InitNamespace(ctx, store, logger, constants.InternalNamespaceName)
-	if err != nil {
-		return err
-	}
-	if _, err = InitNamespace(ctx, store, logger, constants.DefaultNamespaceName); err != nil {
-		return err
-	}
-
-	bOp, bSysAcc, bSysUsr, err := InitBrokerNATSEntities(ctx, txer, store, logger, intNS.ID)
-	if err != nil {
-		return err
-	}
-
-	brokerNats, err := StartEmbeddedNATS(logger, bOp, bSysAcc, nil, cfg.TLS)
-	if err != nil {
-		return fmt.Errorf("create broker embedded nats server: %w", err)
-	}
-	defer brokerNats.Shutdown()
-
-	opTknRW := postgres.NewOperatorTokenReadWriter(pg)
-	opTknIssuer := tkn.NewOperatorIssuer(opTknRW, tkn.OperatorTokenTypeProxy)
-
-	// Server
-	srvOpts := []server.Option{
-		server.WithLogger(logger),
-		server.WithCORS(cfg.CorsOrigins...),
-		server.WithMiddleware(
-			entity.NamespaceContextMiddleware(),
-			entity.InternalNamespaceMiddleware(intNS.ID),
-		),
-	}
-	if cfg.TLS != nil {
-		srvOpts = append(srvOpts, server.WithTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile, cfg.TLS.CACertFile))
-	}
-	srvOpts = append(srvOpts, opts...)
-	srv, err := server.NewServer(cfg.Port, srvOpts...)
-	if err != nil {
-		return err
-	}
-
-	brokerHandler, err := command.NewBrokerWebSocketHandler(bSysUsr, brokerNats, opTknIssuer, store, command.WithBrokerWebsocketLogger(logger))
-	if err != nil {
-		return err
-	}
-
-	commander, err := command.NewCommander("", bSysUsr, command.WithCommanderEmbeddedNATS(brokerNats))
-	if err != nil {
-		return fmt.Errorf("dial broker publisher: %w", err)
-	}
-
-	srv.Register("/api/v1", entity.NewHTTPHandler(txer, store, entity.WithCommander(commander)))
-	srv.Register("/api/v1", brokerHandler)
-	srv.Register("/api/v1", command.NewProxyHTTPHandler(opTknIssuer, store, commander))
-	srv.Register("/api/v1", command.NewStreamHTTPHandler(store, commander))
-	srv.Register("/api/v1", command.NewStreamWebSocketHandler(store, commander, command.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
-
-	if withUI {
-		var uiHandler, err = uiserver.AssetsHandler()
-		if err != nil {
-			return err
-		}
-		srv.Add(echo.GET, "/*", uiHandler)
-	}
-
-	return Serve(ctx, srv, logger)
+	return runAll(ctx, logger, cfg, withUI, txer, postgres.NewEntityRepository(pg), postgres.NewOperatorTokenReadWriter(pg), opts...)
 }
 
 func RunUI(ctx context.Context, logger log.Logger, cfg UIConfig, opts ...server.Option) error {
@@ -262,6 +195,111 @@ func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ..
 	}
 
 	srv.Register("/api/v1", handler)
+
+	return Serve(ctx, srv, logger)
+}
+
+func RunDevServer(ctx context.Context, logger log.Logger, serverPort int, withUI bool) error {
+	db, err := sqlite.Open(ctx, sqlite.WithInMemory())
+	defer db.Close()
+
+	if err = sqlite.MigrateDatabase(db, migrations.FS); err != nil {
+		return err
+	}
+
+	repo := sqlite.NewEntityRepository(db)
+	txer := sqlite.NewTxer(db)
+
+	appCfg := AllConfig{
+		BaseConfig: BaseConfig{
+			Port: serverPort,
+			Logger: LoggerConfig{
+				Level:      "debug",
+				Structured: false,
+			},
+		},
+	}
+
+	return runAll(ctx, logger, appCfg, withUI, txer, repo, sqlite.NewOperatorTokenReadWriter(db))
+}
+
+func runAll(
+	ctx context.Context,
+	logger log.Logger,
+	cfg AllConfig,
+	withUI bool,
+	txer tx.Txer,
+	repo entity.Repository,
+	opTknRW tkn.OperatorTokenReadWriter,
+	opts ...server.Option,
+) error {
+	store, err := NewEntityStore(txer, repo, cfg.EncryptionSecretKey)
+	if err != nil {
+		return err
+	}
+
+	intNS, err := InitNamespace(ctx, store, logger, constants.InternalNamespaceName)
+	if err != nil {
+		return err
+	}
+	if _, err = InitNamespace(ctx, store, logger, constants.DefaultNamespaceName); err != nil {
+		return err
+	}
+
+	bOp, bSysAcc, bSysUsr, err := InitBrokerNATSEntities(ctx, txer, store, logger, intNS.ID)
+	if err != nil {
+		return err
+	}
+
+	brokerNats, err := StartEmbeddedNATS(logger, bOp, bSysAcc, nil, cfg.TLS)
+	if err != nil {
+		return fmt.Errorf("create broker embedded nats server: %w", err)
+	}
+	defer brokerNats.Shutdown()
+
+	opTknIssuer := tkn.NewOperatorIssuer(opTknRW, tkn.OperatorTokenTypeProxy)
+
+	// Server
+	srvOpts := []server.Option{
+		server.WithLogger(logger),
+		server.WithCORS(cfg.CorsOrigins...),
+		server.WithMiddleware(
+			entity.NamespaceContextMiddleware(),
+			entity.InternalNamespaceMiddleware(intNS.ID),
+		),
+	}
+	if cfg.TLS != nil {
+		srvOpts = append(srvOpts, server.WithTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile, cfg.TLS.CACertFile))
+	}
+	srvOpts = append(srvOpts, opts...)
+	srv, err := server.NewServer(cfg.Port, srvOpts...)
+	if err != nil {
+		return err
+	}
+
+	brokerHandler, err := command.NewBrokerWebSocketHandler(bSysUsr, brokerNats, opTknIssuer, store, command.WithBrokerWebsocketLogger(logger))
+	if err != nil {
+		return err
+	}
+
+	commander, err := command.NewCommander("", bSysUsr, command.WithCommanderEmbeddedNATS(brokerNats))
+	if err != nil {
+		return fmt.Errorf("dial broker publisher: %w", err)
+	}
+
+	srv.Register("/api/v1", entity.NewHTTPHandler(txer, store, entity.WithCommander(commander)))
+	srv.Register("/api/v1", brokerHandler)
+	srv.Register("/api/v1", command.NewProxyHTTPHandler(opTknIssuer, store, commander))
+	srv.Register("/api/v1", command.NewStreamHTTPHandler(store, commander))
+	srv.Register("/api/v1", command.NewStreamWebSocketHandler(store, commander, command.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
+
+	if withUI {
+		var uiHandler, err = uiserver.AssetsHandler()
+		if err != nil {
+			return err
+		}
+		srv.Add(echo.GET, "/*", uiHandler)
+	}
 
 	return Serve(ctx, srv, logger)
 }

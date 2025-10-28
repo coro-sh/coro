@@ -44,6 +44,17 @@ See the [scaling example](examples/scaling/) for a simple Docker and Nginx based
 
 Refer to the [configuration guide](docs/config.md) for a full list of configuration options.
 
+## Development
+
+An all-in-one development server can be easily started with `make dev-server`.
+
+This command will:
+
+- Launch the Coro backend and frontend in a single server
+- Create a fresh Namespace that includes an Operator, Account, and User
+- Start an embedded NATS server for the Operator, connected to Coro through the proxy-agent
+- Set up a JetStream test Stream that publishes a message every 30 seconds
+
 ## Disclaimer
 
 Coro is under active development and may undergo significant changes. While it is available for exploration and testing,

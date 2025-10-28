@@ -442,7 +442,7 @@ func (h *HTTPHandler) CreateAccount(c echo.Context) error {
 
 	return server.SetResponse(c, http.StatusCreated, AccountResponse{
 		AccountData: accData,
-		Limits:      loadAccountLimits(accData, claims),
+		Limits:      LoadAccountLimits(accData, claims),
 	})
 }
 
@@ -516,7 +516,7 @@ func (h *HTTPHandler) UpdateAccount(c echo.Context) error {
 
 	return server.SetResponse(c, http.StatusOK, AccountResponse{
 		AccountData: accData,
-		Limits:      loadAccountLimits(accData, claims),
+		Limits:      LoadAccountLimits(accData, claims),
 	})
 }
 
@@ -558,7 +558,7 @@ func (h *HTTPHandler) GetAccount(c echo.Context) error {
 
 	return server.SetResponse(c, http.StatusOK, AccountResponse{
 		AccountData: accData,
-		Limits:      loadAccountLimits(accData, claims),
+		Limits:      LoadAccountLimits(accData, claims),
 	})
 }
 
@@ -597,7 +597,7 @@ func (h *HTTPHandler) ListAccounts(c echo.Context) error {
 
 		accResps[i] = AccountResponse{
 			AccountData: accData,
-			Limits:      loadAccountLimits(accData, claims),
+			Limits:      LoadAccountLimits(accData, claims),
 		}
 	}
 
@@ -691,7 +691,7 @@ func (h *HTTPHandler) CreateUser(c echo.Context) error {
 	return server.SetResponse(c, http.StatusCreated, UserResponse{
 		UserData:  usrData,
 		PublicKey: pubKey,
-		Limits:    loadUserLimits(usrData, usrClaims),
+		Limits:    LoadUserLimits(usrData, usrClaims),
 	})
 }
 
@@ -764,7 +764,7 @@ func (h *HTTPHandler) UpdateUser(c echo.Context) error {
 	return server.SetResponse(c, http.StatusOK, UserResponse{
 		UserData:  usrData,
 		PublicKey: pubKey,
-		Limits:    loadUserLimits(usrData, usrClaims),
+		Limits:    LoadUserLimits(usrData, usrClaims),
 	})
 }
 
@@ -812,7 +812,7 @@ func (h *HTTPHandler) GetUser(c echo.Context) error {
 	return server.SetResponse(c, http.StatusOK, UserResponse{
 		UserData:  usrData,
 		PublicKey: pubKey,
-		Limits:    loadUserLimits(usrData, usrClaims),
+		Limits:    LoadUserLimits(usrData, usrClaims),
 	})
 }
 
@@ -865,7 +865,7 @@ func (h *HTTPHandler) ListUsers(c echo.Context) error {
 		userResps[i] = UserResponse{
 			UserData:  usrData,
 			PublicKey: pubKey,
-			Limits:    loadUserLimits(usrData, usrClaims),
+			Limits:    LoadUserLimits(usrData, usrClaims),
 		}
 	}
 
@@ -1065,6 +1065,17 @@ func (h *HTTPHandler) GetNATSConfig(c echo.Context) error {
 	return c.String(http.StatusOK, content)
 }
 
+func LoadUserLimits(userData UserData, claims *jwt.UserClaims) UserLimits {
+	limits := UserLimits{
+		Subscriptions: parseLimit(claims.Subs),
+		PayloadSize:   parseLimit(claims.Limits.Payload),
+	}
+	if userData.JWTDuration != nil {
+		limits.JWTDurationSecs = ptr(int64(userData.JWTDuration.Seconds()))
+	}
+	return limits
+}
+
 func toUpdateAccountParams(name string, limits *AccountLimits) UpdateAccountParams {
 	params := UpdateAccountParams{
 		Name:          name,
@@ -1080,7 +1091,7 @@ func toUpdateAccountParams(name string, limits *AccountLimits) UpdateAccountPara
 	return params
 }
 
-func loadAccountLimits(accData AccountData, claims *jwt.AccountClaims) AccountLimits {
+func LoadAccountLimits(accData AccountData, claims *jwt.AccountClaims) AccountLimits {
 	limits := AccountLimits{
 		Subscriptions: parseLimit(claims.Limits.Subs),
 		PayloadSize:   parseLimit(claims.Limits.Payload),
@@ -1104,17 +1115,6 @@ func toUpdateUserParams(name string, limits *UserLimits) UpdateUserParams {
 		params.JWTDuration = ptr(time.Duration(*limits.JWTDurationSecs) * time.Second)
 	}
 	return params
-}
-
-func loadUserLimits(userData UserData, claims *jwt.UserClaims) UserLimits {
-	limits := UserLimits{
-		Subscriptions: parseLimit(claims.Subs),
-		PayloadSize:   parseLimit(claims.Limits.Payload),
-	}
-	if userData.JWTDuration != nil {
-		limits.JWTDurationSecs = ptr(int64(userData.JWTDuration.Seconds()))
-	}
-	return limits
 }
 
 func ptr[T any](v T) *T {

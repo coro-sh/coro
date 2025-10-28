@@ -16,9 +16,9 @@ import (
 )
 
 const (
-	AppDBName       = constants.AppName
-	pgRetryInterval = 2 * time.Second
-	pgMaxRetries    = 5
+	AppDBName           = constants.AppName
+	healthRetryInterval = time.Second
+	healthMaxRetries    = 5
 )
 
 type DialOption func(opts *dialOpts)
@@ -109,7 +109,7 @@ func waitHealthy(ctx context.Context, pool *pgxpool.Pool) error {
 		defer cancel()
 		return pool.Ping(ctx)
 	}
-	bo := backoff.WithMaxRetries(backoff.NewConstantBackOff(pgRetryInterval), pgMaxRetries)
+	bo := backoff.WithMaxRetries(backoff.NewConstantBackOff(healthRetryInterval), healthMaxRetries)
 	if err := backoff.Retry(pingFn, bo); err != nil {
 		return fmt.Errorf("postgres connection unhealthy: %w", err)
 	}
