@@ -14,7 +14,7 @@ type NamespaceID struct {
 type Namespace struct {
 	ID    NamespaceID `json:"id"`
 	Name  string      `json:"name"`
-	Owner string      `json:"owner"`
+	Owner string      `json:"-"`
 }
 
 // NewNamespace creates a new Namespace.
