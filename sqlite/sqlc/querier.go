@@ -29,7 +29,7 @@ type Querier interface {
 	ReadAccount(ctx context.Context, id string) (*Account, error)
 	ReadAccountByPublicKey(ctx context.Context, publicKey string) (*Account, error)
 	ReadNamespace(ctx context.Context, id string) (*Namespace, error)
-	ReadNamespaceByName(ctx context.Context, name string) (*Namespace, error)
+	ReadNamespaceByName(ctx context.Context, arg ReadNamespaceByNameParams) (*Namespace, error)
 	ReadNkey(ctx context.Context, id string) (*Nkey, error)
 	ReadOperator(ctx context.Context, id string) (*Operator, error)
 	ReadOperatorByName(ctx context.Context, name string) (*Operator, error)

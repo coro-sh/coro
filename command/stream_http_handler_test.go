@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 	"github.com/coro-sh/coro/server"
@@ -51,7 +52,7 @@ func TestStreamHTTPHandler_ListStreams(t *testing.T) {
 
 	srv, entityStore := newStreamHTTPServer(t, streams, nil)
 
-	ns := entity.NewNamespace(testutil.RandName())
+	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	err := entityStore.CreateNamespace(ctx, ns)
 	require.NoError(t, err)
 
@@ -77,7 +78,7 @@ func TestStreamHTTPHandler_FetchStreamMessages(t *testing.T) {
 
 	srv, entityStore := newStreamHTTPServer(t, nil, nil)
 
-	ns := entity.NewNamespace(testutil.RandName())
+	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	err := entityStore.CreateNamespace(t.Context(), ns)
 	require.NoError(t, err)
 
@@ -110,7 +111,7 @@ func TestStreamHTTPHandler_GetStreamMessageContent(t *testing.T) {
 
 	srv, entityStore := newStreamHTTPServer(t, nil, nil)
 
-	ns := entity.NewNamespace(testutil.RandName())
+	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	err := entityStore.CreateNamespace(t.Context(), ns)
 	require.NoError(t, err)
 

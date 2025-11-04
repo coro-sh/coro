@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/embedns"
 	"github.com/coro-sh/coro/entity"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
@@ -378,7 +379,7 @@ func setupEntities(
 	t *testing.T,
 	store *entity.Store,
 ) (*entity.Operator, *entity.Account, *entity.User) {
-	ns := entity.NewNamespace(testutil.RandName())
+	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	require.NoError(t, store.CreateNamespace(ctx, ns))
 
 	op, err := entity.NewOperator(testutil.RandName(), ns.ID)

@@ -1,11 +1,12 @@
 -- name: CreateNamespace :exec
-INSERT INTO namespace (id, name)
-VALUES ($1, $2);
+INSERT INTO namespace (id, name, owner)
+VALUES ($1, $2, $3);
 
 -- name: ReadNamespaceByName :one
 SELECT *
 FROM namespace
-WHERE name = $1;
+WHERE name = $1
+  AND owner = $2;
 
 -- name: ReadNamespace :one
 SELECT *
@@ -15,13 +16,13 @@ WHERE id = $1;
 -- name: BatchReadNamespaces :many
 SELECT *
 FROM namespace
-WHERE id = ANY(sqlc.arg('ids')::text[]);
+WHERE id = ANY (sqlc.arg('ids')::text[]);
 
 -- name: ListNamespaces :many
 SELECT *
 FROM namespace
 WHERE (sqlc.narg('cursor')::TEXT IS NULL OR id <= sqlc.narg('cursor')::TEXT)
-  AND name != 'coro_internal'
+  AND owner = $1
 ORDER BY id DESC
 LIMIT @size;
 

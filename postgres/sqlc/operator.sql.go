@@ -37,8 +37,8 @@ const deleteOperator = `-- name: DeleteOperator :exec
 SELECT delete_operator_and_nkeys($1)
 `
 
-func (q *Queries) DeleteOperator(ctx context.Context, operatorID string) error {
-	_, err := q.db.Exec(ctx, deleteOperator, operatorID)
+func (q *Queries) DeleteOperator(ctx context.Context, opID string) error {
+	_, err := q.db.Exec(ctx, deleteOperator, opID)
 	return err
 }
 

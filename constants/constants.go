@@ -7,13 +7,15 @@
 package constants
 
 const (
-	AppName               = "coro"
-	AppNameUpper          = "CORO"
-	SysAccountName        = "SYS"
-	SysUserName           = "sys"
-	BrokerOperatorName    = AppName + "_broker"
-	InternalNamespaceName = AppName + "_internal"
-	DefaultNamespaceName  = "default"
+	AppName                = "coro"
+	AppNameUpper           = "CORO"
+	SysAccountName         = "SYS"
+	SysUserName            = "sys"
+	BrokerOperatorName     = AppName + "_broker"
+	InternalNamespaceName  = AppName + "_internal"
+	InternalNamespaceOwner = AppName
+	DefaultNamespaceName   = "default"
+	DefaultNamespaceOwner  = "default"
 )
 
 func IsReservedNamespaceName(name string) bool {

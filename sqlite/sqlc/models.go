@@ -15,8 +15,9 @@ type Account struct {
 }
 
 type Namespace struct {
-	ID   string
-	Name string
+	ID    string
+	Name  string
+	Owner string
 }
 
 type Nkey struct {

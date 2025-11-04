@@ -11,7 +11,7 @@ import (
 )
 
 const batchReadNamespaces = `-- name: BatchReadNamespaces :many
-SELECT id, name
+SELECT id, name, owner
 FROM namespace
 WHERE id IN (/*SLICE:ids*/?)
 `
@@ -35,7 +35,7 @@ func (q *Queries) BatchReadNamespaces(ctx context.Context, ids []string) ([]*Nam
 	var items []*Namespace
 	for rows.Next() {
 		var i Namespace
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name, &i.Owner); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)
@@ -50,17 +50,18 @@ func (q *Queries) BatchReadNamespaces(ctx context.Context, ids []string) ([]*Nam
 }
 
 const createNamespace = `-- name: CreateNamespace :exec
-INSERT INTO namespace (id, name)
-VALUES (?1, ?2)
+INSERT INTO namespace (id, name, owner)
+VALUES (?1, ?2, ?3)
 `
 
 type CreateNamespaceParams struct {
-	ID   string
-	Name string
+	ID    string
+	Name  string
+	Owner string
 }
 
 func (q *Queries) CreateNamespace(ctx context.Context, arg CreateNamespaceParams) error {
-	_, err := q.db.ExecContext(ctx, createNamespace, arg.ID, arg.Name)
+	_, err := q.db.ExecContext(ctx, createNamespace, arg.ID, arg.Name, arg.Owner)
 	return err
 }
 
@@ -76,21 +77,22 @@ func (q *Queries) DeleteNamespace(ctx context.Context, id string) error {
 }
 
 const listNamespaces = `-- name: ListNamespaces :many
-SELECT id, name
+SELECT id, name, owner
 FROM namespace
-WHERE (?1 IS NULL OR id <= ?1)
-  AND name != 'coro_internal'
+WHERE (?2 IS NULL OR id <= ?2)
+  AND owner = ?1
 ORDER BY id DESC
-LIMIT ?2
+LIMIT ?3
 `
 
 type ListNamespacesParams struct {
+	Owner  string
 	Cursor interface{}
 	Size   int64
 }
 
 func (q *Queries) ListNamespaces(ctx context.Context, arg ListNamespacesParams) ([]*Namespace, error) {
-	rows, err := q.db.QueryContext(ctx, listNamespaces, arg.Cursor, arg.Size)
+	rows, err := q.db.QueryContext(ctx, listNamespaces, arg.Owner, arg.Cursor, arg.Size)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +100,7 @@ func (q *Queries) ListNamespaces(ctx context.Context, arg ListNamespacesParams) 
 	var items []*Namespace
 	for rows.Next() {
 		var i Namespace
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name, &i.Owner); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)
@@ -113,7 +115,7 @@ func (q *Queries) ListNamespaces(ctx context.Context, arg ListNamespacesParams) 
 }
 
 const readNamespace = `-- name: ReadNamespace :one
-SELECT id, name
+SELECT id, name, owner
 FROM namespace
 WHERE id = ?1
 `
@@ -121,19 +123,25 @@ WHERE id = ?1
 func (q *Queries) ReadNamespace(ctx context.Context, id string) (*Namespace, error) {
 	row := q.db.QueryRowContext(ctx, readNamespace, id)
 	var i Namespace
-	err := row.Scan(&i.ID, &i.Name)
+	err := row.Scan(&i.ID, &i.Name, &i.Owner)
 	return &i, err
 }
 
 const readNamespaceByName = `-- name: ReadNamespaceByName :one
-SELECT id, name
+SELECT id, name, owner
 FROM namespace
 WHERE name = ?1
+  AND owner = ?2
 `
 
-func (q *Queries) ReadNamespaceByName(ctx context.Context, name string) (*Namespace, error) {
-	row := q.db.QueryRowContext(ctx, readNamespaceByName, name)
+type ReadNamespaceByNameParams struct {
+	Name  string
+	Owner string
+}
+
+func (q *Queries) ReadNamespaceByName(ctx context.Context, arg ReadNamespaceByNameParams) (*Namespace, error) {
+	row := q.db.QueryRowContext(ctx, readNamespaceByName, arg.Name, arg.Owner)
 	var i Namespace
-	err := row.Scan(&i.ID, &i.Name)
+	err := row.Scan(&i.ID, &i.Name, &i.Owner)
 	return &i, err
 }

@@ -14,9 +14,10 @@ import (
 // Operators, Accounts, and Users.
 type Repository interface {
 	CreateNamespace(ctx context.Context, namespace *Namespace) error
-	ReadNamespaceByName(ctx context.Context, name string) (*Namespace, error)
+	ReadNamespace(ctx context.Context, id NamespaceID) (*Namespace, error)
+	ReadNamespaceByName(ctx context.Context, name string, owner string) (*Namespace, error)
 	BatchReadNamespaces(ctx context.Context, ids []NamespaceID) ([]*Namespace, error)
-	ListNamespaces(ctx context.Context, filter paginate.PageFilter[NamespaceID]) ([]*Namespace, error)
+	ListNamespaces(ctx context.Context, owner string, filter paginate.PageFilter[NamespaceID]) ([]*Namespace, error)
 	DeleteNamespace(ctx context.Context, id NamespaceID) error // must cascade delete
 
 	CreateOperator(ctx context.Context, operator OperatorData) error
@@ -87,9 +88,14 @@ func (s *Store) CreateNamespace(ctx context.Context, namespace *Namespace) error
 	return s.repo.CreateNamespace(ctx, namespace)
 }
 
+// ReadNamespace reads a Namespace by ID.
+func (s *Store) ReadNamespace(ctx context.Context, id NamespaceID) (*Namespace, error) {
+	return s.repo.ReadNamespace(ctx, id)
+}
+
 // ReadNamespaceByName reads a Namespace by name.
-func (s *Store) ReadNamespaceByName(ctx context.Context, name string) (*Namespace, error) {
-	return s.repo.ReadNamespaceByName(ctx, name)
+func (s *Store) ReadNamespaceByName(ctx context.Context, name string, owner string) (*Namespace, error) {
+	return s.repo.ReadNamespaceByName(ctx, name, owner)
 }
 
 // BatchReadNamespaces reads a batch of Namespaces by IDs.
@@ -98,8 +104,8 @@ func (s *Store) BatchReadNamespaces(ctx context.Context, ids []NamespaceID) ([]*
 }
 
 // ListNamespaces reads a list of Namespaces matching the provided PageFilter.
-func (s *Store) ListNamespaces(ctx context.Context, filter paginate.PageFilter[NamespaceID]) ([]*Namespace, error) {
-	return s.repo.ListNamespaces(ctx, filter)
+func (s *Store) ListNamespaces(ctx context.Context, owner string, filter paginate.PageFilter[NamespaceID]) ([]*Namespace, error) {
+	return s.repo.ListNamespaces(ctx, owner, filter)
 }
 
 // DeleteNamespace deletes a of Namespace.
@@ -437,14 +443,29 @@ func (s *Store) ReadNkey(ctx context.Context, id string, signingKey bool) (*Nkey
 
 // WithTx creates a new Store instance that uses the provided transaction.
 func (s *Store) WithTx(txn tx.Tx) (*Store, error) {
-	var err error
 	cpy := *s
 	cpy.isTx = true
-	cpy.repo, err = cpy.repo.WithTx(txn)
+	repo, err := cpy.repo.WithTx(txn)
+	cpy.repo = repo
 	if err != nil {
 		return nil, err
 	}
 	return &cpy, nil
+}
+
+// DoTx executes a transactional operation on the store.
+func (s *Store) DoTx(ctx context.Context, txn tx.Tx, fn func(ctx context.Context, store *Store) error) error {
+	cpy := *s
+	cpy.isTx = true
+	repo, err := cpy.repo.WithTx(txn)
+	if err != nil {
+		return err
+	}
+	cpy.repo = repo
+
+	err = fn(ctx, &cpy)
+	tx.Handle(context.Background(), txn, &err)
+	return err
 }
 
 func (s *Store) initOperator(ctx context.Context, data OperatorData) (*Operator, error) {

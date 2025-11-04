@@ -43,8 +43,8 @@ const deleteAccount = `-- name: DeleteAccount :exec
 SELECT delete_account_and_nkeys($1)
 `
 
-func (q *Queries) DeleteAccount(ctx context.Context, accountID string) error {
-	_, err := q.db.Exec(ctx, deleteAccount, accountID)
+func (q *Queries) DeleteAccount(ctx context.Context, accID string) error {
+	_, err := q.db.Exec(ctx, deleteAccount, accID)
 	return err
 }
 

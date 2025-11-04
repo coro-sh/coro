@@ -1,11 +1,12 @@
 -- name: CreateNamespace :exec
-INSERT INTO namespace (id, name)
-VALUES (?1, ?2);
+INSERT INTO namespace (id, name, owner)
+VALUES (?1, ?2, ?3);
 
 -- name: ReadNamespaceByName :one
 SELECT *
 FROM namespace
-WHERE name = ?1;
+WHERE name = ?1
+  AND owner = ?2;
 
 -- name: ReadNamespace :one
 SELECT *
@@ -21,7 +22,7 @@ WHERE id IN (sqlc.slice('ids'));
 SELECT *
 FROM namespace
 WHERE (@cursor IS NULL OR id <= @cursor)
-  AND name != 'coro_internal'
+  AND owner = ?1
 ORDER BY id DESC
 LIMIT @size;
 

@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/testutil"
@@ -27,7 +28,7 @@ func TestOperatorIssuer(t *testing.T) {
 	rw := sqlite.NewOperatorTokenReadWriter(db)
 	issuer := tkn.NewOperatorIssuer(rw, tkn.OperatorTokenTypeProxy)
 
-	ns := entity.NewNamespace(testutil.RandName())
+	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	require.NoError(t, store.CreateNamespace(ctx, ns))
 	op, err := entity.NewOperator(testutil.RandName(), ns.ID)
 	require.NoError(t, err)

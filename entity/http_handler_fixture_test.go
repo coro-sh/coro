@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/log"
 	"github.com/coro-sh/coro/server"
@@ -121,7 +122,7 @@ func (t *HTTPHandlerTestFixture) URLForPath(path string) string {
 }
 
 func (t *HTTPHandlerTestFixture) AddNamespace(ctx context.Context) *entity.Namespace {
-	ns := entity.NewNamespace(testutil.RandName())
+	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	require.NoError(t.t, t.Store.CreateNamespace(ctx, ns))
 	return ns
 }

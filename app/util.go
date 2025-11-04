@@ -58,17 +58,17 @@ func Serve(ctx context.Context, srv *server.Server, logger log.Logger) error {
 	}
 }
 
-func InitNamespace(ctx context.Context, store *entity.Store, logger log.Logger, name string) (*entity.Namespace, error) {
-	ns, err := store.ReadNamespaceByName(ctx, name)
+func InitNamespace(ctx context.Context, store *entity.Store, logger log.Logger, name string, owner string) (*entity.Namespace, error) {
+	ns, err := store.ReadNamespaceByName(ctx, name, owner)
 	if err != nil {
 		if errtag.HasTag[errtag.NotFound](err) {
-			ns = entity.NewNamespace(name)
+			ns = entity.NewNamespace(name, owner)
 			if err = store.CreateNamespace(ctx, ns); err != nil {
 				if !errtag.HasTag[errtag.Conflict](err) {
 					return nil, err
 				}
 				// Another server instance created Namespace first, so we can read the Namespace again
-				ns, err = store.ReadNamespaceByName(ctx, name)
+				ns, err = store.ReadNamespaceByName(ctx, name, owner)
 				if err != nil {
 					return nil, fmt.Errorf("read existing internal namespace: %w", err)
 				}

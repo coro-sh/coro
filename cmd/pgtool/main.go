@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/urfave/cli/v2"
 
+	"github.com/coro-sh/coro/log"
 	"github.com/coro-sh/coro/postgres"
 	"github.com/coro-sh/coro/postgres/migrations"
 )
@@ -126,93 +127,131 @@ func run(args []string) error {
 	return app.Run(args)
 }
 
-func cmdCreateDB(ctx context.Context, cfg config, c *cli.Context) error {
+func cmdCreateDB(ctx context.Context, cfg config, c *cli.Context, l log.Logger) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	database := c.String("default-db")
 	exitOnInvalidFlags(c, valgo.Is(valgo.String(database, "default-db").Not().Blank()))
 
+	l.Info("connecting to default database", "database", database)
 	hostPort := fmt.Sprintf("%s:%d", cfg.host, cfg.port)
 	conn, err := postgres.Dial(ctx, cfg.user, cfg.password, hostPort, database)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
+
+	l = l.With("database", postgres.AppDBName)
+
+	l.Info("creating database")
 	if _, err = conn.Exec(ctx, "CREATE DATABASE "+postgres.AppDBName); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code != pgerrcode.DuplicateDatabase {
 				return err
 			}
+			l.Info("database already exists")
 		}
 	}
+	l.Info("database successfully created")
+
 	return nil
 }
 
-func cmdDropDB(ctx context.Context, cfg config, c *cli.Context) error {
+func cmdDropDB(ctx context.Context, cfg config, c *cli.Context, l log.Logger) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	database := c.String("default-db")
 	exitOnInvalidFlags(c, valgo.Is(valgo.String(database, "default-db").Not().Blank()))
 
+	l.Info("connecting to default database", "database", database)
 	hostPort := fmt.Sprintf("%s:%d", cfg.host, cfg.port)
 	conn, err := postgres.Dial(ctx, cfg.user, cfg.password, hostPort, defaultDB)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
+
+	l = l.With("database", postgres.AppDBName)
+
+	l.Info("dropping database")
 	if _, err = conn.Exec(ctx, "DROP DATABASE IF EXISTS "+postgres.AppDBName); err != nil {
 		return err
 	}
+	l.Info("database successfully dropped", "database")
+
 	return nil
 }
 
-func cmdMigrate(ctx context.Context, cfg config, _ *cli.Context) error {
+func cmdMigrate(ctx context.Context, cfg config, _ *cli.Context, l log.Logger) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+
+	l = l.With("database", postgres.AppDBName)
+
+	l.Info("connecting to database")
 	hostPort := fmt.Sprintf("%s:%d", cfg.host, cfg.port)
 	conn, err := postgres.Dial(ctx, cfg.user, cfg.password, hostPort, postgres.AppDBName)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
-	return postgres.MigrateDatabase(conn, migrations.FS)
+
+	l.Info("migrating database")
+	if err = postgres.MigrateDatabase(conn, migrations.FS); err != nil {
+		return err
+	}
+	l.Info("successfully migrated database")
+
+	return nil
 }
 
-func cmdMigrateVersion(ctx context.Context, cfg config, c *cli.Context) error {
+func cmdMigrateVersion(ctx context.Context, cfg config, c *cli.Context, l log.Logger) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	version := c.Uint("version")
 	exitOnInvalidFlags(c, valgo.Is(valgo.Uint64(uint64(version), "version").GreaterThan(0)))
 
+	l = l.With("database", postgres.AppDBName)
+
+	l.Info("connecting to database")
 	hostPort := fmt.Sprintf("%s:%d", cfg.host, cfg.port)
 	conn, err := postgres.Dial(ctx, cfg.user, cfg.password, hostPort, postgres.AppDBName)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
-	return postgres.MigrateDatabase(conn, migrations.FS, postgres.WithMigrationVersion(version))
-}
 
-func cmdInit(ctx context.Context, cfg config, c *cli.Context) error {
-	if err := cmdCreateDB(ctx, cfg, c); err != nil {
+	l = l.With("version", version)
+	l.Info("migrating database")
+	if err = postgres.MigrateDatabase(conn, migrations.FS, postgres.WithMigrationVersion(version)); err != nil {
 		return err
 	}
-	if err := cmdMigrate(ctx, cfg, c); err != nil {
+	l.Info("successfully migrated database")
+
+	return nil
+}
+
+func cmdInit(ctx context.Context, cfg config, c *cli.Context, l log.Logger) error {
+	if err := cmdCreateDB(ctx, cfg, c, l); err != nil {
+		return err
+	}
+	if err := cmdMigrate(ctx, cfg, c, l); err != nil {
 		return err
 	}
 	return nil
 }
 
-func execCmd(cmd func(ctx context.Context, cfg config, c *cli.Context) error) func(c *cli.Context) error {
+func execCmd(cmd func(ctx context.Context, cfg config, c *cli.Context, l log.Logger) error) func(c *cli.Context) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	l := log.NewLogger()
 	return func(c *cli.Context) error {
 		defer cancel()
 		cfg := loadConfig(c)
-		return cmd(ctx, cfg, c)
+		return cmd(ctx, cfg, c, l)
 	}
 }
 
