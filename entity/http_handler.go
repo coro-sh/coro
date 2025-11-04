@@ -12,6 +12,7 @@ import (
 	"github.com/nats-io/jwt/v2"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/log"
 	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/tx"
@@ -105,7 +106,7 @@ func (h *HTTPHandler) CreateNamespace(c echo.Context) (err error) {
 		return err
 	}
 
-	ns := NewNamespace(req.Name)
+	ns := NewNamespace(req.Name, constants.DefaultNamespaceOwner)
 	c.Set(log.KeyNamespaceID, ns.ID)
 
 	if err = h.store.CreateNamespace(ctx, ns); err != nil {
@@ -121,7 +122,7 @@ func (h *HTTPHandler) CreateNamespace(c echo.Context) (err error) {
 func (h *HTTPHandler) ListNamespaces(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	namespaces, cursor, err := PaginateNamespaces(ctx, c, h.store)
+	namespaces, cursor, err := PaginateNamespaces(ctx, c, h.store, constants.DefaultNamespaceOwner)
 	if err != nil {
 		return err
 	}

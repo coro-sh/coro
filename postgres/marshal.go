@@ -7,8 +7,9 @@ import (
 
 func unmarshalNamespace(in *sqlc.Namespace) *entity.Namespace {
 	return &entity.Namespace{
-		ID:   entity.MustParseID[entity.NamespaceID](in.ID),
-		Name: in.Name,
+		ID:    entity.MustParseID[entity.NamespaceID](in.ID),
+		Name:  in.Name,
+		Owner: in.Owner,
 	}
 }
 

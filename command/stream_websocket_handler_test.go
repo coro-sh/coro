@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 	"github.com/coro-sh/coro/server"
@@ -26,7 +27,7 @@ func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {
 
 	store, _ := sqlite.NewTestEntityStore(t)
 
-	ns := entity.NewNamespace(testutil.RandName())
+	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	err := store.CreateNamespace(ctx, ns)
 	require.NoError(t, err)
 

@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/command"
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/embedns"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/log"
@@ -39,7 +40,7 @@ func TestClusteredNotifications(t *testing.T) {
 	tknRW := sqlite.NewOperatorTokenReadWriter(db)
 	tknIssuer := tkn.NewOperatorIssuer(tknRW, tkn.OperatorTokenTypeProxy)
 
-	namespace := entity.NewNamespace(testutil.RandName())
+	namespace := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	err := store.CreateNamespace(ctx, namespace)
 	require.NoError(t, err)
 

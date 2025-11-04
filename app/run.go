@@ -78,11 +78,11 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 		return err
 	}
 
-	intNS, err := InitNamespace(ctx, store, logger, constants.InternalNamespaceName)
+	intNS, err := InitNamespace(ctx, store, logger, constants.InternalNamespaceName, constants.InternalNamespaceOwner)
 	if err != nil {
 		return err
 	}
-	if _, err = InitNamespace(ctx, store, logger, constants.DefaultNamespaceName); err != nil {
+	if _, err = InitNamespace(ctx, store, logger, constants.DefaultNamespaceName, constants.DefaultNamespaceOwner); err != nil {
 		return err
 	}
 
@@ -152,7 +152,7 @@ func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ..
 		return fmt.Errorf("create entity store: %w", err)
 	}
 
-	intNS, err := InitNamespace(ctx, store, logger, constants.InternalNamespaceName)
+	intNS, err := InitNamespace(ctx, store, logger, constants.InternalNamespaceName, constants.InternalNamespaceOwner)
 	if err != nil {
 		return err
 	}
@@ -238,11 +238,11 @@ func runAll(
 		return err
 	}
 
-	intNS, err := InitNamespace(ctx, store, logger, constants.InternalNamespaceName)
+	intNS, err := InitNamespace(ctx, store, logger, constants.InternalNamespaceName, constants.InternalNamespaceOwner)
 	if err != nil {
 		return err
 	}
-	if _, err = InitNamespace(ctx, store, logger, constants.DefaultNamespaceName); err != nil {
+	if _, err = InitNamespace(ctx, store, logger, constants.DefaultNamespaceName, constants.DefaultNamespaceOwner); err != nil {
 		return err
 	}
 

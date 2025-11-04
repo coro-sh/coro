@@ -17,9 +17,9 @@ type Querier interface {
 	CreateSigningKey(ctx context.Context, arg CreateSigningKeyParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
 	CreateUserJWTIssuance(ctx context.Context, arg CreateUserJWTIssuanceParams) error
-	DeleteAccount(ctx context.Context, accountID string) error
-	DeleteNamespace(ctx context.Context, namespaceID string) error
-	DeleteOperator(ctx context.Context, operatorID string) error
+	DeleteAccount(ctx context.Context, accID string) error
+	DeleteNamespace(ctx context.Context, nsID string) error
+	DeleteOperator(ctx context.Context, opID string) error
 	DeleteUser(ctx context.Context, userID string) error
 	ListAccounts(ctx context.Context, arg ListAccountsParams) ([]*Account, error)
 	ListNamespaces(ctx context.Context, arg ListNamespacesParams) ([]*Namespace, error)
@@ -29,7 +29,7 @@ type Querier interface {
 	ReadAccount(ctx context.Context, id string) (*Account, error)
 	ReadAccountByPublicKey(ctx context.Context, publicKey string) (*Account, error)
 	ReadNamespace(ctx context.Context, id string) (*Namespace, error)
-	ReadNamespaceByName(ctx context.Context, name string) (*Namespace, error)
+	ReadNamespaceByName(ctx context.Context, arg ReadNamespaceByNameParams) (*Namespace, error)
 	ReadNkey(ctx context.Context, id string) (*Nkey, error)
 	ReadOperator(ctx context.Context, id string) (*Operator, error)
 	ReadOperatorByName(ctx context.Context, name string) (*Operator, error)

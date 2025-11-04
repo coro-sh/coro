@@ -12,8 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/errtag"
+	"github.com/coro-sh/coro/paginate"
 	"github.com/coro-sh/coro/postgres/migrations"
 	"github.com/coro-sh/coro/testutil"
 )
@@ -36,7 +38,7 @@ func TestEntityRepository_CreateReadNamespace(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
 
-	got, err = repo.ReadNamespaceByName(ctx, want.Name)
+	got, err = repo.ReadNamespaceByName(ctx, want.Name, want.Owner)
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -62,7 +64,7 @@ func TestEntityRepository_ListNamespaces(t *testing.T) {
 
 	// First page
 	filter := paginate.PageFilter[entity.NamespaceID]{Size: pageSize}
-	gotPage1, err := repo.ListNamespaces(ctx, filter)
+	gotPage1, err := repo.ListNamespaces(ctx, constants.DefaultNamespaceOwner, filter)
 	require.NoError(t, err)
 	assert.Len(t, gotPage1, int(pageSize))
 	wantPage1 := wantNamespaces[:pageSize]
@@ -70,7 +72,7 @@ func TestEntityRepository_ListNamespaces(t *testing.T) {
 
 	// Second page
 	filter.Cursor = &gotPage1[len(gotPage1)-1].ID
-	gotPage2, err := repo.ListNamespaces(ctx, filter)
+	gotPage2, err := repo.ListNamespaces(ctx, constants.DefaultNamespaceOwner, filter)
 	require.NoError(t, err)
 	// Note: cursor is included to support peeking the next page
 	wantLenPage2 := numNamespaces - int(pageSize) + 1
@@ -624,7 +626,7 @@ func TestEntityRepository_WithTx(t *testing.T) {
 }
 
 func genNamespace() *entity.Namespace {
-	return entity.NewNamespace(testutil.RandName())
+	return entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 }
 
 func genOperatorData(ns *entity.Namespace) entity.OperatorData {

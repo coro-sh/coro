@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/errtag"
 	"github.com/coro-sh/coro/sqlite"
@@ -18,14 +19,14 @@ func TestStore_Namespace(t *testing.T) {
 	defer cancel()
 	s, _ := sqlite.NewTestEntityStore(t)
 
-	want := entity.NewNamespace(testutil.RandName())
+	want := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 
 	// create
 	err := s.CreateNamespace(ctx, want)
 	require.NoError(t, err)
 
 	// read
-	got, err := s.ReadNamespaceByName(ctx, want.Name)
+	got, err := s.ReadNamespaceByName(ctx, want.Name, constants.DefaultNamespaceOwner)
 	require.NoError(t, err)
 	require.Equal(t, want, got)
 
@@ -33,7 +34,7 @@ func TestStore_Namespace(t *testing.T) {
 	err = s.DeleteNamespace(ctx, want.ID)
 	require.NoError(t, err)
 
-	_, err = s.ReadNamespaceByName(ctx, want.Name)
+	_, err = s.ReadNamespaceByName(ctx, want.Name, constants.DefaultNamespaceOwner)
 	assert.True(t, errtag.HasTag[errtag.NotFound](err))
 }
 
@@ -42,7 +43,7 @@ func TestStore_Operator(t *testing.T) {
 	defer cancel()
 	s, _ := sqlite.NewTestEntityStore(t)
 
-	ns := entity.NewNamespace(testutil.RandName())
+	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	err := s.CreateNamespace(ctx, ns)
 	require.NoError(t, err)
 
@@ -87,7 +88,7 @@ func TestStore_Account(t *testing.T) {
 	defer cancel()
 	s, _ := sqlite.NewTestEntityStore(t)
 
-	ns := entity.NewNamespace(testutil.RandName())
+	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	err := s.CreateNamespace(ctx, ns)
 	require.NoError(t, err)
 
@@ -141,7 +142,7 @@ func TestStore_User(t *testing.T) {
 	defer cancel()
 	s, _ := sqlite.NewTestEntityStore(t)
 
-	ns := entity.NewNamespace(testutil.RandName())
+	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	err := s.CreateNamespace(ctx, ns)
 	require.NoError(t, err)
 

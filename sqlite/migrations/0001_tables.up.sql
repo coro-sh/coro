@@ -1,7 +1,9 @@
 CREATE TABLE namespace
 (
-    id   TEXT PRIMARY KEY NOT NULL,
-    name TEXT             NOT NULL UNIQUE
+    id    TEXT PRIMARY KEY NOT NULL,
+    name  TEXT             NOT NULL,
+    owner TEXT             NOT NULL,
+    UNIQUE (name, owner)
 );
 
 CREATE TABLE operator

@@ -14,6 +14,7 @@ unit:
 .PHONY: sqlc-gen
 sqlc-gen:
 	go generate postgres/gen.go
+	go generate sqlite/gen.go
 
 
 # Postgres

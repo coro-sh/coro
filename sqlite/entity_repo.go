@@ -27,8 +27,9 @@ func NewEntityRepository(dbtx sqlc.DBTX) *EntityRepository {
 
 func (r *EntityRepository) CreateNamespace(ctx context.Context, namespace *entity.Namespace) error {
 	err := r.db.CreateNamespace(ctx, sqlc.CreateNamespaceParams{
-		ID:   namespace.ID.String(),
-		Name: namespace.Name,
+		ID:    namespace.ID.String(),
+		Name:  namespace.Name,
+		Owner: namespace.Owner,
 	})
 	return tagEntityErr[entity.Namespace](err)
 }
@@ -53,17 +54,21 @@ func (r *EntityRepository) BatchReadNamespaces(ctx context.Context, ids []entity
 	return unmarshalList(namespaces, unmarshalNamespace), nil
 }
 
-func (r *EntityRepository) ReadNamespaceByName(ctx context.Context, name string) (*entity.Namespace, error) {
-	ns, err := r.db.ReadNamespaceByName(ctx, name)
+func (r *EntityRepository) ReadNamespaceByName(ctx context.Context, name string, owner string) (*entity.Namespace, error) {
+	ns, err := r.db.ReadNamespaceByName(ctx, sqlc.ReadNamespaceByNameParams{
+		Name:  name,
+		Owner: owner,
+	})
 	if err != nil {
 		return nil, tagEntityErr[entity.Namespace](err)
 	}
 	return unmarshalNamespace(ns), nil
 }
 
-func (r *EntityRepository) ListNamespaces(ctx context.Context, filter paginate.PageFilter[entity.NamespaceID]) ([]*entity.Namespace, error) {
+func (r *EntityRepository) ListNamespaces(ctx context.Context, owner string, filter paginate.PageFilter[entity.NamespaceID]) ([]*entity.Namespace, error) {
 	params := sqlc.ListNamespacesParams{
-		Size: int64(filter.Size),
+		Owner: owner,
+		Size:  int64(filter.Size),
 	}
 	if filter.Cursor != nil {
 		params.Cursor = ptr(filter.Cursor.String())

@@ -83,8 +83,9 @@ type Account struct {
 }
 
 type Namespace struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Owner string `json:"owner"`
 }
 
 type Nkey struct {

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/sqlite"
@@ -34,7 +35,7 @@ func TestHTTPHandler_GenerateToken(t *testing.T) {
 	err = srv.WaitHealthy(10, time.Millisecond)
 	require.NoError(t, err)
 
-	ns := entity.NewNamespace(testutil.RandName())
+	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	require.NoError(t, store.CreateNamespace(ctx, ns))
 
 	op, err := entity.NewOperator(testutil.RandName(), ns.ID)
@@ -70,7 +71,7 @@ func TestHTTPHandler_GetStatus(t *testing.T) {
 	err = srv.WaitHealthy(10, time.Millisecond)
 	require.NoError(t, err)
 
-	ns := entity.NewNamespace(testutil.RandName())
+	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	require.NoError(t, store.CreateNamespace(ctx, ns))
 
 	op, err := entity.NewOperator(testutil.RandName(), ns.ID)

@@ -10,12 +10,12 @@ import (
 	"github.com/coro-sh/coro/paginate"
 )
 
-func PaginateNamespaces(ctx context.Context, c echo.Context, store *Store) ([]*Namespace, string, error) {
+func PaginateNamespaces(ctx context.Context, c echo.Context, store *Store, owner string) ([]*Namespace, string, error) {
 	cursorGetter := func(item *Namespace) string {
 		return item.ID.String()
 	}
 	lister := func(filter paginate.PageFilter[NamespaceID]) ([]*Namespace, error) {
-		return store.ListNamespaces(ctx, filter)
+		return store.ListNamespaces(ctx, owner, filter)
 	}
 	return paginate.Paginate(c, paginate.Config[*Namespace, NamespaceID]{
 		CursorParser: IDCursorParser[NamespaceID](),

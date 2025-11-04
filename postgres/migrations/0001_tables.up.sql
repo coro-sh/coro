@@ -3,7 +3,9 @@ CREATE TYPE nkey_type AS ENUM ('operator', 'account', 'user');
 CREATE TABLE namespace
 (
     id   TEXT NOT NULL PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE
+    name TEXT NOT NULL,
+    owner TEXT NOT NULL,
+    UNIQUE(name, owner)
 );
 
 CREATE TABLE operator

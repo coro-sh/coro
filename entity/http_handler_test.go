@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/errtag"
 	"github.com/coro-sh/coro/paginate"
@@ -48,7 +49,7 @@ func TestServer_DeleteNamespace(t *testing.T) {
 
 	testutil.Delete(t, fixture.NamespaceURL(ns.ID))
 
-	_, err := fixture.Store.ReadNamespaceByName(t.Context(), ns.Name)
+	_, err := fixture.Store.ReadNamespaceByName(t.Context(), ns.Name, constants.DefaultNamespaceOwner)
 	assert.True(t, errtag.HasTag[errtag.NotFound](err))
 }
 
@@ -349,7 +350,7 @@ func TestServer_DeleteAccount(t *testing.T) {
 }
 
 func setupNewTestSysOperator(ctx context.Context, t *testing.T, store *entity.Store) (*entity.Operator, *entity.Account) {
-	ns := entity.NewNamespace(testutil.RandName())
+	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	require.NoError(t, store.CreateNamespace(ctx, ns))
 	op, err := entity.NewOperator(testutil.RandName(), ns.ID)
 	require.NoError(t, err)

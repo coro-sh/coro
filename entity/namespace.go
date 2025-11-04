@@ -12,14 +12,16 @@ type NamespaceID struct {
 }
 
 type Namespace struct {
-	ID   NamespaceID `json:"id"`
-	Name string      `json:"name"`
+	ID    NamespaceID `json:"id"`
+	Name  string      `json:"name"`
+	Owner string      `json:"owner"`
 }
 
 // NewNamespace creates a new Namespace.
-func NewNamespace(name string) *Namespace {
+func NewNamespace(name string, owner string) *Namespace {
 	return &Namespace{
-		ID:   NewID[NamespaceID](),
-		Name: name,
+		ID:    NewID[NamespaceID](),
+		Name:  name,
+		Owner: owner,
 	}
 }
