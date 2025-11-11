@@ -10,7 +10,15 @@ import (
 	"github.com/coro-sh/coro/paginate"
 )
 
-func PaginateNamespaces(ctx context.Context, c echo.Context, store *Store, owner string) ([]*Namespace, string, error) {
+type Lister interface {
+	ListNamespaces(ctx context.Context, owner string, filter paginate.PageFilter[NamespaceID]) ([]*Namespace, error)
+	ListOperators(ctx context.Context, namespaceID NamespaceID, filter paginate.PageFilter[OperatorID]) ([]*Operator, error)
+	ListAccounts(ctx context.Context, operatorID OperatorID, filter paginate.PageFilter[AccountID]) ([]*Account, error)
+	ListUsers(ctx context.Context, accountID AccountID, filter paginate.PageFilter[UserID]) ([]*User, error)
+	ListUserJWTIssuances(ctx context.Context, userID UserID, filter paginate.PageFilter[int64]) ([]UserJWTIssuance, error)
+}
+
+func PaginateNamespaces(ctx context.Context, c echo.Context, store Lister, owner string) ([]*Namespace, string, error) {
 	cursorGetter := func(item *Namespace) string {
 		return item.ID.String()
 	}
@@ -24,7 +32,7 @@ func PaginateNamespaces(ctx context.Context, c echo.Context, store *Store, owner
 	})
 }
 
-func PaginateOperators(ctx context.Context, c echo.Context, store *Store, nsID NamespaceID) ([]*Operator, string, error) {
+func PaginateOperators(ctx context.Context, c echo.Context, store Lister, nsID NamespaceID) ([]*Operator, string, error) {
 	cursorGetter := func(item *Operator) string {
 		return item.ID.String()
 	}
@@ -38,7 +46,7 @@ func PaginateOperators(ctx context.Context, c echo.Context, store *Store, nsID N
 	})
 }
 
-func PaginateAccounts(ctx context.Context, c echo.Context, store *Store, opID OperatorID) ([]*Account, string, error) {
+func PaginateAccounts(ctx context.Context, c echo.Context, store Lister, opID OperatorID) ([]*Account, string, error) {
 	cursorGetter := func(item *Account) string {
 		return item.ID.String()
 	}
@@ -52,7 +60,7 @@ func PaginateAccounts(ctx context.Context, c echo.Context, store *Store, opID Op
 	})
 }
 
-func PaginateUsers(ctx context.Context, c echo.Context, store *Store, accID AccountID) ([]*User, string, error) {
+func PaginateUsers(ctx context.Context, c echo.Context, store Lister, accID AccountID) ([]*User, string, error) {
 	cursorGetter := func(item *User) string {
 		return item.ID.String()
 	}
@@ -66,7 +74,7 @@ func PaginateUsers(ctx context.Context, c echo.Context, store *Store, accID Acco
 	})
 }
 
-func PaginateUserJWTIssuances(ctx context.Context, c echo.Context, store *Store, userID UserID) ([]UserJWTIssuance, string, error) {
+func PaginateUserJWTIssuances(ctx context.Context, c echo.Context, store Lister, userID UserID) ([]UserJWTIssuance, string, error) {
 	cursorGetter := func(item UserJWTIssuance) string {
 		return strconv.FormatInt(item.IssueTime, 10)
 	}

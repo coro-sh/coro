@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/constants"
+	"github.com/coro-sh/coro/ref"
 	"github.com/coro-sh/coro/testutil"
 )
 
@@ -114,7 +115,7 @@ func TestUser_Update(t *testing.T) {
 	updateParams := UpdateUserParams{
 		Subscriptions: 10,
 		PayloadSize:   1024,
-		JWTDuration:   ptr(time.Second),
+		JWTDuration:   ref.Ptr(time.Second),
 	}
 
 	err = user.Update(acc, updateParams)
@@ -140,7 +141,7 @@ func TestUser_RefreshJWT(t *testing.T) {
 	oldClaims, err := user.Claims()
 	require.NoError(t, err)
 
-	user.jwtDuration = ptr(time.Minute)
+	user.jwtDuration = ref.Ptr(time.Minute)
 	newJWT, newClaims, err := user.RefreshJWT(acc)
 	require.NoError(t, err)
 

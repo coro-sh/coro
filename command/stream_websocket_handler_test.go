@@ -25,7 +25,7 @@ func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
-	store, _ := sqlite.NewTestEntityStore(t)
+	store := sqlite.NewTestEntityStore(t)
 
 	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	err := store.CreateNamespace(ctx, ns)

@@ -55,7 +55,7 @@ WHERE operator_id = $1
   AND ($2::TEXT IS NULL OR id <= $2::TEXT)
   AND name != 'SYS'
 ORDER BY id DESC
-    LIMIT $3
+LIMIT $3
 `
 
 type ListAccountsParams struct {

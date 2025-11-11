@@ -16,10 +16,9 @@ import (
 	"github.com/coro-sh/coro/errtag"
 	"github.com/coro-sh/coro/log"
 	"github.com/coro-sh/coro/server"
-	"github.com/coro-sh/coro/tx"
 )
 
-func NewEntityStore(txer tx.Txer, rw entity.Repository, encKey *string) (*entity.Store, error) {
+func NewEntityStore(rw entity.Repository, encKey *string) (*entity.Store, error) {
 	var storeOpts []entity.StoreOption
 	if encKey != nil {
 		enc, err := encrypt.NewAES(*encKey)
@@ -28,7 +27,7 @@ func NewEntityStore(txer tx.Txer, rw entity.Repository, encKey *string) (*entity
 		}
 		storeOpts = append(storeOpts, entity.WithEncryption(enc))
 	}
-	return entity.NewStore(txer, rw, storeOpts...), nil
+	return entity.NewStore(rw, storeOpts...), nil
 }
 
 func Serve(ctx context.Context, srv *server.Server, logger log.Logger) error {
@@ -81,13 +80,7 @@ func InitNamespace(ctx context.Context, store *entity.Store, logger log.Logger, 
 	return ns, nil
 }
 
-func InitBrokerNATSEntities(
-	ctx context.Context,
-	txer tx.Txer,
-	store *entity.Store,
-	logger log.Logger,
-	internalNamespaceID entity.NamespaceID,
-) (*entity.Operator, *entity.Account, *entity.User, error) {
+func InitBrokerNATSEntities(ctx context.Context, store *entity.Store, logger log.Logger, internalNamespaceID entity.NamespaceID) (*entity.Operator, *entity.Account, *entity.User, error) {
 	createEntities := func() (op *entity.Operator, sysAcc *entity.Account, sysUser *entity.User, err error) {
 		op, err = entity.NewOperator(constants.BrokerOperatorName, internalNamespaceID)
 		if err != nil {
@@ -99,31 +92,27 @@ func InitBrokerNATSEntities(
 			return nil, nil, nil, err
 		}
 
-		txn, err := txer.BeginTx(ctx)
+		err = store.BeginTxFunc(ctx, func(ctx context.Context, store *entity.Store) error {
+			if err = store.CreateOperator(ctx, op); err != nil {
+				return fmt.Errorf("create broker internal operator: %w", err)
+			}
+			logger.Info("created new broker internal operator", "operator.id", op.ID, "operator.name", constants.BrokerOperatorName)
+
+			if err = store.CreateAccount(ctx, sysAcc); err != nil {
+				return fmt.Errorf("create broker internal system account: %w", err)
+			}
+			logger.Info("created new broker internal system account", "account.id", sysAcc.ID, "operator.name", constants.SysAccountName)
+
+			if err = store.CreateUser(ctx, sysUser); err != nil {
+				return fmt.Errorf("create broker internal system user: %w", err)
+			}
+			logger.Info("created new broker internal system user", "user.id", sysUser.ID, "user.name", constants.SysUserName)
+
+			return nil
+		})
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		defer tx.Handle(ctx, txn, &err)
-
-		txStore, err := store.WithTx(txn)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-
-		if err = txStore.CreateOperator(ctx, op); err != nil {
-			return nil, nil, nil, fmt.Errorf("create broker internal operator: %w", err)
-		}
-		logger.Info("created new broker internal operator", "operator.id", op.ID, "operator.name", constants.BrokerOperatorName)
-
-		if err = txStore.CreateAccount(ctx, sysAcc); err != nil {
-			return nil, nil, nil, fmt.Errorf("create broker internal system account: %w", err)
-		}
-		logger.Info("created new broker internal system account", "account.id", sysAcc.ID, "operator.name", constants.SysAccountName)
-
-		if err = txStore.CreateUser(ctx, sysUser); err != nil {
-			return nil, nil, nil, fmt.Errorf("create broker internal system user: %w", err)
-		}
-		logger.Info("created new broker internal system user", "user.id", sysUser.ID, "user.name", constants.SysUserName)
 
 		return op, sysAcc, sysUser, nil
 	}

@@ -15,15 +15,14 @@ import (
 	"github.com/coro-sh/coro/testutil"
 )
 
-func NewTestEntityStore(t *testing.T) (*entity.Store, *Txer) {
+func NewTestEntityStore(t *testing.T) *entity.Store {
 	t.Helper()
 	db := NewTestDB(t)
 	repo := NewEntityRepository(db)
 
 	enc, err := encrypt.NewAES(testutil.RandString(32))
 	require.NoError(t, err)
-	txer := NewTxer(db)
-	return entity.NewStore(txer, repo, entity.WithEncryption(enc)), txer
+	return entity.NewStore(repo, entity.WithEncryption(enc))
 }
 
 func NewTestDB(t *testing.T) *sql.DB {

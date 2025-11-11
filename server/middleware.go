@@ -121,7 +121,7 @@ func errorTransformMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			herr = errtag.Tag[errtag.InvalidArgument](formattedErr, errtag.WithDetails(valgoutil.GetDetails(verr)...))
 		case !errors.As(err, &herr):
 			// Internal server error
-			herr = errtag.Tag[errtag.Unknown](err)
+			herr = errtag.Tag[errtag.Internal](err)
 		}
 
 		return HTTPError{

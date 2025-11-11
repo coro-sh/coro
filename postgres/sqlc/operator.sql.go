@@ -47,7 +47,8 @@ SELECT id, namespace_id, name, public_key, jwt
 FROM operator
 WHERE namespace_id = $1
   AND ($2::TEXT IS NULL OR id <= $2::TEXT)
-ORDER BY id DESC LIMIT $3
+ORDER BY id DESC
+LIMIT $3
 `
 
 type ListOperatorsParams struct {

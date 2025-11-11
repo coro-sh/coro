@@ -67,9 +67,9 @@ func TestHTTPHandler_ListNamespaces(t *testing.T) {
 	for i := range numNS {
 		ns := fixture.AddNamespace(ctx)
 
-		wantResps[i] = entity.NamespaceResponse{
-			Namespace: *ns,
-		}
+		res := entity.NamespaceResponse{Namespace: *ns}
+		res.Owner = "" // omitted from response
+		wantResps[i] = res
 	}
 
 	slices.Reverse(wantResps) // expect order by newest to oldest

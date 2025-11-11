@@ -1,6 +1,6 @@
 module github.com/coro-sh/coro
 
-go 1.24
+go 1.25
 
 require (
 	github.com/caarlos0/env/v11 v11.3.1
@@ -27,6 +27,7 @@ require (
 	golang.org/x/text v0.25.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
+	modernc.org/sqlite v1.37.0
 )
 
 require (
@@ -109,7 +110,6 @@ require (
 	modernc.org/libc v1.62.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.9.1 // indirect
-	modernc.org/sqlite v1.37.0 // indirect
 )
 
 tool (

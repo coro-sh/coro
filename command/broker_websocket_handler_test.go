@@ -25,7 +25,7 @@ func TestWebsocketForwardsCommandsAndReplies(t *testing.T) {
 
 	db := sqlite.NewTestDB(t)
 	repo := sqlite.NewEntityRepository(db)
-	store := entity.NewStore(sqlite.NewTxer(db), repo)
+	store := entity.NewStore(repo)
 	tknIss := tkn.NewOperatorIssuer(sqlite.NewOperatorTokenReadWriter(db), tkn.OperatorTokenTypeProxy)
 
 	op, sysAcc, sysUsr := setupEntities(ctx, t, store)

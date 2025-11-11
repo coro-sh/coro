@@ -22,8 +22,7 @@ func TestOperatorIssuer(t *testing.T) {
 	db := sqlite.NewTestDB(t)
 
 	repo := sqlite.NewEntityRepository(db)
-	txer := sqlite.NewTxer(db)
-	store := entity.NewStore(txer, repo)
+	store := entity.NewStore(repo)
 
 	rw := sqlite.NewOperatorTokenReadWriter(db)
 	issuer := tkn.NewOperatorIssuer(rw, tkn.OperatorTokenTypeProxy)

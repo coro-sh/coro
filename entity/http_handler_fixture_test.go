@@ -32,7 +32,7 @@ type HTTPHandlerTestFixture struct {
 func NewHTTPHandlerTestFixture(t *testing.T) *HTTPHandlerTestFixture {
 	t.Helper()
 
-	store, txer := sqlite.NewTestEntityStore(t)
+	store := sqlite.NewTestEntityStore(t)
 
 	logger := log.NewLogger(log.WithDevelopment())
 	srv, err := server.NewServer(testutil.GetFreePort(t),
@@ -40,7 +40,7 @@ func NewHTTPHandlerTestFixture(t *testing.T) *HTTPHandlerTestFixture {
 		server.WithMiddleware(entity.NamespaceContextMiddleware()),
 	)
 	require.NoError(t, err)
-	srv.Register("", entity.NewHTTPHandler(txer, store, entity.WithCommander(new(commanderStub))))
+	srv.Register("", entity.NewHTTPHandler(store, entity.WithCommander[*entity.Store](new(commanderStub))))
 
 	go srv.Start()
 	err = srv.WaitHealthy(10, time.Millisecond)

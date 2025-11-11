@@ -26,7 +26,7 @@ WHERE operator_id = $1
   AND (sqlc.narg('cursor')::TEXT IS NULL OR id <= sqlc.narg('cursor')::TEXT)
   AND name != 'SYS'
 ORDER BY id DESC
-    LIMIT @size;
+LIMIT @size;
 
 -- name: DeleteAccount :exec
 SELECT delete_account_and_nkeys($1);

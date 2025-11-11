@@ -28,7 +28,8 @@ SELECT *
 FROM operator
 WHERE namespace_id = $1
   AND (sqlc.narg('cursor')::TEXT IS NULL OR id <= sqlc.narg('cursor')::TEXT)
-ORDER BY id DESC LIMIT @size;
+ORDER BY id DESC
+LIMIT @size;
 
 -- name: DeleteOperator :exec
 SELECT delete_operator_and_nkeys($1);

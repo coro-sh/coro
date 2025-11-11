@@ -138,7 +138,7 @@ func TestStreamHTTPHandler_GetStreamMessageContent(t *testing.T) {
 }
 
 func newStreamHTTPServer(t *testing.T, streams []*jetstream.StreamInfo, msgs <-chan *commandv1.ReplyMessage) (*server.Server, *entity.Store) {
-	store, _ := sqlite.NewTestEntityStore(t)
+	store := sqlite.NewTestEntityStore(t)
 
 	srv, err := server.NewServer(testutil.GetFreePort(t), server.WithMiddleware(entity.NamespaceContextMiddleware()))
 	require.NoError(t, err)
