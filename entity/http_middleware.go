@@ -57,7 +57,9 @@ func InternalNamespaceMiddleware(internalNamespaceID NamespaceID) echo.Middlewar
 func NamespaceIDFromContext(c echo.Context) (NamespaceID, error) {
 	nsID, ok := c.Get(namespaceContextKey).(NamespaceID)
 	if !ok {
-		return NamespaceID{}, errtag.NewTagged[errtag.InvalidArgument]("namespace id not found in context", errtag.WithMsg("Namespace ID not found in request path"))
+		return NamespaceID{}, errtag.NewTagged[errtag.InvalidArgument]("namespace id not found in context",
+			errtag.WithMsg("Namespace ID not found in request path"),
+		)
 	}
 	return nsID, nil
 }

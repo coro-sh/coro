@@ -14,8 +14,8 @@ import (
 
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/log"
+	"github.com/coro-sh/coro/ref"
 	"github.com/coro-sh/coro/server"
-	"github.com/coro-sh/coro/tx"
 )
 
 const (
@@ -33,27 +33,37 @@ type Commander interface {
 }
 
 // HTTPHandlerOption configures a HTTPHandler.
-type HTTPHandlerOption func(handler *HTTPHandler)
+type HTTPHandlerOption[S Storer] func(handler *HTTPHandler[S])
 
 // WithCommander sets a Commander on the handler to enable commands.
-func WithCommander(commander Commander) HTTPHandlerOption {
-	return func(handler *HTTPHandler) {
+func WithCommander[S Storer](commander Commander) HTTPHandlerOption[S] {
+	return func(handler *HTTPHandler[S]) {
 		handler.commander = commander
 	}
 }
 
+// WithNamespaceOwnerGetter sets a function to get the namespace owner for a
+// request. If not set, the default namespace owner will be used.
+func WithNamespaceOwnerGetter[S Storer](fn func(c echo.Context) (string, error)) HTTPHandlerOption[S] {
+	return func(handler *HTTPHandler[S]) {
+		handler.ownerGetter = fn
+	}
+}
+
 // HTTPHandler handles entity HTTP requests.
-type HTTPHandler struct {
-	txer      tx.Txer
-	store     *Store
-	commander Commander
+type HTTPHandler[S Storer] struct {
+	store       TxStorer[S]
+	commander   Commander
+	ownerGetter func(c echo.Context) (string, error)
 }
 
 // NewHTTPHandler creates a new HTTPHandler.
-func NewHTTPHandler(txer tx.Txer, store *Store, opts ...HTTPHandlerOption) *HTTPHandler {
-	h := &HTTPHandler{
-		txer:  txer,
+func NewHTTPHandler[S Storer](store TxStorer[S], opts ...HTTPHandlerOption[S]) *HTTPHandler[S] {
+	h := &HTTPHandler[S]{
 		store: store,
+		ownerGetter: func(c echo.Context) (string, error) {
+			return constants.DefaultNamespaceOwner, nil
+		},
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -62,7 +72,7 @@ func NewHTTPHandler(txer tx.Txer, store *Store, opts ...HTTPHandlerOption) *HTTP
 }
 
 // Register adds the HTTPHandler endpoints to the provided Echo router group.
-func (h *HTTPHandler) Register(g *echo.Group) {
+func (h *HTTPHandler[S]) Register(g *echo.Group) {
 	namespaces := g.Group("/namespaces")
 	namespaces.POST("", h.CreateNamespace)
 	namespaces.GET("", h.ListNamespaces)
@@ -98,7 +108,7 @@ func (h *HTTPHandler) Register(g *echo.Group) {
 }
 
 // CreateNamespace handles POST requests to create a Namespace.
-func (h *HTTPHandler) CreateNamespace(c echo.Context) (err error) {
+func (h *HTTPHandler[S]) CreateNamespace(c echo.Context) (err error) {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[CreateNamespaceRequest](c)
@@ -106,7 +116,12 @@ func (h *HTTPHandler) CreateNamespace(c echo.Context) (err error) {
 		return err
 	}
 
-	ns := NewNamespace(req.Name, constants.DefaultNamespaceOwner)
+	owner, err := h.ownerGetter(c)
+	if err != nil {
+		return err
+	}
+
+	ns := NewNamespace(req.Name, owner)
 	c.Set(log.KeyNamespaceID, ns.ID)
 
 	if err = h.store.CreateNamespace(ctx, ns); err != nil {
@@ -119,10 +134,15 @@ func (h *HTTPHandler) CreateNamespace(c echo.Context) (err error) {
 }
 
 // ListNamespaces handles GET requests to list Namespaces.
-func (h *HTTPHandler) ListNamespaces(c echo.Context) error {
+func (h *HTTPHandler[S]) ListNamespaces(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	namespaces, cursor, err := PaginateNamespaces(ctx, c, h.store, constants.DefaultNamespaceOwner)
+	owner, err := h.ownerGetter(c)
+	if err != nil {
+		return err
+	}
+
+	namespaces, cursor, err := PaginateNamespaces(ctx, c, h.store, owner)
 	if err != nil {
 		return err
 	}
@@ -138,7 +158,7 @@ func (h *HTTPHandler) ListNamespaces(c echo.Context) error {
 }
 
 // DeleteNamespace handles DELETE requests to delete a Namespace.
-func (h *HTTPHandler) DeleteNamespace(c echo.Context) error {
+func (h *HTTPHandler[S]) DeleteNamespace(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[DeleteNamespaceRequest](c)
@@ -157,7 +177,7 @@ func (h *HTTPHandler) DeleteNamespace(c echo.Context) error {
 }
 
 // CreateOperator handles POST requests to create an Operator.
-func (h *HTTPHandler) CreateOperator(c echo.Context) (err error) {
+func (h *HTTPHandler[S]) CreateOperator(c echo.Context) (err error) {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[CreateOperatorRequest](c)
@@ -184,26 +204,16 @@ func (h *HTTPHandler) CreateOperator(c echo.Context) (err error) {
 	c.Set(log.KeySystemAccountID, sysAcc.ID)
 	c.Set(log.KeySystemUserID, sysUser.ID)
 
-	txn, err := h.txer.BeginTx(ctx)
+	err = h.store.BeginTxFunc(ctx, func(ctx context.Context, store S) error {
+		if err = store.CreateOperator(ctx, op); err != nil {
+			return err
+		}
+		if err = store.CreateAccount(ctx, sysAcc); err != nil {
+			return err
+		}
+		return store.CreateUser(ctx, sysUser)
+	})
 	if err != nil {
-		return err
-	}
-	defer tx.Handle(ctx, txn, &err)
-
-	store, err := h.store.WithTx(txn)
-	if err != nil {
-		return err
-	}
-
-	if err = store.CreateOperator(ctx, op); err != nil {
-		return err
-	}
-
-	if err = store.CreateAccount(ctx, sysAcc); err != nil {
-		return err
-	}
-
-	if err = store.CreateUser(ctx, sysUser); err != nil {
 		return err
 	}
 
@@ -216,7 +226,7 @@ func (h *HTTPHandler) CreateOperator(c echo.Context) (err error) {
 }
 
 // UpdateOperator handles PUT requests to update an Operator.
-func (h *HTTPHandler) UpdateOperator(c echo.Context) error {
+func (h *HTTPHandler[S]) UpdateOperator(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[UpdateOperatorRequest](c)
@@ -261,7 +271,7 @@ func (h *HTTPHandler) UpdateOperator(c echo.Context) error {
 }
 
 // GetOperator handles GET requests to get an Operator.
-func (h *HTTPHandler) GetOperator(c echo.Context) error {
+func (h *HTTPHandler[S]) GetOperator(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[GetOperatorRequest](c)
@@ -298,7 +308,7 @@ func (h *HTTPHandler) GetOperator(c echo.Context) error {
 }
 
 // DeleteOperator handles DELETE requests to delete an Operator.
-func (h *HTTPHandler) DeleteOperator(c echo.Context) error {
+func (h *HTTPHandler[S]) DeleteOperator(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[GetOperatorRequest](c)
@@ -326,7 +336,7 @@ func (h *HTTPHandler) DeleteOperator(c echo.Context) error {
 }
 
 // ListOperators handles GET requests to list Operators.
-func (h *HTTPHandler) ListOperators(c echo.Context) error {
+func (h *HTTPHandler[S]) ListOperators(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[ListOperatorsRequest](c)
@@ -378,7 +388,7 @@ func (h *HTTPHandler) ListOperators(c echo.Context) error {
 // CreateAccount handles POST requests to create an Account.
 // The associated Operator's NATS server will be notified of the new Account if
 // a Commander has been configured.
-func (h *HTTPHandler) CreateAccount(c echo.Context) error {
+func (h *HTTPHandler[S]) CreateAccount(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[CreateAccountRequest](c)
@@ -420,25 +430,17 @@ func (h *HTTPHandler) CreateAccount(c echo.Context) error {
 		return err
 	}
 
-	txn, err := h.txer.BeginTx(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Handle(ctx, txn, &err)
-
-	store, err := h.store.WithTx(txn)
-	if err != nil {
-		return err
-	}
-
-	if err = store.CreateAccount(ctx, acc); err != nil {
-		return err
-	}
-
-	if h.commander != nil {
-		if err = h.commander.NotifyAccountClaimsUpdate(ctx, acc); err != nil {
+	err = h.store.BeginTxFunc(ctx, func(ctx context.Context, store S) error {
+		if err = store.CreateAccount(ctx, acc); err != nil {
 			return err
 		}
+		if h.commander != nil {
+			return h.commander.NotifyAccountClaimsUpdate(ctx, acc)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return server.SetResponse(c, http.StatusCreated, AccountResponse{
@@ -450,7 +452,7 @@ func (h *HTTPHandler) CreateAccount(c echo.Context) error {
 // UpdateAccount handles PUT requests to update an Account.
 // The associated Operator's NATS server will be notified of the Account update
 // if a Commander has been configured.
-func (h *HTTPHandler) UpdateAccount(c echo.Context) error {
+func (h *HTTPHandler[S]) UpdateAccount(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[UpdateAccountRequest](c)
@@ -494,25 +496,17 @@ func (h *HTTPHandler) UpdateAccount(c echo.Context) error {
 		return err
 	}
 
-	txn, err := h.txer.BeginTx(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Handle(ctx, txn, &err)
-
-	store, err := h.store.WithTx(txn)
-	if err != nil {
-		return err
-	}
-
-	if err = store.UpdateAccount(ctx, acc); err != nil {
-		return err
-	}
-
-	if h.commander != nil {
-		if err = h.commander.NotifyAccountClaimsUpdate(ctx, acc); err != nil {
+	err = h.store.BeginTxFunc(ctx, func(ctx context.Context, store S) error {
+		if err = store.UpdateAccount(ctx, acc); err != nil {
 			return err
 		}
+		if h.commander != nil {
+			return h.commander.NotifyAccountClaimsUpdate(ctx, acc)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return server.SetResponse(c, http.StatusOK, AccountResponse{
@@ -522,7 +516,7 @@ func (h *HTTPHandler) UpdateAccount(c echo.Context) error {
 }
 
 // GetAccount handles GET requests to get an Account.
-func (h *HTTPHandler) GetAccount(c echo.Context) error {
+func (h *HTTPHandler[S]) GetAccount(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[GetAccountRequest](c)
@@ -564,7 +558,7 @@ func (h *HTTPHandler) GetAccount(c echo.Context) error {
 }
 
 // ListAccounts handles GET requests to list Accounts.
-func (h *HTTPHandler) ListAccounts(c echo.Context) error {
+func (h *HTTPHandler[S]) ListAccounts(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[ListAccountsRequest](c)
@@ -606,7 +600,7 @@ func (h *HTTPHandler) ListAccounts(c echo.Context) error {
 }
 
 // DeleteAccount handles DELETE requests to delete an Account.
-func (h *HTTPHandler) DeleteAccount(c echo.Context) error {
+func (h *HTTPHandler[S]) DeleteAccount(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[GetAccountRequest](c)
@@ -634,7 +628,7 @@ func (h *HTTPHandler) DeleteAccount(c echo.Context) error {
 }
 
 // CreateUser handles POST requests to create a User.
-func (h *HTTPHandler) CreateUser(c echo.Context) error {
+func (h *HTTPHandler[S]) CreateUser(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[CreateUserRequest](c)
@@ -697,7 +691,7 @@ func (h *HTTPHandler) CreateUser(c echo.Context) error {
 }
 
 // UpdateUser handles PUT requests to update a User.
-func (h *HTTPHandler) UpdateUser(c echo.Context) error {
+func (h *HTTPHandler[S]) UpdateUser(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[UpdateUserRequest](c)
@@ -742,22 +736,14 @@ func (h *HTTPHandler) UpdateUser(c echo.Context) error {
 		return err
 	}
 
-	txn, err := h.txer.BeginTx(ctx)
-	if err != nil {
+	var pubKey string
+	err = h.store.BeginTxFunc(ctx, func(ctx context.Context, store S) error {
+		if err = store.UpdateUser(ctx, usr); err != nil {
+			return err
+		}
+		pubKey, err = usr.NKey().KeyPair().PublicKey()
 		return err
-	}
-	defer tx.Handle(ctx, txn, &err)
-
-	store, err := h.store.WithTx(txn)
-	if err != nil {
-		return err
-	}
-
-	if err = store.UpdateUser(ctx, usr); err != nil {
-		return err
-	}
-
-	pubKey, err := usr.NKey().KeyPair().PublicKey()
+	})
 	if err != nil {
 		return err
 	}
@@ -770,7 +756,7 @@ func (h *HTTPHandler) UpdateUser(c echo.Context) error {
 }
 
 // GetUser handles GET requests to get a User.
-func (h *HTTPHandler) GetUser(c echo.Context) error {
+func (h *HTTPHandler[S]) GetUser(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[GetUserRequest](c)
@@ -818,7 +804,7 @@ func (h *HTTPHandler) GetUser(c echo.Context) error {
 }
 
 // ListUsers handles GET requests to list users.
-func (h *HTTPHandler) ListUsers(c echo.Context) error {
+func (h *HTTPHandler[S]) ListUsers(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[ListUsersRequest](c)
@@ -874,7 +860,7 @@ func (h *HTTPHandler) ListUsers(c echo.Context) error {
 }
 
 // DeleteUser handles DELETE requests to delete a User.
-func (h *HTTPHandler) DeleteUser(c echo.Context) error {
+func (h *HTTPHandler[S]) DeleteUser(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[GetUserRequest](c)
@@ -917,7 +903,7 @@ func (h *HTTPHandler) DeleteUser(c echo.Context) error {
 //	------END USER NKEY SEED------
 //
 //	*************************************************************
-func (h *HTTPHandler) GetUserCreds(c echo.Context) error {
+func (h *HTTPHandler[S]) GetUserCreds(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[GetUserRequest](c)
@@ -979,7 +965,7 @@ func (h *HTTPHandler) GetUserCreds(c echo.Context) error {
 	return c.String(http.StatusOK, string(content))
 }
 
-func (h *HTTPHandler) ListUserJWTIssuances(c echo.Context) error {
+func (h *HTTPHandler[S]) ListUserJWTIssuances(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[GetUserRequest](c)
@@ -1021,7 +1007,7 @@ func (h *HTTPHandler) ListUserJWTIssuances(c echo.Context) error {
 
 // GetNATSConfig handles GET requests to get a NATS server configuration file.
 // for an Operator
-func (h *HTTPHandler) GetNATSConfig(c echo.Context) error {
+func (h *HTTPHandler[S]) GetNATSConfig(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	req, err := server.BindRequest[GetOperatorRequest](c)
@@ -1072,7 +1058,7 @@ func LoadUserLimits(userData UserData, claims *jwt.UserClaims) UserLimits {
 		PayloadSize:   parseLimit(claims.Limits.Payload),
 	}
 	if userData.JWTDuration != nil {
-		limits.JWTDurationSecs = ptr(int64(userData.JWTDuration.Seconds()))
+		limits.JWTDurationSecs = ref.Ptr(int64(userData.JWTDuration.Seconds()))
 	}
 	return limits
 }
@@ -1080,14 +1066,14 @@ func LoadUserLimits(userData UserData, claims *jwt.UserClaims) UserLimits {
 func toUpdateAccountParams(name string, limits *AccountLimits) UpdateAccountParams {
 	params := UpdateAccountParams{
 		Name:          name,
-		Subscriptions: deref(limits.Subscriptions, noLimit),
-		PayloadSize:   deref(limits.PayloadSize, noLimit),
-		Imports:       deref(limits.Imports, noLimit),
-		Exports:       deref(limits.Exports, noLimit),
-		Connections:   deref(limits.Connections, noLimit),
+		Subscriptions: ref.Deref(limits.Subscriptions, noLimit),
+		PayloadSize:   ref.Deref(limits.PayloadSize, noLimit),
+		Imports:       ref.Deref(limits.Imports, noLimit),
+		Exports:       ref.Deref(limits.Exports, noLimit),
+		Connections:   ref.Deref(limits.Connections, noLimit),
 	}
 	if limits.UserJWTDurationSecs != nil {
-		params.UserJWTDuration = ptr(time.Duration(*limits.UserJWTDurationSecs) * time.Second)
+		params.UserJWTDuration = ref.Ptr(time.Duration(*limits.UserJWTDurationSecs) * time.Second)
 	}
 	return params
 }
@@ -1101,7 +1087,7 @@ func LoadAccountLimits(accData AccountData, claims *jwt.AccountClaims) AccountLi
 		Connections:   parseLimit(claims.Limits.Conn),
 	}
 	if accData.UserJWTDuration != nil {
-		limits.UserJWTDurationSecs = ptr(int64(accData.UserJWTDuration.Seconds()))
+		limits.UserJWTDurationSecs = ref.Ptr(int64(accData.UserJWTDuration.Seconds()))
 	}
 	return limits
 }
@@ -1109,24 +1095,13 @@ func LoadAccountLimits(accData AccountData, claims *jwt.AccountClaims) AccountLi
 func toUpdateUserParams(name string, limits *UserLimits) UpdateUserParams {
 	params := UpdateUserParams{
 		Name:          name,
-		Subscriptions: deref(limits.Subscriptions, noLimit),
-		PayloadSize:   deref(limits.PayloadSize, noLimit),
+		Subscriptions: ref.Deref(limits.Subscriptions, noLimit),
+		PayloadSize:   ref.Deref(limits.PayloadSize, noLimit),
 	}
 	if limits.JWTDurationSecs != nil {
-		params.JWTDuration = ptr(time.Duration(*limits.JWTDurationSecs) * time.Second)
+		params.JWTDuration = ref.Ptr(time.Duration(*limits.JWTDurationSecs) * time.Second)
 	}
 	return params
-}
-
-func ptr[T any](v T) *T {
-	return &v
-}
-
-func deref[T any](ptr *T, defaultValue T) T {
-	if ptr == nil {
-		return defaultValue
-	}
-	return *ptr
 }
 
 func parseLimit(l int64) *int64 {

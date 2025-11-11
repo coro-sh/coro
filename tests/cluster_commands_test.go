@@ -18,11 +18,11 @@ import (
 	"github.com/coro-sh/coro/embedns"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/log"
+	"github.com/coro-sh/coro/ref"
 	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tkn"
-	"github.com/coro-sh/coro/tx"
 )
 
 const testTimeout = 5 * time.Second
@@ -34,8 +34,7 @@ func TestClusteredNotifications(t *testing.T) {
 
 	db := sqlite.NewTestDB(t)
 	repo := sqlite.NewEntityRepository(db)
-	txer := sqlite.NewTxer(db)
-	store := entity.NewStore(txer, repo)
+	store := entity.NewStore(repo)
 
 	tknRW := sqlite.NewOperatorTokenReadWriter(db)
 	tknIssuer := tkn.NewOperatorIssuer(tknRW, tkn.OperatorTokenTypeProxy)
@@ -76,7 +75,7 @@ func TestClusteredNotifications(t *testing.T) {
 		brokerNats.Start()
 		require.True(t, brokerNats.ReadyForConnections(2*time.Second))
 
-		srv := SetupTestServer(t, txer, store, tknIssuer, brokerNats, bSysUsr)
+		srv := SetupTestServer(t, store, tknIssuer, brokerNats, bSysUsr)
 		require.NoError(t, err)
 		return srv, brokerNats
 	}
@@ -125,7 +124,7 @@ func TestClusteredNotifications(t *testing.T) {
 	accSrv2URL := fmt.Sprintf("%s/namespaces/%s/accounts/%s", srv2.Address(), namespace.ID, gotCreated.ID)
 	updateReq := entity.UpdateAccountRequest{
 		Name:   gotCreated.Name,
-		Limits: &entity.AccountLimits{Subscriptions: ptr(rand.Int64N(100))},
+		Limits: &entity.AccountLimits{Subscriptions: ref.Ptr(rand.Int64N(100))},
 	}
 	updateRes := testutil.Put[server.Response[entity.AccountResponse]](t, accSrv2URL, updateReq)
 	gotUpdated := updateRes.Data
@@ -138,10 +137,6 @@ func TestClusteredNotifications(t *testing.T) {
 	claims, err := jwt.DecodeAccountClaims(gotNatsAccJWT)
 	require.NoError(t, err)
 	assert.Equal(t, *updateReq.Limits.Subscriptions, claims.Limits.Subs)
-}
-
-func ptr[T any](v T) *T {
-	return &v
 }
 
 func setupNewTestSysOperator(ctx context.Context, t *testing.T, testStore *entity.Store, ns *entity.Namespace) (*entity.Operator, *entity.Account) {
@@ -160,7 +155,6 @@ func setupNewTestSysOperator(ctx context.Context, t *testing.T, testStore *entit
 
 func SetupTestServer(
 	t *testing.T,
-	txer tx.Txer,
 	store *entity.Store,
 	tknIssuer *tkn.OperatorIssuer,
 	brokerNats *natsrv.Server,
@@ -182,7 +176,7 @@ func SetupTestServer(
 	brokerHandler, err := command.NewBrokerWebSocketHandler(bSysUser, brokerNats, tknIssuer, store, command.WithBrokerWebsocketLogger(logger))
 	require.NoError(t, err)
 
-	srv.Register("", entity.NewHTTPHandler(txer, store, entity.WithCommander(commander)))
+	srv.Register("", entity.NewHTTPHandler(store, entity.WithCommander[*entity.Store](commander)))
 	srv.Register("", command.NewProxyHTTPHandler(tknIssuer, store, commander))
 	srv.Register("", brokerHandler)
 

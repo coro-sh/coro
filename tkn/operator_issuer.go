@@ -13,11 +13,6 @@ type OperatorTokenType string
 
 const OperatorTokenTypeProxy OperatorTokenType = "pxy"
 
-type OperatorTokenReadWriter interface {
-	Read(ctx context.Context, tokenType OperatorTokenType, operatorID entity.OperatorID) (string, error)
-	Write(ctx context.Context, tokenType OperatorTokenType, operatorID entity.OperatorID, hashedToken string) error
-}
-
 type OperatorIssuer struct {
 	iss     *Issuer
 	rw      OperatorTokenReadWriter

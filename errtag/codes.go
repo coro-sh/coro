@@ -21,3 +21,7 @@ func (codeNotFound) Code() int { return http.StatusNotFound }
 type codeConflict struct{}
 
 func (codeConflict) Code() int { return http.StatusConflict }
+
+type forbidden struct{}
+
+func (forbidden) Code() int { return http.StatusForbidden }

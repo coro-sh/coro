@@ -5,10 +5,13 @@ import (
 	"database/sql"
 	"errors"
 
+	"modernc.org/sqlite"
+	sqlite3 "modernc.org/sqlite/lib"
+
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/errtag"
 	"github.com/coro-sh/coro/paginate"
-	"github.com/coro-sh/coro/postgres"
+	"github.com/coro-sh/coro/ref"
 	"github.com/coro-sh/coro/sqlite/sqlc"
 	"github.com/coro-sh/coro/tx"
 )
@@ -16,12 +19,22 @@ import (
 var _ entity.Repository = (*EntityRepository)(nil)
 
 type EntityRepository struct {
-	db *sqlc.Queries
+	db   *sqlc.Queries
+	txer *tx.SQLiteRepositoryTxer[entity.Repository]
 }
 
-func NewEntityRepository(dbtx sqlc.DBTX) *EntityRepository {
+func NewEntityRepository(db DB) *EntityRepository {
 	return &EntityRepository{
-		db: sqlc.New(dbtx),
+		db: sqlc.New(db),
+		txer: tx.NewSQLiteRepositoryTxer(db, tx.SQLiteRepositoryTxerConfig[entity.Repository]{
+			Timeout: tx.DefaultTimeout,
+			WithTxFunc: func(repo entity.Repository, txer *tx.SQLiteRepositoryTxer[entity.Repository], tx *sql.Tx) entity.Repository {
+				cpy := *repo.(*EntityRepository)
+				cpy.db = cpy.db.WithTx(tx)
+				cpy.txer = txer
+				return entity.Repository(&cpy)
+			},
+		}),
 	}
 }
 
@@ -71,7 +84,7 @@ func (r *EntityRepository) ListNamespaces(ctx context.Context, owner string, fil
 		Size:  int64(filter.Size),
 	}
 	if filter.Cursor != nil {
-		params.Cursor = ptr(filter.Cursor.String())
+		params.Cursor = ref.Ptr(filter.Cursor.String())
 	}
 	namespaces, err := r.db.ListNamespaces(ctx, params)
 	if err != nil {
@@ -84,6 +97,11 @@ func (r *EntityRepository) ListNamespaces(ctx context.Context, owner string, fil
 func (r *EntityRepository) DeleteNamespace(ctx context.Context, id entity.NamespaceID) error {
 	err := r.db.DeleteNamespace(ctx, id.String())
 	return tagEntityErr[entity.Namespace](err)
+}
+
+func (r *EntityRepository) CountOwnerNamespaces(ctx context.Context, owner string) (int64, error) {
+	namespaces, err := r.db.CountOwnerNamespaces(ctx, owner)
+	return namespaces, tagErr(err)
 }
 
 func (r *EntityRepository) CreateOperator(ctx context.Context, operator entity.OperatorData) error {
@@ -139,7 +157,7 @@ func (r *EntityRepository) ListOperators(ctx context.Context, namespaceID entity
 		Size:        int64(filter.Size),
 	}
 	if filter.Cursor != nil {
-		params.Cursor = ptr(filter.Cursor.String())
+		params.Cursor = ref.Ptr(filter.Cursor.String())
 	}
 
 	ops, err := r.db.ListOperators(ctx, params)
@@ -155,6 +173,11 @@ func (r *EntityRepository) DeleteOperator(ctx context.Context, id entity.Operato
 	return tagEntityErr[entity.Operator](err)
 }
 
+func (r *EntityRepository) CountOwnerOperators(ctx context.Context, owner string) (int64, error) {
+	ops, err := r.db.CountOwnerOperators(ctx, owner)
+	return ops, tagErr(err)
+}
+
 func (r *EntityRepository) CreateAccount(ctx context.Context, account entity.AccountData) error {
 	params := sqlc.CreateAccountParams{
 		ID:          account.ID.String(),
@@ -165,7 +188,7 @@ func (r *EntityRepository) CreateAccount(ctx context.Context, account entity.Acc
 		Jwt:         account.JWT,
 	}
 	if account.UserJWTDuration != nil {
-		params.UserJwtDuration = ptr(int64(account.UserJWTDuration.Seconds()))
+		params.UserJwtDuration = ref.Ptr(int64(account.UserJWTDuration.Seconds()))
 	}
 	err := r.db.CreateAccount(ctx, params)
 	return tagEntityErr[entity.Account](err)
@@ -178,7 +201,7 @@ func (r *EntityRepository) UpdateAccount(ctx context.Context, account entity.Acc
 		Jwt:  account.JWT,
 	}
 	if account.UserJWTDuration != nil {
-		params.UserJwtDuration = ptr(int64(account.UserJWTDuration.Seconds()))
+		params.UserJwtDuration = ref.Ptr(int64(account.UserJWTDuration.Seconds()))
 	}
 	err := r.db.UpdateAccount(ctx, params)
 	return tagEntityErr[entity.Account](err)
@@ -206,7 +229,7 @@ func (r *EntityRepository) ListAccounts(ctx context.Context, operatorID entity.O
 		Size:       int64(filter.Size),
 	}
 	if filter.Cursor != nil {
-		params.Cursor = ptr(filter.Cursor.String())
+		params.Cursor = ref.Ptr(filter.Cursor.String())
 	}
 
 	accounts, err := r.db.ListAccounts(ctx, params)
@@ -222,6 +245,11 @@ func (r *EntityRepository) DeleteAccount(ctx context.Context, id entity.AccountI
 	return tagEntityErr[entity.Account](err)
 }
 
+func (r *EntityRepository) CountOwnerAccounts(ctx context.Context, owner string) (int64, error) {
+	accs, err := r.db.CountOwnerAccounts(ctx, owner)
+	return accs, tagErr(err)
+}
+
 func (r *EntityRepository) CreateUser(ctx context.Context, user entity.UserData) error {
 	params := sqlc.CreateUserParams{
 		ID:          user.ID.String(),
@@ -232,7 +260,7 @@ func (r *EntityRepository) CreateUser(ctx context.Context, user entity.UserData)
 		Jwt:         user.JWT,
 	}
 	if user.JWTDuration != nil {
-		params.JwtDuration = ptr(int64(user.JWTDuration.Seconds()))
+		params.JwtDuration = ref.Ptr(int64(user.JWTDuration.Seconds()))
 	}
 	err := r.db.CreateUser(ctx, params)
 	return tagEntityErr[entity.User](err)
@@ -245,7 +273,7 @@ func (r *EntityRepository) UpdateUser(ctx context.Context, user entity.UserData)
 		Jwt:  user.JWT,
 	}
 	if user.JWTDuration != nil {
-		params.JwtDuration = ptr(int64(user.JWTDuration.Seconds()))
+		params.JwtDuration = ref.Ptr(int64(user.JWTDuration.Seconds()))
 	}
 	err := r.db.UpdateUser(ctx, params)
 	return tagEntityErr[entity.User](err)
@@ -277,7 +305,7 @@ func (r *EntityRepository) ListUsers(ctx context.Context, accountID entity.Accou
 		Size:      int64(filter.Size),
 	}
 	if filter.Cursor != nil {
-		params.Cursor = ptr(filter.Cursor.String())
+		params.Cursor = ref.Ptr(filter.Cursor.String())
 	}
 
 	users, err := r.db.ListUsers(ctx, params)
@@ -291,6 +319,11 @@ func (r *EntityRepository) ListUsers(ctx context.Context, accountID entity.Accou
 func (r *EntityRepository) DeleteUser(ctx context.Context, id entity.UserID) error {
 	err := r.db.DeleteUser(ctx, id.String())
 	return tagEntityErr[entity.Account](err)
+}
+
+func (r *EntityRepository) CountOwnerUsers(ctx context.Context, owner string) (int64, error) {
+	users, err := r.db.CountOwnerUsers(ctx, owner)
+	return users, tagErr(err)
 }
 
 func (r *EntityRepository) CreateUserJWTIssuance(ctx context.Context, userID entity.UserID, iss entity.UserJWTIssuance) error {
@@ -315,18 +348,20 @@ func (r *EntityRepository) ListUserJWTIssuances(ctx context.Context, userID enti
 
 func (r *EntityRepository) CreateNkey(ctx context.Context, nkey entity.NkeyData) error {
 	if nkey.SigningKey {
-		return r.db.CreateSigningKey(ctx, sqlc.CreateSigningKeyParams{
+		err := r.db.CreateSigningKey(ctx, sqlc.CreateSigningKeyParams{
 			ID:   nkey.ID,
 			Type: nkey.Type.String(),
 			Seed: nkey.Seed,
 		})
+		return tagNkeyErr(err, nkey.SigningKey)
 	}
 
-	return r.db.CreateNkey(ctx, sqlc.CreateNkeyParams{
+	err := r.db.CreateNkey(ctx, sqlc.CreateNkeyParams{
 		ID:   nkey.ID,
 		Type: nkey.Type.String(),
 		Seed: nkey.Seed,
 	})
+	return tagNkeyErr(err, nkey.SigningKey)
 }
 
 func (r *EntityRepository) ReadNkey(ctx context.Context, id string, signingKey bool) (_ entity.NkeyData, err error) {
@@ -347,8 +382,12 @@ func (r *EntityRepository) ReadNkey(ctx context.Context, id string, signingKey b
 	return unmarshalNkey(nk), nil
 }
 
-func (r *EntityRepository) WithTx(txn tx.Tx) (entity.Repository, error) {
-	return initWithTx(txn, NewEntityRepository)
+func (r *EntityRepository) WithTx(tx tx.Tx) entity.Repository {
+	return r.txer.WithTx(r, tx)
+}
+
+func (r *EntityRepository) BeginTxFunc(ctx context.Context, fn func(ctx context.Context, tx tx.Tx, repo entity.Repository) error) error {
+	return r.txer.BeginTxFunc(ctx, r, fn)
 }
 
 func tagNkeyErr(err error, signingKey bool) error {
@@ -357,9 +396,15 @@ func tagNkeyErr(err error, signingKey bool) error {
 	}
 	if errors.Is(err, sql.ErrNoRows) {
 		if signingKey {
-			return errtag.Tag[postgres.SigningKeyNotFound](err)
+			return errtag.Tag[entity.ErrTagSigningKeyNotFound](err)
 		}
-		return errtag.Tag[postgres.NkeyNotFound](err)
+		return errtag.Tag[entity.ErrTagNkeyNotFound](err)
+	}
+	if isSQLiteErrCode(err, sqlite3.SQLITE_CONSTRAINT, sqlite3.SQLITE_CONSTRAINT_UNIQUE, sqlite3.SQLITE_CONSTRAINT_PRIMARYKEY) {
+		if signingKey {
+			return errtag.Tag[entity.ErrTagSigningKeyConflict](err)
+		}
+		return errtag.Tag[entity.ErrTagNkeyConflict](err)
 	}
 	return err
 }
@@ -369,11 +414,26 @@ func tagEntityErr[T entity.Entity](err error) error {
 		return nil
 	}
 	if errors.Is(err, sql.ErrNoRows) {
-		return errtag.Tag[postgres.EntityNotFound[T]](err)
+		return errtag.Tag[entity.ErrTagNotFound[T]](err)
+	}
+	if isSQLiteErrCode(err, sqlite3.SQLITE_CONSTRAINT, sqlite3.SQLITE_CONSTRAINT_UNIQUE, sqlite3.SQLITE_CONSTRAINT_PRIMARYKEY) {
+		return errtag.Tag[entity.ErrTagConflict[T]](err)
 	}
 	return err
 }
 
-func ptr[T any](v T) *T {
-	return &v
+func tagErr(err error) error {
+	return tx.TagSQLiteTimeoutErr(err)
+}
+
+func isSQLiteErrCode(err error, codes ...int) bool {
+	var sqliteErr *sqlite.Error
+	if errors.As(err, &sqliteErr) {
+		for _, code := range codes {
+			if sqliteErr.Code() == code {
+				return true
+			}
+		}
+	}
+	return false
 }

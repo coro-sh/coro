@@ -1,6 +1,10 @@
 package entity
 
-import "go.jetify.com/typeid"
+import (
+	"go.jetify.com/typeid"
+
+	cid "github.com/coro-sh/coro/id"
+)
 
 // ID is a generic identifier interface that combines all entity ID types
 // (NamespaceID, OperatorID, AccountID, UserID).
@@ -12,17 +16,17 @@ type ID interface {
 
 // NewID creates a new instance of the specified ID type. It panics if the ID
 // cannot be generated.
-func NewID[T ID, PT typeid.SubtypePtr[T]]() T {
-	return typeid.Must(typeid.New[T, PT]())
+func NewID[I ID, PI typeid.SubtypePtr[I]]() I {
+	return cid.New[I, PI]()
 }
 
 // ParseID parses a string representation of an ID into the specified ID type.
-func ParseID[T ID, PT typeid.SubtypePtr[T]](id string) (T, error) {
-	return typeid.Parse[T, PT](id)
+func ParseID[I ID, PI typeid.SubtypePtr[I]](id string) (I, error) {
+	return cid.Parse[I, PI](id)
 }
 
 // MustParseID parses a string representation of an ID into the specified ID
 // type and panics if it cannot be parsed.
-func MustParseID[T ID, PT typeid.SubtypePtr[T]](id string) T {
-	return typeid.Must(ParseID[T, PT](id))
+func MustParseID[I ID, PI typeid.SubtypePtr[I]](id string) I {
+	return cid.MustParse[I, PI](id)
 }

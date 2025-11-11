@@ -25,7 +25,6 @@ import (
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/sqlite/migrations"
 	"github.com/coro-sh/coro/tkn"
-	"github.com/coro-sh/coro/tx"
 )
 
 func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool, opts ...server.Option) error {
@@ -35,8 +34,7 @@ func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool, 
 		return err
 	}
 	defer pg.Close()
-	txer := postgres.NewTxer(pg)
-	return runAll(ctx, logger, cfg, withUI, txer, postgres.NewEntityRepository(pg), postgres.NewOperatorTokenReadWriter(pg), opts...)
+	return runAll(ctx, logger, cfg, withUI, postgres.NewEntityRepository(pg), postgres.NewOperatorTokenReadWriter(pg), opts...)
 }
 
 func RunUI(ctx context.Context, logger log.Logger, cfg UIConfig, opts ...server.Option) error {
@@ -72,8 +70,7 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 	}
 	defer pg.Close()
 
-	txer := postgres.NewTxer(pg)
-	store, err := NewEntityStore(txer, postgres.NewEntityRepository(pg), cfg.EncryptionSecretKey)
+	store, err := NewEntityStore(postgres.NewEntityRepository(pg), cfg.EncryptionSecretKey)
 	if err != nil {
 		return err
 	}
@@ -105,9 +102,9 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 		return err
 	}
 
-	var entityHandlerOpts []entity.HTTPHandlerOption
+	var entityHandlerOpts []entity.HTTPHandlerOption[*entity.Store]
 	if cfg.Broker != nil {
-		_, _, bSysUsr, err := InitBrokerNATSEntities(ctx, txer, store, logger, intNS.ID)
+		_, _, bSysUsr, err := InitBrokerNATSEntities(ctx, store, logger, intNS.ID)
 		if err != nil {
 			return err
 		}
@@ -125,7 +122,7 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 			return fmt.Errorf("dial broker publisher: %w", err)
 		}
 
-		entityHandlerOpts = append(entityHandlerOpts, entity.WithCommander(commander))
+		entityHandlerOpts = append(entityHandlerOpts, entity.WithCommander[*entity.Store](commander))
 		opTknRW := postgres.NewOperatorTokenReadWriter(pg)
 		opTknIssuer := tkn.NewOperatorIssuer(opTknRW, tkn.OperatorTokenTypeProxy)
 		srv.Register("/api/v1", command.NewProxyHTTPHandler(opTknIssuer, store, commander))
@@ -133,7 +130,7 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 		srv.Register("/api/v1", command.NewStreamWebSocketHandler(store, commander, command.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
 	}
 
-	srv.Register("/api/v1", entity.NewHTTPHandler(txer, store, entityHandlerOpts...))
+	srv.Register("/api/v1", entity.NewHTTPHandler(store, entityHandlerOpts...))
 
 	return Serve(ctx, srv, logger)
 }
@@ -146,8 +143,7 @@ func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ..
 	}
 	defer pg.Close()
 
-	txer := postgres.NewTxer(pg)
-	store, err := NewEntityStore(txer, postgres.NewEntityRepository(pg), cfg.EncryptionSecretKey)
+	store, err := NewEntityStore(postgres.NewEntityRepository(pg), cfg.EncryptionSecretKey)
 	if err != nil {
 		return fmt.Errorf("create entity store: %w", err)
 	}
@@ -156,7 +152,7 @@ func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ..
 	if err != nil {
 		return err
 	}
-	bOp, bSysAcc, bSysUsr, err := InitBrokerNATSEntities(ctx, txer, store, logger, intNS.ID)
+	bOp, bSysAcc, bSysUsr, err := InitBrokerNATSEntities(ctx, store, logger, intNS.ID)
 	if err != nil {
 		return err
 	}
@@ -207,9 +203,6 @@ func RunDevServer(ctx context.Context, logger log.Logger, serverPort int, withUI
 		return err
 	}
 
-	repo := sqlite.NewEntityRepository(db)
-	txer := sqlite.NewTxer(db)
-
 	appCfg := AllConfig{
 		BaseConfig: BaseConfig{
 			Port: serverPort,
@@ -220,7 +213,7 @@ func RunDevServer(ctx context.Context, logger log.Logger, serverPort int, withUI
 		},
 	}
 
-	return runAll(ctx, logger, appCfg, withUI, txer, repo, sqlite.NewOperatorTokenReadWriter(db))
+	return runAll(ctx, logger, appCfg, withUI, sqlite.NewEntityRepository(db), sqlite.NewOperatorTokenReadWriter(db))
 }
 
 func runAll(
@@ -228,12 +221,11 @@ func runAll(
 	logger log.Logger,
 	cfg AllConfig,
 	withUI bool,
-	txer tx.Txer,
 	repo entity.Repository,
 	opTknRW tkn.OperatorTokenReadWriter,
 	opts ...server.Option,
 ) error {
-	store, err := NewEntityStore(txer, repo, cfg.EncryptionSecretKey)
+	store, err := NewEntityStore(repo, cfg.EncryptionSecretKey)
 	if err != nil {
 		return err
 	}
@@ -246,7 +238,7 @@ func runAll(
 		return err
 	}
 
-	bOp, bSysAcc, bSysUsr, err := InitBrokerNATSEntities(ctx, txer, store, logger, intNS.ID)
+	bOp, bSysAcc, bSysUsr, err := InitBrokerNATSEntities(ctx, store, logger, intNS.ID)
 	if err != nil {
 		return err
 	}
@@ -287,7 +279,7 @@ func runAll(
 		return fmt.Errorf("dial broker publisher: %w", err)
 	}
 
-	srv.Register("/api/v1", entity.NewHTTPHandler(txer, store, entity.WithCommander(commander)))
+	srv.Register("/api/v1", entity.NewHTTPHandler(store, entity.WithCommander[*entity.Store](commander)))
 	srv.Register("/api/v1", brokerHandler)
 	srv.Register("/api/v1", command.NewProxyHTTPHandler(opTknIssuer, store, commander))
 	srv.Register("/api/v1", command.NewStreamHTTPHandler(store, commander))

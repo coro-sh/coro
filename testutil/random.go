@@ -1,8 +1,10 @@
 package testutil
 
 import (
-	"math/rand"
-	"strconv"
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+	mrand "math/rand"
 )
 
 var leftNames = []string{
@@ -18,16 +20,22 @@ var rightNames = []string{
 }
 
 func RandName() string {
-	left := leftNames[rand.Intn(len(leftNames))]
-	right := rightNames[rand.Intn(len(rightNames))]
-	return left + "_" + right + "_" + strconv.Itoa(rand.Intn(50))
+	left := leftNames[mrand.Intn(len(leftNames))]
+	right := rightNames[mrand.Intn(len(rightNames))]
+
+	var b [8]byte // 64 bits of randomness
+	if _, err := rand.Read(b[:]); err != nil {
+		panic(err)
+	}
+	suffix := hex.EncodeToString(b[:]) // 16 hex chars
+	return fmt.Sprintf("%s_%s_%s", left, right, suffix)
 }
 
 func RandString(length int) string {
 	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 	b := make([]byte, length)
 	for i := range b {
-		b[i] = charset[rand.Intn(len(charset))]
+		b[i] = charset[mrand.Intn(len(charset))]
 	}
 	return string(b)
 }

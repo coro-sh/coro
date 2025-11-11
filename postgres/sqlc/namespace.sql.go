@@ -12,7 +12,7 @@ import (
 const batchReadNamespaces = `-- name: BatchReadNamespaces :many
 SELECT id, name, owner
 FROM namespace
-WHERE id = ANY ($1::text[])
+WHERE id = ANY ($1::TEXT[])
 `
 
 func (q *Queries) BatchReadNamespaces(ctx context.Context, ids []string) ([]*Namespace, error) {

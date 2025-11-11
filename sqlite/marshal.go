@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/ref"
 	"github.com/coro-sh/coro/sqlite/sqlc"
 )
 
@@ -39,7 +40,7 @@ func unmarshalAccount(in *sqlc.Account) entity.AccountData {
 		PublicKey: in.PublicKey,
 	}
 	if in.UserJwtDuration != nil {
-		out.UserJWTDuration = ptr(time.Second * time.Duration(*in.UserJwtDuration))
+		out.UserJWTDuration = ref.Ptr(time.Second * time.Duration(*in.UserJwtDuration))
 	}
 	return out
 }
@@ -56,7 +57,7 @@ func unmarshalUser(in *sqlc.User) entity.UserData {
 		JWT:  in.Jwt,
 	}
 	if in.JwtDuration != nil {
-		out.JWTDuration = ptr(time.Second * time.Duration(*in.JwtDuration))
+		out.JWTDuration = ref.Ptr(time.Second * time.Duration(*in.JwtDuration))
 	}
 	return out
 }

@@ -16,7 +16,7 @@ WHERE id = $1;
 -- name: BatchReadNamespaces :many
 SELECT *
 FROM namespace
-WHERE id = ANY (sqlc.arg('ids')::text[]);
+WHERE id = ANY (sqlc.arg('ids')::TEXT[]);
 
 -- name: ListNamespaces :many
 SELECT *
@@ -28,3 +28,4 @@ LIMIT @size;
 
 -- name: DeleteNamespace :exec
 SELECT delete_namespace_and_nkeys($1);
+

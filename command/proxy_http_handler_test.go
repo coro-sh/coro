@@ -23,7 +23,7 @@ func TestHTTPHandler_GenerateToken(t *testing.T) {
 
 	db := sqlite.NewTestDB(t)
 	repo := sqlite.NewEntityRepository(db)
-	store := entity.NewStore(sqlite.NewTxer(db), repo)
+	store := entity.NewStore(repo)
 	tknIss := tkn.NewOperatorIssuer(sqlite.NewOperatorTokenReadWriter(db), tkn.OperatorTokenTypeProxy)
 
 	srv, err := server.NewServer(testutil.GetFreePort(t), server.WithMiddleware(
@@ -59,7 +59,7 @@ func TestHTTPHandler_GetStatus(t *testing.T) {
 
 	db := sqlite.NewTestDB(t)
 	repo := sqlite.NewEntityRepository(db)
-	store := entity.NewStore(sqlite.NewTxer(db), repo)
+	store := entity.NewStore(repo)
 	tknIss := tkn.NewOperatorIssuer(sqlite.NewOperatorTokenReadWriter(db), tkn.OperatorTokenTypeProxy)
 
 	srv, err := server.NewServer(testutil.GetFreePort(t), server.WithMiddleware(

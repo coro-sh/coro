@@ -17,7 +17,7 @@ import (
 func TestStore_Namespace(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
 	defer cancel()
-	s, _ := sqlite.NewTestEntityStore(t)
+	s := sqlite.NewTestEntityStore(t)
 
 	want := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 
@@ -41,7 +41,7 @@ func TestStore_Namespace(t *testing.T) {
 func TestStore_Operator(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
 	defer cancel()
-	s, _ := sqlite.NewTestEntityStore(t)
+	s := sqlite.NewTestEntityStore(t)
 
 	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	err := s.CreateNamespace(ctx, ns)
@@ -86,7 +86,7 @@ func TestStore_Operator(t *testing.T) {
 func TestStore_Account(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
 	defer cancel()
-	s, _ := sqlite.NewTestEntityStore(t)
+	s := sqlite.NewTestEntityStore(t)
 
 	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	err := s.CreateNamespace(ctx, ns)
@@ -140,7 +140,7 @@ func TestStore_Account(t *testing.T) {
 func TestStore_User(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
 	defer cancel()
-	s, _ := sqlite.NewTestEntityStore(t)
+	s := sqlite.NewTestEntityStore(t)
 
 	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
 	err := s.CreateNamespace(ctx, ns)
@@ -195,7 +195,7 @@ func TestStore_User(t *testing.T) {
 func TestStore_Nkey(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
 	defer cancel()
-	s, _ := sqlite.NewTestEntityStore(t)
+	s := sqlite.NewTestEntityStore(t)
 
 	want, err := entity.NewNkey(testutil.RandString(10), entity.TypeOperator, false)
 	require.NoError(t, err)

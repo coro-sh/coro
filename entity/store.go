@@ -10,45 +10,67 @@ import (
 	"github.com/coro-sh/coro/tx"
 )
 
-// Repository is the interface for performing CRUD operations on Nkeys,
-// Operators, Accounts, and Users.
-type Repository interface {
+type TxStorer[S Storer] interface {
+	Storer
+	BeginTxFunc(ctx context.Context, fn func(ctx context.Context, store S) error) error
+}
+
+type Storer interface {
+	NamespaceStorer
+	OperatorStorer
+	AccountStorer
+	UserStorer
+	NkeyStorer
+	GetRepository() Repository
+	SetRepository(repo Repository)
+}
+
+type NamespaceStorer interface {
 	CreateNamespace(ctx context.Context, namespace *Namespace) error
 	ReadNamespace(ctx context.Context, id NamespaceID) (*Namespace, error)
-	ReadNamespaceByName(ctx context.Context, name string, owner string) (*Namespace, error)
+	ReadNamespaceByName(ctx context.Context, name, owner string) (*Namespace, error)
 	BatchReadNamespaces(ctx context.Context, ids []NamespaceID) ([]*Namespace, error)
 	ListNamespaces(ctx context.Context, owner string, filter paginate.PageFilter[NamespaceID]) ([]*Namespace, error)
-	DeleteNamespace(ctx context.Context, id NamespaceID) error // must cascade delete
+	CountOwnerNamespaces(ctx context.Context, owner string) (int64, error)
+	DeleteNamespace(ctx context.Context, id NamespaceID) error
+}
 
-	CreateOperator(ctx context.Context, operator OperatorData) error
-	UpdateOperator(ctx context.Context, operator OperatorData) error
-	ReadOperator(ctx context.Context, id OperatorID) (OperatorData, error)
-	ReadOperatorByName(ctx context.Context, name string) (OperatorData, error)
-	ReadOperatorByPublicKey(ctx context.Context, pubKey string) (OperatorData, error)
-	ListOperators(ctx context.Context, namespaceID NamespaceID, filter paginate.PageFilter[OperatorID]) ([]OperatorData, error)
-	DeleteOperator(ctx context.Context, id OperatorID) error // must cascade delete
+type OperatorStorer interface {
+	CreateOperator(ctx context.Context, operator *Operator) error
+	UpdateOperator(ctx context.Context, operator *Operator) error
+	ReadOperator(ctx context.Context, id OperatorID) (*Operator, error)
+	ReadOperatorByName(ctx context.Context, name string) (*Operator, error)
+	ReadOperatorByPublicKey(ctx context.Context, pubKey string) (*Operator, error)
+	ListOperators(ctx context.Context, namespaceID NamespaceID, filter paginate.PageFilter[OperatorID]) ([]*Operator, error)
+	DeleteOperator(ctx context.Context, id OperatorID) error
+	CountOwnerOperators(ctx context.Context, owner string) (int64, error)
+}
 
-	CreateAccount(ctx context.Context, account AccountData) error
-	UpdateAccount(ctx context.Context, account AccountData) error
-	ReadAccount(ctx context.Context, id AccountID) (AccountData, error)
-	ReadAccountByPublicKey(ctx context.Context, pubKey string) (AccountData, error)
-	ListAccounts(ctx context.Context, operatorID OperatorID, filter paginate.PageFilter[AccountID]) ([]AccountData, error)
-	DeleteAccount(ctx context.Context, id AccountID) error // must cascade delete
+type AccountStorer interface {
+	CreateAccount(ctx context.Context, account *Account) error
+	UpdateAccount(ctx context.Context, account *Account) error
+	ReadAccount(ctx context.Context, id AccountID) (*Account, error)
+	ReadAccountByPublicKey(ctx context.Context, pubKey string) (*Account, error)
+	ListAccounts(ctx context.Context, operatorID OperatorID, filter paginate.PageFilter[AccountID]) ([]*Account, error)
+	DeleteAccount(ctx context.Context, id AccountID) error
+	CountOwnerAccounts(ctx context.Context, owner string) (int64, error)
+}
 
-	CreateUser(ctx context.Context, user UserData) error
-	UpdateUser(ctx context.Context, user UserData) error
-	ReadUser(ctx context.Context, id UserID) (UserData, error)
-	ReadUserByName(ctx context.Context, operatorID OperatorID, accountID AccountID, name string) (UserData, error)
-	ListUsers(ctx context.Context, accountID AccountID, filter paginate.PageFilter[UserID]) ([]UserData, error)
-	DeleteUser(ctx context.Context, id UserID) error // must cascade delete
-
-	CreateUserJWTIssuance(ctx context.Context, userID UserID, iss UserJWTIssuance) error
+type UserStorer interface {
+	CreateUser(ctx context.Context, user *User) error
+	UpdateUser(ctx context.Context, user *User) error
+	ReadUser(ctx context.Context, id UserID) (*User, error)
+	ReadSystemUser(ctx context.Context, operatorID OperatorID, sysAccountID AccountID) (*User, error)
+	ListUsers(ctx context.Context, accountID AccountID, filter paginate.PageFilter[UserID]) ([]*User, error)
+	DeleteUser(ctx context.Context, id UserID) error
+	CountOwnerUsers(ctx context.Context, owner string) (int64, error)
+	RecordUserJWTIssuance(ctx context.Context, user *User) error
 	ListUserJWTIssuances(ctx context.Context, userID UserID, filter paginate.PageFilter[int64]) ([]UserJWTIssuance, error)
+}
 
-	ReadNkey(ctx context.Context, id string, signingKey bool) (NkeyData, error)
-	CreateNkey(ctx context.Context, nkey NkeyData) error
-
-	WithTx(tx tx.Tx) (Repository, error)
+type NkeyStorer interface {
+	CreateNkey(ctx context.Context, nkey *Nkey) error
+	ReadNkey(ctx context.Context, id string, signingKey bool) (*Nkey, error)
 }
 
 // StoreOption configures a Store during initialization.
@@ -62,20 +84,20 @@ func WithEncryption(encrypter encrypt.Encrypter) StoreOption {
 	}
 }
 
-// Store create, reads, and updates entities and their associated nkeys.
+var _ TxStorer[*Store] = (*Store)(nil)
+
+// Store is a convenience wrapper around a Repository to easily perform CRUD
+// operations on entities and their associated nkeys.
 type Store struct {
 	repo      Repository
-	txer      tx.Txer
 	encrypter encrypt.Encrypter
-	isTx      bool
 }
 
 // NewStore creates a new Store instance with the provided Repository and
-// optional configuration options.
-func NewStore(txer tx.Txer, repo Repository, opts ...StoreOption) *Store {
+// options.
+func NewStore(repo Repository, opts ...StoreOption) *Store {
 	s := &Store{
 		repo: repo,
-		txer: txer,
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -108,6 +130,11 @@ func (s *Store) ListNamespaces(ctx context.Context, owner string, filter paginat
 	return s.repo.ListNamespaces(ctx, owner, filter)
 }
 
+// CountOwnerNamespaces returns the number of namespaces belonging to an owner.
+func (s *Store) CountOwnerNamespaces(ctx context.Context, owner string) (int64, error) {
+	return s.repo.CountOwnerNamespaces(ctx, owner)
+}
+
 // DeleteNamespace deletes a of Namespace.
 func (s *Store) DeleteNamespace(ctx context.Context, id NamespaceID) error {
 	return s.repo.DeleteNamespace(ctx, id)
@@ -120,29 +147,17 @@ func (s *Store) CreateOperator(ctx context.Context, operator *Operator) (err err
 		return err
 	}
 
-	store := s
-	if !s.isTx {
-		// begin transaction if not already started
-		txn, err := s.txer.BeginTx(ctx)
-		if err != nil {
+	return s.BeginTxFunc(ctx, func(ctx context.Context, store *Store) error {
+		if err = store.CreateNkey(ctx, operator.NKey()); err != nil {
 			return err
 		}
-		defer tx.Handle(ctx, txn, &err)
-		store, err = store.WithTx(txn)
-		if err != nil {
+
+		if err = store.CreateNkey(ctx, operator.SigningKey()); err != nil {
 			return err
 		}
-	}
 
-	if err = store.CreateNkey(ctx, operator.NKey()); err != nil {
-		return err
-	}
-
-	if err = store.CreateNkey(ctx, operator.SigningKey()); err != nil {
-		return err
-	}
-
-	return store.repo.CreateOperator(ctx, data)
+		return store.repo.CreateOperator(ctx, data)
+	})
 }
 
 // UpdateOperator updates an existing Operator in the store.
@@ -210,6 +225,11 @@ func (s *Store) DeleteOperator(ctx context.Context, id OperatorID) (err error) {
 	return s.repo.DeleteOperator(ctx, id)
 }
 
+// CountOwnerOperators returns the number of operators belonging to an owner.
+func (s *Store) CountOwnerOperators(ctx context.Context, owner string) (int64, error) {
+	return s.repo.CountOwnerOperators(ctx, owner)
+}
+
 // CreateAccount creates an Account and its associated Nkeys to the store.
 func (s *Store) CreateAccount(ctx context.Context, account *Account) (err error) {
 	data, err := account.Data()
@@ -217,29 +237,17 @@ func (s *Store) CreateAccount(ctx context.Context, account *Account) (err error)
 		return err
 	}
 
-	store := s
-	if !s.isTx {
-		// begin transaction if not already started
-		txn, err := s.txer.BeginTx(ctx)
-		if err != nil {
+	return s.BeginTxFunc(ctx, func(ctx context.Context, store *Store) error {
+		if err = store.CreateNkey(ctx, account.NKey()); err != nil {
 			return err
 		}
-		defer tx.Handle(ctx, txn, &err)
-		store, err = store.WithTx(txn)
-		if err != nil {
+
+		if err = store.CreateNkey(ctx, account.SigningKey()); err != nil {
 			return err
 		}
-	}
 
-	if err = store.CreateNkey(ctx, account.NKey()); err != nil {
-		return err
-	}
-
-	if err = store.CreateNkey(ctx, account.SigningKey()); err != nil {
-		return err
-	}
-
-	return store.repo.CreateAccount(ctx, data)
+		return store.repo.CreateAccount(ctx, data)
+	})
 }
 
 // UpdateAccount updates an existing Account in the store.
@@ -296,32 +304,25 @@ func (s *Store) DeleteAccount(ctx context.Context, id AccountID) (err error) {
 	return s.repo.DeleteAccount(ctx, id)
 }
 
+// CountOwnerAccounts returns the number of accounts belonging to an owner.
+func (s *Store) CountOwnerAccounts(ctx context.Context, owner string) (int64, error) {
+	return s.repo.CountOwnerAccounts(ctx, owner)
+}
+
 // CreateUser creates a User and its associated Nkey in the store.
 func (s *Store) CreateUser(ctx context.Context, user *User) (err error) {
-	store := s
-	if !s.isTx {
-		// begin transaction if not already started
-		txn, err := s.txer.BeginTx(ctx)
+	return s.BeginTxFunc(ctx, func(ctx context.Context, store *Store) error {
+		if err = store.CreateNkey(ctx, user.NKey()); err != nil {
+			return err
+		}
+
+		data, err := user.Data()
 		if err != nil {
 			return err
 		}
-		defer tx.Handle(ctx, txn, &err)
-		store, err = store.WithTx(txn)
-		if err != nil {
-			return err
-		}
-	}
 
-	if err = store.CreateNkey(ctx, user.NKey()); err != nil {
-		return err
-	}
-
-	data, err := user.Data()
-	if err != nil {
-		return err
-	}
-
-	return store.repo.CreateUser(ctx, data)
+		return store.repo.CreateUser(ctx, data)
+	})
 }
 
 // UpdateUser updates an existing User in the store.
@@ -377,6 +378,11 @@ func (s *Store) ListUsers(ctx context.Context, accountID AccountID, filter pagin
 // DeleteUser deletes a User from the store by its ID.
 func (s *Store) DeleteUser(ctx context.Context, id UserID) (err error) {
 	return s.repo.DeleteUser(ctx, id)
+}
+
+// CountOwnerUsers returns the number of accounts belonging to an owner.
+func (s *Store) CountOwnerUsers(ctx context.Context, owner string) (int64, error) {
+	return s.repo.CountOwnerUsers(ctx, owner)
 }
 
 func (s *Store) RecordUserJWTIssuance(ctx context.Context, user *User) error {
@@ -441,31 +447,23 @@ func (s *Store) ReadNkey(ctx context.Context, id string, signingKey bool) (*Nkey
 	return NewNkeyFromData(data)
 }
 
-// WithTx creates a new Store instance that uses the provided transaction.
-func (s *Store) WithTx(txn tx.Tx) (*Store, error) {
-	cpy := *s
-	cpy.isTx = true
-	repo, err := cpy.repo.WithTx(txn)
-	cpy.repo = repo
-	if err != nil {
-		return nil, err
-	}
-	return &cpy, nil
+// BeginTxFunc begins a transactional operation on the store.
+func (s *Store) BeginTxFunc(ctx context.Context, fn func(ctx context.Context, store *Store) error) error {
+	return s.repo.BeginTxFunc(ctx, func(ctx context.Context, _ tx.Tx, repo Repository) error {
+		cpy := *s
+		cpy.repo = repo
+		return fn(ctx, &cpy)
+	})
 }
 
-// DoTx executes a transactional operation on the store.
-func (s *Store) DoTx(ctx context.Context, txn tx.Tx, fn func(ctx context.Context, store *Store) error) error {
-	cpy := *s
-	cpy.isTx = true
-	repo, err := cpy.repo.WithTx(txn)
-	if err != nil {
-		return err
-	}
-	cpy.repo = repo
+// SetRepository replaces the repository instance for the Store.
+func (s *Store) SetRepository(repo Repository) {
+	s.repo = repo
+}
 
-	err = fn(ctx, &cpy)
-	tx.Handle(context.Background(), txn, &err)
-	return err
+// GetRepository returns the repository instance for the Store.
+func (s *Store) GetRepository() Repository {
+	return s.repo
 }
 
 func (s *Store) initOperator(ctx context.Context, data OperatorData) (*Operator, error) {
