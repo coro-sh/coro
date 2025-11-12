@@ -50,7 +50,7 @@ func Open(ctx context.Context, opts ...OpenOption) (*sql.DB, error) {
 	var dsn string
 
 	if o.inMemory {
-		dsn = "file::memory:?cache=shared"
+		dsn = ":memory:"
 	} else {
 		file := constants.AppName + ".db"
 		if o.dir != "" {

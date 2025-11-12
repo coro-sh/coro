@@ -12,7 +12,7 @@ import (
 func TestEntityRepositoryTestSuite(t *testing.T) {
 	suite.Run(t, &entity.RepositoryTestSuite{
 		Setup: func(t *testing.T) entity.Repository {
-			return NewEntityRepository(setupTestDB(t))
+			return NewEntityRepository(NewTestDB(t))
 		},
 		SetTransactionTimeout: func(t *testing.T, timeout time.Duration, repo entity.Repository) {
 			repo.(*EntityRepository).txer.Config.Timeout = timeout
