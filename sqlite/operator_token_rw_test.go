@@ -12,7 +12,7 @@ import (
 func TestOperatorTokenReadWriterTestSuite(t *testing.T) {
 	suite.Run(t, &tkn.OperatorTokenReadWriterTestSuite{
 		Setup: func(t *testing.T) tkn.OperatorTokenReadWriterTestConfig {
-			db := setupTestDB(t)
+			db := NewTestDB(t)
 			return tkn.OperatorTokenReadWriterTestConfig{
 				EntityRepo:      NewEntityRepository(db),
 				OperatorTokenRW: NewOperatorTokenReadWriter(db),
