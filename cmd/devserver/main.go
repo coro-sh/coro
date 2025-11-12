@@ -75,7 +75,7 @@ func run(ctx context.Context, args []string, logger log.Logger) error {
 		&cli.BoolFlag{
 			Name:    "server-ui",
 			Aliases: []string{"ui"},
-			Value:   true,
+			Value:   false,
 			Usage:   "enable coro server ui",
 			EnvVars: []string{"SERVER_UI"},
 		},

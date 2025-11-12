@@ -54,4 +54,4 @@ client-gen:
 .PHONY: dev-server
 # Usage: make dev-server CORS_ORIGINS="http://localhost:8080 http://localhost:5173"
 dev-server:
-	go run ./cmd/devserver $(foreach origin,$(CORS_ORIGINS),-cors-origin $(origin))
+	go run ./cmd/devserver -ui $(foreach origin,$(CORS_ORIGINS),-cors-origin $(origin))
