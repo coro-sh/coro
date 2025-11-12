@@ -1,8 +1,10 @@
 package app
 
 import (
+	"embed"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -221,21 +223,46 @@ func (c *EmbeddedNATSConfig) Validation() *valgo.Validation {
 	return v
 }
 
+type loadConfigOptions struct {
+	fs *embed.FS
+}
+
+type LoadConfigOption func(*loadConfigOptions)
+
+func WithFS(fs embed.FS) LoadConfigOption {
+	return func(o *loadConfigOptions) {
+		o.fs = &fs
+	}
+}
+
 type Configurable interface {
 	InitDefaults()
 	Validation() *valgo.Validation
 }
 
-func LoadConfig(configFile string, out Configurable) {
+func LoadConfig(configFile string, out Configurable, opts ...LoadConfigOption) {
+	var options loadConfigOptions
+	for _, opt := range opts {
+		opt(&options)
+	}
+
 	err := func() error {
 		out.InitDefaults()
 
 		if configFile != "" {
-			file, err := os.Open(configFile)
+			var file io.ReadCloser
+			var err error
+
+			if options.fs != nil {
+				file, err = options.fs.Open(configFile)
+			} else {
+				file, err = os.Open(configFile)
+			}
 			if err != nil {
 				return fmt.Errorf("open config file: %w", err)
 			}
 			defer file.Close()
+
 			decoder := yaml.NewDecoder(file)
 			if err = decoder.Decode(out); err != nil {
 				return fmt.Errorf("decode config file: %w", err)

@@ -18,7 +18,7 @@ import (
 	"github.com/coro-sh/coro/server"
 )
 
-func NewEntityStore(rw entity.Repository, encKey *string) (*entity.Store, error) {
+func NewEntityStore(repo entity.Repository, encKey *string) (*entity.Store, error) {
 	var storeOpts []entity.StoreOption
 	if encKey != nil {
 		enc, err := encrypt.NewAES(*encKey)
@@ -27,7 +27,7 @@ func NewEntityStore(rw entity.Repository, encKey *string) (*entity.Store, error)
 		}
 		storeOpts = append(storeOpts, entity.WithEncryption(enc))
 	}
-	return entity.NewStore(rw, storeOpts...), nil
+	return entity.NewStore(repo, storeOpts...), nil
 }
 
 func Serve(ctx context.Context, srv *server.Server, logger log.Logger) error {
@@ -80,7 +80,12 @@ func InitNamespace(ctx context.Context, store *entity.Store, logger log.Logger, 
 	return ns, nil
 }
 
-func InitBrokerNATSEntities(ctx context.Context, store *entity.Store, logger log.Logger, internalNamespaceID entity.NamespaceID) (*entity.Operator, *entity.Account, *entity.User, error) {
+func InitBrokerNATSEntities(
+	ctx context.Context,
+	store *entity.Store,
+	logger log.Logger,
+	internalNamespaceID entity.NamespaceID,
+) (*entity.Operator, *entity.Account, *entity.User, error) {
 	createEntities := func() (op *entity.Operator, sysAcc *entity.Account, sysUser *entity.User, err error) {
 		op, err = entity.NewOperator(constants.BrokerOperatorName, internalNamespaceID)
 		if err != nil {
