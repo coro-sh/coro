@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -21,7 +22,11 @@ import (
 func NewEntityStore(repo entity.Repository, encKey *string) (*entity.Store, error) {
 	var storeOpts []entity.StoreOption
 	if encKey != nil {
-		enc, err := encrypt.NewAES([]byte(*encKey))
+		b, err := hex.DecodeString(*encKey)
+		if err != nil {
+			return nil, fmt.Errorf("hex decode encryption key: %w", err)
+		}
+		enc, err := encrypt.NewAES(b)
 		if err != nil {
 			return nil, fmt.Errorf("create aes encrypter: %w", err)
 		}

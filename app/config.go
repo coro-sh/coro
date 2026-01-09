@@ -101,7 +101,7 @@ type BaseConfig struct {
 	TLS    *TLSConfig   `yaml:"tls" envPrefix:"TLS_"`
 	// EncryptionSecretKey (optional):
 	// Enables encryption for sensitive data like nkeys and proxy tokens.
-	// The key must decode to 16, 24, or 32 bytes (AES-128/192/256).
+	// The key must be a hex-encoded key that decodes to 16, 24, or 32 bytes (AES-128/192/256).
 	// Hex-encoded keys can be generated using:
 	//   openssl rand -hex 16 # AES-128
 	//   openssl rand -hex 24 # AES-192
