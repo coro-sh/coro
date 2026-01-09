@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/constants"
-	"github.com/coro-sh/coro/testutil"
+	"github.com/joshjon/kit/testutil"
 )
 
 func TestNewUser(t *testing.T) {
-	op, err := NewOperator("test_operator", NewID[NamespaceID]())
+	op, err := NewOperator("test_operator", id.New[NamespaceID]())
 	require.NoError(t, err)
 	acc, err := NewAccount("test_account", op)
 	require.NoError(t, err)
@@ -31,7 +31,7 @@ func TestNewUser(t *testing.T) {
 }
 
 func TestNewSystemUser(t *testing.T) {
-	op, err := NewOperator("test_operator", NewID[NamespaceID]())
+	op, err := NewOperator("test_operator", id.New[NamespaceID]())
 	require.NoError(t, err)
 
 	t.Run("valid system user", func(t *testing.T) {
@@ -57,7 +57,7 @@ func TestNewSystemUser(t *testing.T) {
 }
 
 func TestNewUserFromData(t *testing.T) {
-	operator, err := NewOperator("test_operator", NewID[NamespaceID]())
+	operator, err := NewOperator("test_operator", id.New[NamespaceID]())
 	require.NoError(t, err)
 
 	account, err := NewAccount("test_account", operator)
@@ -85,7 +85,7 @@ func TestNewUserFromData(t *testing.T) {
 }
 
 func TestUser_Validate(t *testing.T) {
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
+	op, err := NewOperator(testutil.RandName(), id.New[NamespaceID]())
 	require.NoError(t, err)
 	acc, err := NewAccount(testutil.RandName(), op)
 	require.NoError(t, err)
@@ -105,7 +105,7 @@ func TestUser_Validate(t *testing.T) {
 }
 
 func TestUser_Update(t *testing.T) {
-	op, err := NewOperator("test_operator", NewID[NamespaceID]())
+	op, err := NewOperator("test_operator", id.New[NamespaceID]())
 	require.NoError(t, err)
 	acc, err := NewAccount("test_account", op)
 	require.NoError(t, err)
@@ -129,7 +129,7 @@ func TestUser_Update(t *testing.T) {
 }
 
 func TestUser_RefreshJWT(t *testing.T) {
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
+	op, err := NewOperator(testutil.RandName(), id.New[NamespaceID]())
 	require.NoError(t, err)
 	acc, err := NewAccount(testutil.RandName(), op)
 	require.NoError(t, err)

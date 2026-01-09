@@ -1,4 +1,4 @@
-package entity
+package entityapi
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/joshjon/kit/id"
 	"github.com/joshjon/kit/ref"
 	"github.com/joshjon/kit/server"
 	"github.com/labstack/echo/v4"
@@ -15,6 +16,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/coro-sh/coro/constants"
+	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/logkey"
 )
 
@@ -27,16 +29,16 @@ const (
 
 // Commander sends commands to a NATS server.
 type Commander interface {
-	NotifyAccountClaimsUpdate(ctx context.Context, account *Account) error
+	NotifyAccountClaimsUpdate(ctx context.Context, account *entity.Account) error
 	// Ping checks if an Operator is connected and ready to receive commands.
-	Ping(ctx context.Context, operatorID OperatorID) (OperatorNATSStatus, error)
+	Ping(ctx context.Context, operatorID entity.OperatorID) (entity.OperatorNATSStatus, error)
 }
 
 // HTTPHandlerOption configures a HTTPHandler.
-type HTTPHandlerOption[S Storer] func(handler *HTTPHandler[S])
+type HTTPHandlerOption[S entity.Storer] func(handler *HTTPHandler[S])
 
 // WithCommander sets a Commander on the handler to enable commands.
-func WithCommander[S Storer](commander Commander) HTTPHandlerOption[S] {
+func WithCommander[S entity.Storer](commander Commander) HTTPHandlerOption[S] {
 	return func(handler *HTTPHandler[S]) {
 		handler.commander = commander
 	}
@@ -44,21 +46,21 @@ func WithCommander[S Storer](commander Commander) HTTPHandlerOption[S] {
 
 // WithNamespaceOwnerGetter sets a function to get the namespace owner for a
 // request. If not set, the default namespace owner will be used.
-func WithNamespaceOwnerGetter[S Storer](fn func(c echo.Context) (string, error)) HTTPHandlerOption[S] {
+func WithNamespaceOwnerGetter[S entity.Storer](fn func(c echo.Context) (string, error)) HTTPHandlerOption[S] {
 	return func(handler *HTTPHandler[S]) {
 		handler.ownerGetter = fn
 	}
 }
 
 // HTTPHandler handles entity HTTP requests.
-type HTTPHandler[S Storer] struct {
-	store       TxStorer[S]
+type HTTPHandler[S entity.Storer] struct {
+	store       entity.TxStorer[S]
 	commander   Commander
 	ownerGetter func(c echo.Context) (string, error)
 }
 
 // NewHTTPHandler creates a new HTTPHandler.
-func NewHTTPHandler[S Storer](store TxStorer[S], opts ...HTTPHandlerOption[S]) *HTTPHandler[S] {
+func NewHTTPHandler[S entity.Storer](store entity.TxStorer[S], opts ...HTTPHandlerOption[S]) *HTTPHandler[S] {
 	h := &HTTPHandler[S]{
 		store: store,
 		ownerGetter: func(c echo.Context) (string, error) {
@@ -121,7 +123,7 @@ func (h *HTTPHandler[S]) CreateNamespace(c echo.Context) (err error) {
 		return err
 	}
 
-	ns := NewNamespace(req.Name, owner)
+	ns := entity.NewNamespace(req.Name, owner)
 	c.Set(logkey.NamespaceID, ns.ID)
 
 	if err = h.store.CreateNamespace(ctx, ns); err != nil {
@@ -166,7 +168,7 @@ func (h *HTTPHandler[S]) DeleteNamespace(c echo.Context) error {
 		return err
 	}
 
-	nsID := MustParseID[NamespaceID](req.ID)
+	nsID := id.MustParse[entity.NamespaceID](req.ID)
 	c.Set(logkey.NamespaceID, nsID)
 
 	if err = h.store.DeleteNamespace(ctx, nsID); err != nil {
@@ -184,9 +186,9 @@ func (h *HTTPHandler[S]) CreateOperator(c echo.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	nsID := MustParseID[NamespaceID](req.NamespaceID)
+	nsID := id.MustParse[entity.NamespaceID](req.NamespaceID)
 
-	op, err := NewOperator(req.Name, nsID)
+	op, err := entity.NewOperator(req.Name, nsID)
 	if err != nil {
 		return err
 	}
@@ -219,7 +221,7 @@ func (h *HTTPHandler[S]) CreateOperator(c echo.Context) (err error) {
 
 	return server.SetResponse(c, http.StatusCreated, OperatorResponse{
 		OperatorData: data,
-		Status: OperatorNATSStatus{
+		Status: entity.OperatorNATSStatus{
 			Connected: false,
 		},
 	})
@@ -234,7 +236,7 @@ func (h *HTTPHandler[S]) UpdateOperator(c echo.Context) error {
 		return err
 	}
 
-	opID := MustParseID[OperatorID](req.ID)
+	opID := id.MustParse[entity.OperatorID](req.ID)
 	c.Set(logkey.OperatorID, opID)
 
 	op, err := h.store.ReadOperator(ctx, opID)
@@ -279,7 +281,7 @@ func (h *HTTPHandler[S]) GetOperator(c echo.Context) error {
 		return err
 	}
 
-	opID := MustParseID[OperatorID](req.ID)
+	opID := id.MustParse[entity.OperatorID](req.ID)
 	c.Set(logkey.OperatorID, opID)
 
 	op, err := h.store.ReadOperator(ctx, opID)
@@ -316,7 +318,7 @@ func (h *HTTPHandler[S]) DeleteOperator(c echo.Context) error {
 		return err
 	}
 
-	opID := MustParseID[OperatorID](req.ID)
+	opID := id.MustParse[entity.OperatorID](req.ID)
 	c.Set(logkey.OperatorID, opID)
 
 	op, err := h.store.ReadOperator(ctx, opID)
@@ -344,7 +346,7 @@ func (h *HTTPHandler[S]) ListOperators(c echo.Context) error {
 		return err
 	}
 
-	nsID := MustParseID[NamespaceID](req.NamespaceID)
+	nsID := id.MustParse[entity.NamespaceID](req.NamespaceID)
 	c.Set(logkey.NamespaceID, nsID)
 
 	ops, cursor, err := PaginateOperators(ctx, c, h.store, nsID)
@@ -396,7 +398,7 @@ func (h *HTTPHandler[S]) CreateAccount(c echo.Context) error {
 		return err
 	}
 
-	opID := MustParseID[OperatorID](req.OperatorID)
+	opID := id.MustParse[entity.OperatorID](req.OperatorID)
 	c.Set(logkey.OperatorID, opID)
 
 	op, err := h.store.ReadOperator(ctx, opID)
@@ -408,7 +410,7 @@ func (h *HTTPHandler[S]) CreateAccount(c echo.Context) error {
 		return err
 	}
 
-	acc, err := NewAccount(req.Name, op)
+	acc, err := entity.NewAccount(req.Name, op)
 	if err != nil {
 		return err
 	}
@@ -460,7 +462,7 @@ func (h *HTTPHandler[S]) UpdateAccount(c echo.Context) error {
 		return err
 	}
 
-	accID := MustParseID[AccountID](req.ID)
+	accID := id.MustParse[entity.AccountID](req.ID)
 	c.Set(logkey.AccountID, accID)
 
 	acc, err := h.store.ReadAccount(ctx, accID)
@@ -524,7 +526,7 @@ func (h *HTTPHandler[S]) GetAccount(c echo.Context) error {
 		return err
 	}
 
-	accID := MustParseID[AccountID](req.ID)
+	accID := id.MustParse[entity.AccountID](req.ID)
 	c.Set(logkey.AccountID, accID)
 
 	acc, err := h.store.ReadAccount(ctx, accID)
@@ -566,7 +568,7 @@ func (h *HTTPHandler[S]) ListAccounts(c echo.Context) error {
 		return err
 	}
 
-	opID := MustParseID[OperatorID](req.OperatorID)
+	opID := id.MustParse[entity.OperatorID](req.OperatorID)
 	c.Set(logkey.OperatorID, opID)
 
 	accs, cursor, err := PaginateAccounts(ctx, c, h.store, opID)
@@ -608,7 +610,7 @@ func (h *HTTPHandler[S]) DeleteAccount(c echo.Context) error {
 		return err
 	}
 
-	accID := MustParseID[AccountID](req.ID)
+	accID := id.MustParse[entity.AccountID](req.ID)
 	c.Set(logkey.AccountID, accID)
 
 	op, err := h.store.ReadAccount(ctx, accID)
@@ -635,7 +637,7 @@ func (h *HTTPHandler[S]) CreateUser(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	accID := MustParseID[AccountID](req.AccountID)
+	accID := id.MustParse[entity.AccountID](req.AccountID)
 	c.Set(logkey.AccountID, accID)
 
 	acc, err := h.store.ReadAccount(ctx, accID)
@@ -652,7 +654,7 @@ func (h *HTTPHandler[S]) CreateUser(c echo.Context) error {
 		return err
 	}
 
-	usr, err := NewUser(req.Name, acc)
+	usr, err := entity.NewUser(req.Name, acc)
 	if err != nil {
 		return err
 	}
@@ -699,7 +701,7 @@ func (h *HTTPHandler[S]) UpdateUser(c echo.Context) error {
 		return err
 	}
 
-	userID := MustParseID[UserID](req.ID)
+	userID := id.MustParse[entity.UserID](req.ID)
 	c.Set(logkey.UserID, userID)
 
 	usr, err := h.store.ReadUser(ctx, userID)
@@ -763,7 +765,7 @@ func (h *HTTPHandler[S]) GetUser(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	userID := MustParseID[UserID](req.ID)
+	userID := id.MustParse[entity.UserID](req.ID)
 	c.Set(logkey.UserID, userID)
 
 	usr, err := h.store.ReadUser(ctx, userID)
@@ -812,7 +814,7 @@ func (h *HTTPHandler[S]) ListUsers(c echo.Context) error {
 		return err
 	}
 
-	accID := MustParseID[AccountID](req.AccountID)
+	accID := id.MustParse[entity.AccountID](req.AccountID)
 	c.Set(logkey.AccountID, accID)
 
 	acc, err := h.store.ReadAccount(ctx, accID)
@@ -868,7 +870,7 @@ func (h *HTTPHandler[S]) DeleteUser(c echo.Context) error {
 		return err
 	}
 
-	userID := MustParseID[UserID](req.ID)
+	userID := id.MustParse[entity.UserID](req.ID)
 	c.Set(logkey.UserID, userID)
 
 	op, err := h.store.ReadUser(ctx, userID)
@@ -910,7 +912,7 @@ func (h *HTTPHandler[S]) GetUserCreds(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	userID := MustParseID[UserID](req.ID)
+	userID := id.MustParse[entity.UserID](req.ID)
 	c.Set(logkey.UserID, userID)
 
 	usr, err := h.store.ReadUser(ctx, userID)
@@ -972,7 +974,7 @@ func (h *HTTPHandler[S]) ListUserJWTIssuances(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	userID := MustParseID[UserID](req.ID)
+	userID := id.MustParse[entity.UserID](req.ID)
 	c.Set(logkey.UserID, userID)
 
 	usr, err := h.store.ReadUser(ctx, userID)
@@ -1014,7 +1016,7 @@ func (h *HTTPHandler[S]) GetNATSConfig(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	opID := MustParseID[OperatorID](req.ID)
+	opID := id.MustParse[entity.OperatorID](req.ID)
 	c.Set(logkey.OperatorID, opID)
 
 	op, err := h.store.ReadOperator(ctx, opID)
@@ -1041,7 +1043,7 @@ func (h *HTTPHandler[S]) GetNATSConfig(c echo.Context) error {
 	}
 	c.Set(logkey.SystemAccountID, sysAcc.ID)
 
-	content, err := NewDirResolverConfig(op, sysAcc, DefaultResolverDir)
+	content, err := entity.NewDirResolverConfig(op, sysAcc, entity.DefaultResolverDir)
 	if err != nil {
 		return err
 	}
@@ -1052,7 +1054,7 @@ func (h *HTTPHandler[S]) GetNATSConfig(c echo.Context) error {
 	return c.String(http.StatusOK, content)
 }
 
-func LoadUserLimits(userData UserData, claims *jwt.UserClaims) UserLimits {
+func LoadUserLimits(userData entity.UserData, claims *jwt.UserClaims) UserLimits {
 	limits := UserLimits{
 		Subscriptions: parseLimit(claims.Subs),
 		PayloadSize:   parseLimit(claims.Limits.Payload),
@@ -1063,8 +1065,8 @@ func LoadUserLimits(userData UserData, claims *jwt.UserClaims) UserLimits {
 	return limits
 }
 
-func toUpdateAccountParams(name string, limits *AccountLimits) UpdateAccountParams {
-	params := UpdateAccountParams{
+func toUpdateAccountParams(name string, limits *AccountLimits) entity.UpdateAccountParams {
+	params := entity.UpdateAccountParams{
 		Name:          name,
 		Subscriptions: ref.Deref(limits.Subscriptions, noLimit),
 		PayloadSize:   ref.Deref(limits.PayloadSize, noLimit),
@@ -1078,7 +1080,7 @@ func toUpdateAccountParams(name string, limits *AccountLimits) UpdateAccountPara
 	return params
 }
 
-func LoadAccountLimits(accData AccountData, claims *jwt.AccountClaims) AccountLimits {
+func LoadAccountLimits(accData entity.AccountData, claims *jwt.AccountClaims) AccountLimits {
 	limits := AccountLimits{
 		Subscriptions: parseLimit(claims.Limits.Subs),
 		PayloadSize:   parseLimit(claims.Limits.Payload),
@@ -1092,8 +1094,8 @@ func LoadAccountLimits(accData AccountData, claims *jwt.AccountClaims) AccountLi
 	return limits
 }
 
-func toUpdateUserParams(name string, limits *UserLimits) UpdateUserParams {
-	params := UpdateUserParams{
+func toUpdateUserParams(name string, limits *UserLimits) entity.UpdateUserParams {
+	params := entity.UpdateUserParams{
 		Name:          name,
 		Subscriptions: ref.Deref(limits.Subscriptions, noLimit),
 		PayloadSize:   ref.Deref(limits.PayloadSize, noLimit),

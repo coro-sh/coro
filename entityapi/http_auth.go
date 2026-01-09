@@ -1,4 +1,4 @@
-package entity
+package entityapi
 
 import (
 	"github.com/labstack/echo/v4"
@@ -6,10 +6,11 @@ import (
 	"github.com/joshjon/kit/errtag"
 
 	"github.com/coro-sh/coro/constants"
+	"github.com/coro-sh/coro/entity"
 )
 
 type NamespaceIDGetter interface {
-	GetNamespaceID() NamespaceID
+	GetNamespaceID() entity.NamespaceID
 }
 
 func VerifyEntityNamespace(c echo.Context, entity NamespaceIDGetter) error {
@@ -23,7 +24,7 @@ func VerifyEntityNamespace(c echo.Context, entity NamespaceIDGetter) error {
 	return nil
 }
 
-func VerifyPublicAccount(acc *Account) error {
+func VerifyPublicAccount(acc *entity.Account) error {
 	accData, err := acc.Data()
 	if err != nil {
 		return err
@@ -35,7 +36,7 @@ func VerifyPublicAccount(acc *Account) error {
 	return nil
 }
 
-func VerifyPublicUser(usr *User) error {
+func VerifyPublicUser(usr *entity.User) error {
 	usrData, err := usr.Data()
 	if err != nil {
 		return err

@@ -1,9 +1,10 @@
-package command
+package proxyapi
 
 import (
 	"github.com/cohesivestack/valgo"
 
 	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/entityapi"
 )
 
 type GenerateProxyTokenRequest struct {
@@ -12,8 +13,8 @@ type GenerateProxyTokenRequest struct {
 
 func (r GenerateProxyTokenRequest) Validate() error {
 	return valgo.In("params",
-		valgo.Is(entity.IDValidator[entity.OperatorID](r.OperatorID, entity.PathParamOperatorID)),
-	).Error()
+		valgo.Is(entityapi.IDValidator[entity.OperatorID](r.OperatorID, entityapi.PathParamOperatorID)),
+	).ToError()
 }
 
 type GenerateProxyTokenResponse struct {
@@ -26,8 +27,8 @@ type GetProxyStatusRequest struct {
 
 func (r GetProxyStatusRequest) Validate() error {
 	return valgo.In("params",
-		valgo.Is(entity.IDValidator[entity.OperatorID](r.OperatorID, entity.PathParamOperatorID)),
-	).Error()
+		valgo.Is(entityapi.IDValidator[entity.OperatorID](r.OperatorID, entityapi.PathParamOperatorID)),
+	).ToError()
 }
 
 type GetProxyStatusResponse struct {

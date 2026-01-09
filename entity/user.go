@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/joshjon/kit/id"
 	"github.com/nats-io/jwt/v2"
 	"github.com/nats-io/nkeys"
 	"go.jetify.com/typeid"
@@ -237,7 +238,7 @@ func newUser(name string, account *Account) (*User, error) {
 		return nil, err
 	}
 
-	id := NewID[UserID]()
+	id := id.New[UserID]()
 
 	nk, err := NewNkey(id.String(), TypeUser, false)
 	if err != nil {

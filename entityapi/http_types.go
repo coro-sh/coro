@@ -1,4 +1,4 @@
-package entity
+package entityapi
 
 import (
 	"fmt"
@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/cohesivestack/valgo"
+	"github.com/joshjon/kit/id"
 	"github.com/nats-io/nkeys"
-	"go.jetify.com/typeid"
 
 	"github.com/coro-sh/coro/constants"
+	"github.com/coro-sh/coro/entity"
 )
 
 const (
@@ -32,11 +33,11 @@ type DeleteNamespaceRequest struct {
 }
 
 func (r DeleteNamespaceRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[NamespaceID](r.ID, "namespace_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.NamespaceID](r.ID, "namespace_id"))).Error()
 }
 
 type NamespaceResponse struct {
-	Namespace
+	entity.Namespace
 }
 
 type CreateOperatorRequest struct {
@@ -45,8 +46,8 @@ type CreateOperatorRequest struct {
 }
 
 func (r CreateOperatorRequest) Validate() error {
-	v := valgo.In("params", valgo.Is(IDValidator[NamespaceID](r.NamespaceID, "namespace_id")))
-	return v.Is(operatorNameValidator(r.Name, "name")).Error()
+	v := valgo.In("params", valgo.Is(IDValidator[entity.NamespaceID](r.NamespaceID, "namespace_id")))
+	return v.Is(operatorNameValidator(r.Name, "name")).ToError()
 }
 
 type UpdateOperatorRequest struct {
@@ -55,7 +56,7 @@ type UpdateOperatorRequest struct {
 }
 
 func (r UpdateOperatorRequest) Validate() error {
-	v := valgo.In("params", valgo.Is(IDValidator[OperatorID](r.ID, "operator_id")))
+	v := valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.ID, "operator_id")))
 	v.Is(operatorNameValidator(r.Name, "name"))
 	return v.ToError()
 }
@@ -65,7 +66,7 @@ type GetOperatorRequest struct {
 }
 
 func (r GetOperatorRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[OperatorID](r.ID, "operator_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.ID, "operator_id"))).Error()
 }
 
 type GetOperatorJWTRequest struct {
@@ -85,12 +86,12 @@ type ListOperatorsRequest struct {
 }
 
 func (r ListOperatorsRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[NamespaceID](r.NamespaceID, "namespace_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.NamespaceID](r.NamespaceID, "namespace_id"))).Error()
 }
 
 type OperatorResponse struct {
-	OperatorData
-	Status OperatorNATSStatus `json:"status"`
+	entity.OperatorData
+	Status entity.OperatorNATSStatus `json:"status"`
 }
 
 type AccountLimits struct {
@@ -124,7 +125,7 @@ func (r CreateAccountRequest) Validate() error {
 	if r.Limits != nil {
 		v.In("limits", r.Limits.validation())
 	}
-	v.In("params", valgo.Is(IDValidator[OperatorID](r.OperatorID, "operator_id")))
+	v.In("params", valgo.Is(IDValidator[entity.OperatorID](r.OperatorID, "operator_id")))
 	return v.ToError()
 }
 
@@ -133,7 +134,7 @@ type GetAccountRequest struct {
 }
 
 func (r GetAccountRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[AccountID](r.ID, "account_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.AccountID](r.ID, "account_id"))).Error()
 }
 
 type GetAccountJWTRequest struct {
@@ -155,7 +156,7 @@ type UpdateAccountRequest struct {
 }
 
 func (r UpdateAccountRequest) Validate() error {
-	v := valgo.In("params", valgo.Is(IDValidator[AccountID](r.ID, "account_id")))
+	v := valgo.In("params", valgo.Is(IDValidator[entity.AccountID](r.ID, "account_id")))
 	v.Is(accountNameValidator(r.Name, "name"))
 	if r.Limits != nil {
 		v.In("limits", r.Limits.validation())
@@ -168,11 +169,11 @@ type ListAccountsRequest struct {
 }
 
 func (r ListAccountsRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[OperatorID](r.OperatorID, "operator_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.OperatorID, "operator_id"))).Error()
 }
 
 type AccountResponse struct {
-	AccountData
+	entity.AccountData
 	Limits AccountLimits `json:"limits"`
 }
 
@@ -198,7 +199,7 @@ type CreateUserRequest struct {
 
 func (r CreateUserRequest) Validate() error {
 	v := valgo.Is(userNameValidator(r.Name, "name"))
-	v.In("params", valgo.Is(IDValidator[AccountID](r.AccountID, "account_id")))
+	v.In("params", valgo.Is(IDValidator[entity.AccountID](r.AccountID, "account_id")))
 	return v.ToError()
 }
 
@@ -209,7 +210,7 @@ type UpdateUserRequest struct {
 }
 
 func (r UpdateUserRequest) Validate() error {
-	v := valgo.In("params", valgo.Is(IDValidator[UserID](r.ID, "user_id")))
+	v := valgo.In("params", valgo.Is(IDValidator[entity.UserID](r.ID, "user_id")))
 	v.Is(userNameValidator(r.Name, "name"))
 	if r.Limits != nil {
 		v.In("limits", r.Limits.validation())
@@ -222,7 +223,7 @@ type GetUserRequest struct {
 }
 
 func (r GetUserRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[UserID](r.ID, "user_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.UserID](r.ID, "user_id"))).Error()
 }
 
 type ListUsersRequest struct {
@@ -230,17 +231,17 @@ type ListUsersRequest struct {
 }
 
 func (r ListUsersRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[AccountID](r.AccountID, "account_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.AccountID](r.AccountID, "account_id"))).Error()
 }
 
 type UserResponse struct {
-	UserData
+	entity.UserData
 	PublicKey string     `json:"public_key"`
 	Limits    UserLimits `json:"limits"`
 }
 
 type UserJWTIssuanceResponse struct {
-	UserJWTIssuance
+	entity.UserJWTIssuance
 	Active bool `json:"active"`
 }
 
@@ -249,7 +250,7 @@ type GenerateProxyTokenRequest struct {
 }
 
 func (r GenerateProxyTokenRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[OperatorID](r.OperatorID, "operator_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.OperatorID, "operator_id"))).Error()
 }
 
 type GenerateProxyTokenResponse struct {
@@ -261,22 +262,22 @@ type GetProxyStatusRequest struct {
 }
 
 func (r GetProxyStatusRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[OperatorID](r.OperatorID, "operator_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.OperatorID, "operator_id"))).Error()
 }
 
 type GetProxyStatusResponse struct {
 	Connected bool `json:"connected"`
 }
 
-func IDValidator[T ID, PT typeid.SubtypePtr[T]](id string, nameAndTitle ...string) valgo.Validator {
-	entityName := GetTypeNameFromID[T]()
+func IDValidator[ID entity.ID, PT id.SubtypePtr[ID]](identifier string, nameAndTitle ...string) valgo.Validator {
+	entityName := entity.GetTypeNameFromID[ID]()
 
-	var parsed T
+	var parsed ID
 	var parseErr error
 
-	return valgo.String(id, nameAndTitle...).
+	return valgo.String(identifier, nameAndTitle...).
 		Passing(func(_ string) bool {
-			parsed, parseErr = ParseID[T, PT](id)
+			parsed, parseErr = id.Parse[ID, PT](identifier)
 			return parseErr == nil
 		}, fmt.Sprintf("Must be a valid %s ID", entityName)).
 		Passing(func(_ string) bool {

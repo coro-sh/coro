@@ -13,7 +13,7 @@ import (
 
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/sqlite/migrations"
-	"github.com/coro-sh/coro/testutil"
+	"github.com/joshjon/kit/testutil"
 )
 
 func NewTestEntityStore(t *testing.T) *entity.Store {

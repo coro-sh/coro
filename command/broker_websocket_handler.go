@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -16,6 +14,7 @@ import (
 	"github.com/coder/websocket/wsjson"
 	"github.com/google/uuid"
 	"github.com/joshjon/kit/errtag"
+	"github.com/joshjon/kit/id"
 	"github.com/joshjon/kit/log"
 	"github.com/labstack/echo/v4"
 	"github.com/nats-io/nats-server/v2/server"
@@ -26,6 +25,7 @@ import (
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/logkey"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
+	"github.com/coro-sh/coro/websocketutil"
 )
 
 const (
@@ -187,11 +187,11 @@ func (b *BrokerWebSocketHandler) Handle(c echo.Context) (err error) {
 		close(wsReplyCh)
 		close(doneCh)
 		// close the websocket conn first
-		code, reason := getWebSocketCloseCodeAndReason(err)
+		code, reason := websocketutil.GetCloseErrCodeAndReason(err)
 		if code == websocket.StatusNormalClosure {
 			err = nil // not an actual failure
 		}
-		closeWebSocketConn(conn, logger, code, reason)
+		websocketutil.CloseConn(conn, code, reason, logger)
 		b.numConns.Add(-1)
 		// then wait for all goroutines to finish
 		wg.Wait()
@@ -492,7 +492,7 @@ func (b *BrokerWebSocketHandler) startPingOperatorWorker() error {
 			opIDStr := strings.TrimPrefix(msg.Subject, pingOperatorSubjectBase+".OPERATOR.")
 			logger := b.logger.With(logkey.OperatorID, opIDStr)
 
-			opID, err := entity.ParseID[entity.OperatorID](opIDStr)
+			opID, err := id.Parse[entity.OperatorID](opIDStr)
 			if err != nil {
 				logger.Error("invalid operator id found in ping operator message", "error", err)
 				continue
@@ -516,30 +516,6 @@ func (b *BrokerWebSocketHandler) startPingOperatorWorker() error {
 	}()
 
 	return nil
-}
-
-func closeWebSocketConn(conn *websocket.Conn, logger log.Logger, code websocket.StatusCode, reason string) {
-	if cerr := conn.Close(code, reason); cerr != nil && !errors.Is(cerr, net.ErrClosed) {
-		logger.Error("failed to close websocket connection", "error", cerr, "websocket.close_code", code, "websocket.close_reason", reason)
-		return
-	}
-	logger.Info("websocket connection closed", "websocket.close_code", code, "websocket.close_reason", reason)
-}
-
-func getWebSocketCloseCodeAndReason(err error) (websocket.StatusCode, string) {
-	if err != nil {
-		var ce websocket.CloseError
-		if errors.As(err, &ce) && ce.Code == websocket.StatusNormalClosure {
-			return ce.Code, ce.Reason
-		}
-
-		if errors.Is(err, context.Canceled) || errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
-			return websocket.StatusGoingAway, "connection closed"
-		}
-
-		return websocket.StatusInternalError, "internal server error"
-	}
-	return websocket.StatusNormalClosure, ""
 }
 
 func getOperatorSubject(operatorID entity.OperatorID) string {

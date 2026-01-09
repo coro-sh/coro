@@ -1,9 +1,10 @@
-package command
+package streamapi
 
 import (
 	"github.com/cohesivestack/valgo"
 
 	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/entityapi"
 )
 
 type ListStreamsRequest struct {
@@ -12,8 +13,8 @@ type ListStreamsRequest struct {
 
 func (r ListStreamsRequest) Validate() error {
 	return valgo.In("params", valgo.Is(
-		entity.IDValidator[entity.AccountID](r.AccountID, entity.PathParamAccountID),
-	)).Error()
+		entityapi.IDValidator[entity.AccountID](r.AccountID, entityapi.PathParamAccountID),
+	)).ToError()
 }
 
 type GetStreamRequest struct {
@@ -23,9 +24,9 @@ type GetStreamRequest struct {
 
 func (r GetStreamRequest) Validate() error {
 	return valgo.In("params", valgo.Is(
-		entity.IDValidator[entity.AccountID](r.AccountID, entity.PathParamAccountID),
+		entityapi.IDValidator[entity.AccountID](r.AccountID, entityapi.PathParamAccountID),
 		valgo.String(r.StreamName, "stream_name").Not().Blank(),
-	)).Error()
+	)).ToError()
 }
 
 type FetchStreamMessagesRequest struct {
@@ -38,7 +39,7 @@ type FetchStreamMessagesRequest struct {
 func (r FetchStreamMessagesRequest) Validate() error {
 	v := valgo.New()
 	v.In("params", valgo.Is(
-		entity.IDValidator[entity.AccountID](r.AccountID, entity.PathParamAccountID),
+		entityapi.IDValidator[entity.AccountID](r.AccountID, entityapi.PathParamAccountID),
 		valgo.String(r.StreamName, "stream_name").Not().Blank(),
 	))
 	v.In("query_params", valgo.Is(
@@ -56,7 +57,7 @@ type GetStreamMessageContentRequest struct {
 func (r GetStreamMessageContentRequest) Validate() error {
 	return valgo.In("params",
 		valgo.Is(
-			entity.IDValidator[entity.AccountID](r.AccountID, entity.PathParamAccountID),
+			entityapi.IDValidator[entity.AccountID](r.AccountID, entityapi.PathParamAccountID),
 			valgo.String(r.StreamName, "stream_name").Not().Blank(),
 			valgo.Uint64(r.Sequence, "stream_sequence").GreaterOrEqualTo(1),
 		),

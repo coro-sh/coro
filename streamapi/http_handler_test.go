@@ -1,4 +1,4 @@
-package command
+package streamapi
 
 import (
 	"context"
@@ -11,12 +11,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/joshjon/kit/server"
+	"github.com/joshjon/kit/testutil"
+
+	"github.com/coro-sh/coro/command"
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/entityapi"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 	"github.com/coro-sh/coro/sqlite"
-	"github.com/coro-sh/coro/testutil"
-	"github.com/joshjon/kit/server"
 )
 
 func TestStreamHTTPHandler_ListStreams(t *testing.T) {
@@ -140,7 +143,7 @@ func TestStreamHTTPHandler_GetStreamMessageContent(t *testing.T) {
 func newStreamHTTPServer(t *testing.T, streams []*jetstream.StreamInfo, msgs <-chan *commandv1.ReplyMessage) (*server.Server, *entity.Store) {
 	store := sqlite.NewTestEntityStore(t)
 
-	srv, err := server.NewServer(testutil.GetFreePort(t), server.WithMiddleware(entity.NamespaceContextMiddleware()))
+	srv, err := server.NewServer(testutil.GetFreePort(t), server.WithMiddleware(entityapi.NamespaceContextMiddleware()))
 	require.NoError(t, err)
 	srv.Register("", NewStreamHTTPHandler(store, newStreamerStub(streams, msgs)))
 
@@ -196,12 +199,12 @@ func (s *streamerStub) GetStreamMessageContent(_ context.Context, _ *entity.Acco
 	}, nil
 }
 
-func (s *streamerStub) ConsumeStream(_ *entity.Account, _ string, _ uint64, handler func(msg *commandv1.ReplyMessage)) (StreamConsumer, error) {
+func (s *streamerStub) ConsumeStream(_ *entity.Account, _ string, _ uint64, handler func(msg *commandv1.ReplyMessage)) (command.StreamConsumer, error) {
 	return newStreamerConsumerStub(s.msgs, handler), nil
 }
 
 type streamerConsumerStub struct {
-	id             StreamConsumerID
+	id             command.StreamConsumerID
 	handler        func(msg *commandv1.ReplyMessage)
 	heartbeatCount atomic.Int32
 	stop           chan struct{}
@@ -209,7 +212,7 @@ type streamerConsumerStub struct {
 
 func newStreamerConsumerStub(msgs <-chan *commandv1.ReplyMessage, handler func(msg *commandv1.ReplyMessage)) *streamerConsumerStub {
 	s := &streamerConsumerStub{
-		id:             NewStreamConsumerID(),
+		id:             command.NewStreamConsumerID(),
 		handler:        handler,
 		heartbeatCount: atomic.Int32{},
 		stop:           make(chan struct{}),
@@ -243,7 +246,7 @@ func (s *streamerConsumerStub) Stop(_ context.Context) error {
 	return nil
 }
 
-func getStubConsumerHeartbeatCount(t *testing.T, stubConsumer StreamConsumer) int32 {
+func getStubConsumerHeartbeatCount(t *testing.T, stubConsumer command.StreamConsumer) int32 {
 	s, ok := stubConsumer.(*streamerConsumerStub)
 	require.True(t, ok, "underlying stream consumer type is not a streamerStub")
 	return s.heartbeatCount.Load()

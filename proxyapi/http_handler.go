@@ -1,4 +1,4 @@
-package command
+package proxyapi
 
 import (
 	"context"
@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/joshjon/kit/id"
 	"github.com/labstack/echo/v4"
 
 	"github.com/joshjon/kit/server"
 
 	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/entityapi"
 	"github.com/coro-sh/coro/logkey"
 	"github.com/coro-sh/coro/tkn"
 )
@@ -42,8 +44,8 @@ func NewProxyHTTPHandler(iss *tkn.OperatorIssuer, operators OperatorReader, ping
 }
 
 func (h *ProxyHTTPHandler) Register(g *echo.Group) {
-	g.POST(fmt.Sprintf("/namespaces/:%s/operators/:%s/proxy/token", entity.PathParamNamespaceID, entity.PathParamOperatorID), h.GenerateProxyToken)
-	g.GET(fmt.Sprintf("/namespaces/:%s/operators/:%s/proxy/status", entity.PathParamNamespaceID, entity.PathParamOperatorID), h.GetProxyStatus)
+	g.POST(fmt.Sprintf("/namespaces/:%s/operators/:%s/proxy/token", entityapi.PathParamNamespaceID, entityapi.PathParamOperatorID), h.GenerateProxyToken)
+	g.GET(fmt.Sprintf("/namespaces/:%s/operators/:%s/proxy/status", entityapi.PathParamNamespaceID, entityapi.PathParamOperatorID), h.GetProxyStatus)
 }
 
 // GenerateProxyToken handles POST requests to generate a Proxy token for an
@@ -57,7 +59,7 @@ func (h *ProxyHTTPHandler) GenerateProxyToken(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	opID := entity.MustParseID[entity.OperatorID](req.OperatorID)
+	opID := id.MustParse[entity.OperatorID](req.OperatorID)
 	c.Set(logkey.OperatorID, opID)
 
 	op, err := h.opReader.ReadOperator(ctx, opID)
@@ -65,7 +67,7 @@ func (h *ProxyHTTPHandler) GenerateProxyToken(c echo.Context) error {
 		return err
 	}
 
-	if err = entity.VerifyEntityNamespace(c, op); err != nil {
+	if err = entityapi.VerifyEntityNamespace(c, op); err != nil {
 		return err
 	}
 
@@ -89,7 +91,7 @@ func (h *ProxyHTTPHandler) GetProxyStatus(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	opID := entity.MustParseID[entity.OperatorID](req.OperatorID)
+	opID := id.MustParse[entity.OperatorID](req.OperatorID)
 	c.Set(logkey.OperatorID, opID)
 
 	op, err := h.opReader.ReadOperator(ctx, opID)
@@ -97,7 +99,7 @@ func (h *ProxyHTTPHandler) GetProxyStatus(c echo.Context) error {
 		return err
 	}
 
-	if err = entity.VerifyEntityNamespace(c, op); err != nil {
+	if err = entityapi.VerifyEntityNamespace(c, op); err != nil {
 		return err
 	}
 

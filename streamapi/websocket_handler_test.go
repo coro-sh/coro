@@ -1,4 +1,4 @@
-package command
+package streamapi
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 	"github.com/coro-sh/coro/entity"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 	"github.com/coro-sh/coro/sqlite"
-	"github.com/coro-sh/coro/testutil"
+	"github.com/joshjon/kit/testutil"
 )
 
 func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {

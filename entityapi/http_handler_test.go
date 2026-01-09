@@ -1,4 +1,4 @@
-package entity_test // avoid import cycle with sqlite package
+package entityapi_test // avoid import cycle with sqlite package
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"github.com/joshjon/kit/paginate"
 	"github.com/joshjon/kit/ref"
 	"github.com/joshjon/kit/server"
+	"github.com/joshjon/kit/testutil"
 	"github.com/nats-io/jwt/v2"
 	natsrv "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
@@ -22,27 +23,25 @@ import (
 
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/testutil"
+	"github.com/coro-sh/coro/entityapi"
 )
 
 func TestServer_CreateNamespace(t *testing.T) {
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 
-	req := entity.CreateNamespaceRequest{
+	req := entityapi.CreateNamespaceRequest{
 		Name: testutil.RandName(),
 	}
 
-	res := testutil.Post[server.Response[entity.NamespaceResponse]](t, fixture.NamespacesURL(), req)
+	res := testutil.Post[server.Response[entityapi.NamespaceResponse]](t, fixture.NamespacesURL(), req)
 	got := res.Data
 	assert.False(t, got.ID.IsZero())
 	assert.Equal(t, req.Name, got.Name)
 }
 
 func TestServer_DeleteNamespace(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
-
+	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 	ns := fixture.AddNamespace(ctx)
@@ -54,20 +53,19 @@ func TestServer_DeleteNamespace(t *testing.T) {
 }
 
 func TestHTTPHandler_ListNamespaces(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
+	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 
 	numNS := 15
 	pageSize := 10
 
-	wantResps := make([]entity.NamespaceResponse, numNS)
+	wantResps := make([]entityapi.NamespaceResponse, numNS)
 
 	for i := range numNS {
 		ns := fixture.AddNamespace(ctx)
 
-		res := entity.NamespaceResponse{Namespace: *ns}
+		res := entityapi.NamespaceResponse{Namespace: *ns}
 		res.Owner = "" // omitted from response
 		wantResps[i] = res
 	}
@@ -76,13 +74,13 @@ func TestHTTPHandler_ListNamespaces(t *testing.T) {
 
 	// Page 1
 	url := fmt.Sprintf("%s?%s=%d", fixture.NamespacesURL(), paginate.PageSizeQueryParam, pageSize)
-	res := testutil.Get[server.ResponseList[entity.NamespaceResponse]](t, url)
+	res := testutil.Get[server.ResponseList[entityapi.NamespaceResponse]](t, url)
 	assert.Equal(t, wantResps[:pageSize], res.Data)
 	assert.NotEmpty(t, res.NextPageCursor)
 
 	// Page 2
 	url = fmt.Sprintf("%s&%s=%s", url, paginate.PageCursorQueryParam, *res.NextPageCursor)
-	res = testutil.Get[server.ResponseList[entity.NamespaceResponse]](t, url)
+	res = testutil.Get[server.ResponseList[entityapi.NamespaceResponse]](t, url)
 	assert.Equal(t, wantResps[pageSize:], res.Data)
 	assert.Nil(t, res.NextPageCursor)
 }
@@ -92,11 +90,11 @@ func TestServer_CreateOperator(t *testing.T) {
 	defer fixture.Stop()
 	ns := fixture.AddNamespace(t.Context())
 
-	req := entity.CreateOperatorRequest{
+	req := entityapi.CreateOperatorRequest{
 		Name: testutil.RandName(),
 	}
 
-	res := testutil.Post[server.Response[entity.OperatorResponse]](t, fixture.OperatorsURL(ns.ID), req)
+	res := testutil.Post[server.Response[entityapi.OperatorResponse]](t, fixture.OperatorsURL(ns.ID), req)
 	got := res.Data
 	assert.False(t, got.ID.IsZero())
 	assert.NotEmpty(t, got.JWT)
@@ -105,18 +103,16 @@ func TestServer_CreateOperator(t *testing.T) {
 }
 
 func TestServer_UpdateOperator(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
-
+	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 	op := fixture.AddOperator(ctx)
 
-	req := entity.UpdateOperatorRequest{
+	req := entityapi.UpdateOperatorRequest{
 		Name: testutil.RandName(),
 	}
 
-	res := testutil.Put[server.Response[entity.OperatorResponse]](t, fixture.OperatorURL(op.NamespaceID, op.ID), req)
+	res := testutil.Put[server.Response[entityapi.OperatorResponse]](t, fixture.OperatorURL(op.NamespaceID, op.ID), req)
 	got := res.Data
 
 	opData, err := op.Data()
@@ -131,14 +127,12 @@ func TestServer_UpdateOperator(t *testing.T) {
 }
 
 func TestServer_GetOperator(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
-
+	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 	op := fixture.AddOperator(ctx)
 
-	res := testutil.Get[server.Response[entity.OperatorResponse]](t, fixture.OperatorURL(op.NamespaceID, op.ID))
+	res := testutil.Get[server.Response[entityapi.OperatorResponse]](t, fixture.OperatorURL(op.NamespaceID, op.ID))
 	got := res.Data
 	opData, err := op.Data()
 	require.NoError(t, err)
@@ -146,16 +140,14 @@ func TestServer_GetOperator(t *testing.T) {
 }
 
 func TestHTTPHandler_ListOperators(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
-
+	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 	ns := fixture.AddNamespace(ctx)
 
 	numOps := 15
 	pageSize := 10
-	wantResps := make([]entity.OperatorResponse, numOps)
+	wantResps := make([]entityapi.OperatorResponse, numOps)
 
 	for i := range numOps {
 		op, err := entity.NewOperator(testutil.RandName(), ns.ID)
@@ -166,7 +158,7 @@ func TestHTTPHandler_ListOperators(t *testing.T) {
 		wantData, err := op.Data()
 		require.NoError(t, err)
 
-		wantResps[i] = entity.OperatorResponse{
+		wantResps[i] = entityapi.OperatorResponse{
 			OperatorData: wantData,
 			Status: entity.OperatorNATSStatus{
 				Connected:   true,
@@ -179,21 +171,19 @@ func TestHTTPHandler_ListOperators(t *testing.T) {
 
 	// Page 1
 	url := fmt.Sprintf("%s?%s=%d", fixture.OperatorsURL(ns.ID), paginate.PageSizeQueryParam, pageSize)
-	res := testutil.Get[server.ResponseList[entity.OperatorResponse]](t, url)
+	res := testutil.Get[server.ResponseList[entityapi.OperatorResponse]](t, url)
 	assert.Equal(t, wantResps[:pageSize], res.Data)
 	assert.NotEmpty(t, res.NextPageCursor)
 
 	// Page 2
 	url = fmt.Sprintf("%s&%s=%s", url, paginate.PageCursorQueryParam, *res.NextPageCursor)
-	res = testutil.Get[server.ResponseList[entity.OperatorResponse]](t, url)
+	res = testutil.Get[server.ResponseList[entityapi.OperatorResponse]](t, url)
 	assert.Equal(t, wantResps[pageSize:], res.Data)
 	assert.Nil(t, res.NextPageCursor)
 }
 
 func TestServer_DeleteOperator(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
-
+	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 	op := fixture.AddOperator(ctx)
@@ -224,7 +214,7 @@ func TestServer_CreateAccount(t *testing.T) {
 		},
 	}
 
-	res := testutil.Post[server.Response[entity.AccountResponse]](t, fixture.OperatorAccountsURL(op.NamespaceID, op.ID), req)
+	res := testutil.Post[server.Response[entityapi.AccountResponse]](t, fixture.OperatorAccountsURL(op.NamespaceID, op.ID), req)
 	got := res.Data
 
 	assert.False(t, got.ID.IsZero())
@@ -271,9 +261,7 @@ func TestServer_UpdateAccount(t *testing.T) {
 }
 
 func TestServer_GetAccount(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
-
+	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 	acc := fixture.AddAccount(ctx)
@@ -291,9 +279,7 @@ func TestServer_GetAccount(t *testing.T) {
 }
 
 func TestHTTPHandler_ListAccounts(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
-
+	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 	op := fixture.AddOperator(ctx)
@@ -301,7 +287,7 @@ func TestHTTPHandler_ListAccounts(t *testing.T) {
 	numOps := 15
 	pageSize := 10
 
-	wantResps := make([]entity.AccountResponse, numOps)
+	wantResps := make([]entityapi.AccountResponse, numOps)
 
 	for i := range numOps {
 		acc, err := entity.NewAccount(testutil.RandName(), op)
@@ -314,7 +300,7 @@ func TestHTTPHandler_ListAccounts(t *testing.T) {
 		accClaims, err := acc.Claims()
 		require.NoError(t, err)
 
-		wantResps[i] = entity.AccountResponse{
+		wantResps[i] = entityapi.AccountResponse{
 			AccountData: wantData,
 			Limits:      entity.LoadAccountLimits(wantData, accClaims),
 		}
@@ -324,21 +310,19 @@ func TestHTTPHandler_ListAccounts(t *testing.T) {
 
 	// Page 1
 	url := fmt.Sprintf("%s?%s=%d", fixture.AccountsURL(op.NamespaceID, op.ID), paginate.PageSizeQueryParam, pageSize)
-	res := testutil.Get[server.ResponseList[entity.AccountResponse]](t, url)
+	res := testutil.Get[server.ResponseList[entityapi.AccountResponse]](t, url)
 	assert.Equal(t, wantResps[:pageSize], res.Data)
 	assert.NotEmpty(t, res.NextPageCursor)
 
 	// Page 2
 	url = fmt.Sprintf("%s&%s=%s", url, paginate.PageCursorQueryParam, *res.NextPageCursor)
-	res = testutil.Get[server.ResponseList[entity.AccountResponse]](t, url)
+	res = testutil.Get[server.ResponseList[entityapi.AccountResponse]](t, url)
 	assert.Equal(t, wantResps[pageSize:], res.Data)
 	assert.Nil(t, res.NextPageCursor)
 }
 
 func TestServer_DeleteAccount(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
-
+	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 	acc := fixture.AddAccount(ctx)
@@ -379,7 +363,7 @@ func TestServer_CreateUser(t *testing.T) {
 		},
 	}
 
-	res := testutil.Post[server.Response[entity.UserResponse]](t, fixture.AccountUsersURL(acc.NamespaceID, acc.ID), req)
+	res := testutil.Post[server.Response[entityapi.UserResponse]](t, fixture.AccountUsersURL(acc.NamespaceID, acc.ID), req)
 	got := res.Data
 
 	assert.False(t, got.ID.IsZero())
@@ -407,7 +391,7 @@ func TestServer_UpdateUser(t *testing.T) {
 		},
 	}
 
-	res := testutil.Put[server.Response[entity.UserResponse]](t, fixture.UserURL(usr.NamespaceID, usr.ID), req)
+	res := testutil.Put[server.Response[entityapi.UserResponse]](t, fixture.UserURL(usr.NamespaceID, usr.ID), req)
 	got := res.Data
 
 	userData, err := usr.Data()
@@ -435,7 +419,7 @@ func TestServer_GetUser(t *testing.T) {
 	usrClaims, err := usr.Claims()
 	require.NoError(t, err)
 
-	res := testutil.Get[server.Response[entity.UserResponse]](t, fixture.UserURL(usr.NamespaceID, usr.ID))
+	res := testutil.Get[server.Response[entityapi.UserResponse]](t, fixture.UserURL(usr.NamespaceID, usr.ID))
 	got := res.Data
 	assert.Equal(t, usrData, got.UserData)
 	assert.Equal(t, usr.JWT(), got.JWT)
@@ -499,9 +483,7 @@ func TestServer_GetServerConfig(t *testing.T) {
 }
 
 func TestHTTPHandler_ListUsers(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
-
+	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 	acc := fixture.AddAccount(ctx)
@@ -509,7 +491,7 @@ func TestHTTPHandler_ListUsers(t *testing.T) {
 	numOps := 15
 	pageSize := 10
 
-	wantResps := make([]entity.UserResponse, numOps)
+	wantResps := make([]entityapi.UserResponse, numOps)
 
 	for i := range numOps {
 		user, err := entity.NewUser(testutil.RandName(), acc)
@@ -524,7 +506,7 @@ func TestHTTPHandler_ListUsers(t *testing.T) {
 		wantPubKey, err := user.NKey().KeyPair().PublicKey()
 		require.NoError(t, err)
 
-		wantResps[i] = entity.UserResponse{
+		wantResps[i] = entityapi.UserResponse{
 			UserData:  wantData,
 			PublicKey: wantPubKey,
 			Limits:    entity.LoadUserLimits(wantData, usrClaims),
@@ -535,21 +517,19 @@ func TestHTTPHandler_ListUsers(t *testing.T) {
 
 	// Page 1
 	url := fmt.Sprintf("%s?%s=%d", fixture.UsersURL(acc.NamespaceID, acc.ID), paginate.PageSizeQueryParam, pageSize)
-	res := testutil.Get[server.ResponseList[entity.UserResponse]](t, url)
+	res := testutil.Get[server.ResponseList[entityapi.UserResponse]](t, url)
 	assert.Equal(t, wantResps[:pageSize], res.Data)
 	assert.NotEmpty(t, res.NextPageCursor)
 
 	// Page 2
 	url = fmt.Sprintf("%s&%s=%s", url, paginate.PageCursorQueryParam, *res.NextPageCursor)
-	res = testutil.Get[server.ResponseList[entity.UserResponse]](t, url)
+	res = testutil.Get[server.ResponseList[entityapi.UserResponse]](t, url)
 	assert.Equal(t, wantResps[pageSize:], res.Data)
 	assert.Nil(t, res.NextPageCursor)
 }
 
 func TestServer_DeleteUser(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
-
+	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 	usr := fixture.AddUser(ctx)

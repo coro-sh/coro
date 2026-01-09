@@ -1,4 +1,4 @@
-package entity_test // avoid import cycle with sqlite package
+package entityapi_test // avoid import cycle with sqlite package
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/sqlite"
-	"github.com/coro-sh/coro/testutil"
+	"github.com/joshjon/kit/testutil"
 )
 
 const (

@@ -24,9 +24,12 @@ import (
 	"github.com/coro-sh/coro/command"
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/entityapi"
 	"github.com/coro-sh/coro/postgres"
+	"github.com/coro-sh/coro/proxyapi"
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/sqlite/migrations"
+	"github.com/coro-sh/coro/streamapi"
 	"github.com/coro-sh/coro/tkn"
 )
 
@@ -89,8 +92,8 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 	srvOpts := []server.Option{
 		server.WithLogger(logger),
 		server.WithMiddleware(
-			entity.NamespaceContextMiddleware(),
-			entity.InternalNamespaceMiddleware(intNS.ID),
+			entityapi.NamespaceContextMiddleware(),
+			entityapi.InternalNamespaceMiddleware(intNS.ID),
 		),
 	}
 	if len(cfg.CorsOrigins) > 0 {
@@ -105,7 +108,7 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 		return err
 	}
 
-	var entityHandlerOpts []entity.HTTPHandlerOption[*entity.Store]
+	var entityHandlerOpts []entityapi.HTTPHandlerOption[*entity.Store]
 	if cfg.Broker != nil {
 		_, _, bSysUsr, err := InitBrokerNATSEntities(ctx, store, logger, intNS.ID)
 		if err != nil {
@@ -125,15 +128,15 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 			return fmt.Errorf("dial broker publisher: %w", err)
 		}
 
-		entityHandlerOpts = append(entityHandlerOpts, entity.WithCommander[*entity.Store](commander))
+		entityHandlerOpts = append(entityHandlerOpts, entityapi.WithCommander[*entity.Store](commander))
 		opTknRW := postgres.NewOperatorTokenReadWriter(pg)
 		opTknIssuer := tkn.NewOperatorIssuer(opTknRW, tkn.OperatorTokenTypeProxy)
-		srv.Register("/api/v1", command.NewProxyHTTPHandler(opTknIssuer, store, commander))
-		srv.Register("/api/v1", command.NewStreamHTTPHandler(store, commander))
-		srv.Register("/api/v1", command.NewStreamWebSocketHandler(store, commander, command.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
+		srv.Register("/api/v1", proxyapi.NewProxyHTTPHandler(opTknIssuer, store, commander))
+		srv.Register("/api/v1", streamapi.NewStreamHTTPHandler(store, commander))
+		srv.Register("/api/v1", streamapi.NewStreamWebSocketHandler(store, commander, streamapi.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
 	}
 
-	srv.Register("/api/v1", entity.NewHTTPHandler(store, entityHandlerOpts...))
+	srv.Register("/api/v1", entityapi.NewHTTPHandler(store, entityHandlerOpts...))
 
 	return Serve(ctx, srv, logger)
 }
@@ -259,8 +262,8 @@ func runAll(
 		server.WithLogger(logger),
 		server.WithCORS(cfg.CorsOrigins...),
 		server.WithMiddleware(
-			entity.NamespaceContextMiddleware(),
-			entity.InternalNamespaceMiddleware(intNS.ID),
+			entityapi.NamespaceContextMiddleware(),
+			entityapi.InternalNamespaceMiddleware(intNS.ID),
 		),
 	}
 	if cfg.TLS != nil {
@@ -282,11 +285,11 @@ func runAll(
 		return fmt.Errorf("dial broker publisher: %w", err)
 	}
 
-	srv.Register("/api/v1", entity.NewHTTPHandler(store, entity.WithCommander[*entity.Store](commander)))
+	srv.Register("/api/v1", entityapi.NewHTTPHandler(store, entityapi.WithCommander[*entity.Store](commander)))
 	srv.Register("/api/v1", brokerHandler)
-	srv.Register("/api/v1", command.NewProxyHTTPHandler(opTknIssuer, store, commander))
-	srv.Register("/api/v1", command.NewStreamHTTPHandler(store, commander))
-	srv.Register("/api/v1", command.NewStreamWebSocketHandler(store, commander, command.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
+	srv.Register("/api/v1", proxyapi.NewProxyHTTPHandler(opTknIssuer, store, commander))
+	srv.Register("/api/v1", streamapi.NewStreamHTTPHandler(store, commander))
+	srv.Register("/api/v1", streamapi.NewStreamWebSocketHandler(store, commander, streamapi.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
 
 	if withUI {
 		var uiHandler, err = uiserver.AssetsHandler()

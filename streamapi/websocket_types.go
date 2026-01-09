@@ -1,9 +1,10 @@
-package command
+package streamapi
 
 import (
 	"github.com/cohesivestack/valgo"
 
 	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/entityapi"
 )
 
 type StartStreamConsumerRequest struct {
@@ -14,9 +15,9 @@ type StartStreamConsumerRequest struct {
 
 func (r StartStreamConsumerRequest) Validate() error {
 	return valgo.In("params", valgo.Is(
-		entity.IDValidator[entity.AccountID](r.AccountID, entity.PathParamAccountID),
+		entityapi.IDValidator[entity.AccountID](r.AccountID, entityapi.PathParamAccountID),
 		valgo.String(r.StreamName, "stream_name").Not().Blank(),
-	)).Error()
+	)).ToError()
 }
 
 type StreamConsumerMessage struct {

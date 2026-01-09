@@ -1,4 +1,4 @@
-package command
+package proxyapi
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joshjon/kit/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -13,22 +14,20 @@ import (
 
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/entityapi"
 	"github.com/coro-sh/coro/sqlite"
-	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tkn"
 )
 
 func TestHTTPHandler_GenerateToken(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
-
+	ctx := testutil.Context(t)
 	db := sqlite.NewTestDB(t)
 	repo := sqlite.NewEntityRepository(db)
 	store := entity.NewStore(repo)
 	tknIss := tkn.NewOperatorIssuer(sqlite.NewOperatorTokenReadWriter(db), tkn.OperatorTokenTypeProxy)
 
 	srv, err := server.NewServer(testutil.GetFreePort(t), server.WithMiddleware(
-		entity.NamespaceContextMiddleware(),
+		entityapi.NamespaceContextMiddleware(),
 	))
 	require.NoError(t, err)
 	srv.Register("", NewProxyHTTPHandler(tknIss, store, new(pingerStub)))
@@ -55,16 +54,14 @@ func TestHTTPHandler_GenerateToken(t *testing.T) {
 }
 
 func TestHTTPHandler_GetStatus(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
-
+	ctx := testutil.Context(t)
 	db := sqlite.NewTestDB(t)
 	repo := sqlite.NewEntityRepository(db)
 	store := entity.NewStore(repo)
 	tknIss := tkn.NewOperatorIssuer(sqlite.NewOperatorTokenReadWriter(db), tkn.OperatorTokenTypeProxy)
 
 	srv, err := server.NewServer(testutil.GetFreePort(t), server.WithMiddleware(
-		entity.NamespaceContextMiddleware(),
+		entityapi.NamespaceContextMiddleware(),
 	))
 	require.NoError(t, err)
 	srv.Register("", NewProxyHTTPHandler(tknIss, store, new(pingerStub)))

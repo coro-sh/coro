@@ -9,11 +9,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/constants"
-	"github.com/coro-sh/coro/testutil"
+	"github.com/joshjon/kit/testutil"
 )
 
 func TestNewAccount(t *testing.T) {
-	op, err := NewOperator("test_operator", NewID[NamespaceID]())
+	op, err := NewOperator("test_operator", id.New[NamespaceID]())
 	require.NoError(t, err)
 	opSKPubKey, err := op.SigningKey().KeyPair().PublicKey()
 	require.NoError(t, err)
@@ -28,7 +28,7 @@ func TestNewAccount(t *testing.T) {
 }
 
 func TestNewSystemAccount(t *testing.T) {
-	op, err := NewOperator("test_operator", NewID[NamespaceID]())
+	op, err := NewOperator("test_operator", id.New[NamespaceID]())
 	require.NoError(t, err)
 	opSKPubKey, err := op.SigningKey().KeyPair().PublicKey()
 	require.NoError(t, err)
@@ -42,7 +42,7 @@ func TestNewSystemAccount(t *testing.T) {
 }
 
 func TestNewAccountFromData(t *testing.T) {
-	op, err := NewOperator("test_operator", NewID[NamespaceID]())
+	op, err := NewOperator("test_operator", id.New[NamespaceID]())
 	require.NoError(t, err)
 
 	name := "test_account"
@@ -67,7 +67,7 @@ func TestNewAccountFromData(t *testing.T) {
 }
 
 func TestAccount_Update(t *testing.T) {
-	op, err := NewOperator("test_operator", NewID[NamespaceID]())
+	op, err := NewOperator("test_operator", id.New[NamespaceID]())
 	require.NoError(t, err)
 
 	acc, err := NewAccount("test_account", op)
@@ -95,7 +95,7 @@ func TestAccount_Update(t *testing.T) {
 }
 
 func TestAccount_Validate(t *testing.T) {
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
+	op, err := NewOperator(testutil.RandName(), id.New[NamespaceID]())
 	require.NoError(t, err)
 
 	tests := []struct {

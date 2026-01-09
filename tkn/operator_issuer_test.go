@@ -11,8 +11,8 @@ import (
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/sqlite"
-	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tkn"
+	"github.com/joshjon/kit/testutil"
 )
 
 func TestOperatorIssuer(t *testing.T) {

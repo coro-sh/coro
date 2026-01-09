@@ -6,13 +6,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joshjon/kit/id"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/joshjon/kit/errtag"
+	"github.com/joshjon/kit/testutil"
 
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tx"
-	"github.com/joshjon/kit/errtag"
 )
 
 const defaultTimeout = 5 * time.Second
@@ -234,7 +236,7 @@ func (s *OperatorTokenReadWriterTestSuite) TestBeginTxFunc() {
 			time.Sleep(timeout + (50 * time.Millisecond))
 
 			// Next statement should fail due to the transaction timeout
-			opID2 := entity.NewID[entity.OperatorID]()
+			opID2 := id.New[entity.OperatorID]()
 			err := repo.Write(ctx, OperatorTokenTypeProxy, opID2, testutil.RandString(30))
 			s.Require().Error(err)
 			s.True(errtag.HasTag[tx.ErrTagTransactionTimeout](err))
@@ -282,7 +284,7 @@ func (s *OperatorTokenReadWriterTestSuite) TestErrorTags() {
 		ctx, cancel := context.WithTimeout(context.Background(), s.Timeout)
 		defer cancel()
 
-		_, err := s.opTknRW.Read(ctx, OperatorTokenTypeProxy, entity.NewID[entity.OperatorID]())
+		_, err := s.opTknRW.Read(ctx, OperatorTokenTypeProxy, id.New[entity.OperatorID]())
 		s.Require().Error(err)
 		s.True(errtag.HasTag[errtag.NotFound](err))
 	})
@@ -295,7 +297,7 @@ func genNamespace() *entity.Namespace {
 func genOperatorData(ns *entity.Namespace) entity.OperatorData {
 	return entity.OperatorData{
 		OperatorIdentity: entity.OperatorIdentity{
-			ID:          entity.NewID[entity.OperatorID](),
+			ID:          id.New[entity.OperatorID](),
 			NamespaceID: ns.ID,
 			JWT:         testutil.RandString(50),
 		},

@@ -8,13 +8,15 @@ import (
 	"time"
 
 	"github.com/joshjon/kit/errtag"
+	"github.com/joshjon/kit/id"
 	"github.com/joshjon/kit/paginate"
 	"github.com/joshjon/kit/ref"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/joshjon/kit/testutil"
+
 	"github.com/coro-sh/coro/constants"
-	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tx"
 )
 
@@ -720,7 +722,7 @@ func (s *RepositoryTestSuite) TestErrorTags() {
 		ctx, cancel := context.WithTimeout(s.T().Context(), s.Timeout)
 		defer cancel()
 
-		_, err := s.repo.ReadNamespace(ctx, NewID[NamespaceID]())
+		_, err := s.repo.ReadNamespace(ctx, id.New[NamespaceID]())
 		s.Require().Error(err)
 		s.True(errtag.HasTag[ErrTagNotFound[Namespace]](err))
 
@@ -746,7 +748,7 @@ func (s *RepositoryTestSuite) TestErrorTags() {
 		ctx, cancel := context.WithTimeout(s.T().Context(), s.Timeout)
 		defer cancel()
 
-		_, err := s.repo.ReadOperator(ctx, NewID[OperatorID]())
+		_, err := s.repo.ReadOperator(ctx, id.New[OperatorID]())
 		s.Require().Error(err)
 		s.True(errtag.HasTag[ErrTagNotFound[Operator]](err))
 
@@ -778,7 +780,7 @@ func (s *RepositoryTestSuite) TestErrorTags() {
 		ctx, cancel := context.WithTimeout(s.T().Context(), s.Timeout)
 		defer cancel()
 
-		_, err := s.repo.ReadAccount(ctx, NewID[AccountID]())
+		_, err := s.repo.ReadAccount(ctx, id.New[AccountID]())
 		s.Require().Error(err)
 		s.True(errtag.HasTag[ErrTagNotFound[Account]](err))
 
@@ -809,7 +811,7 @@ func (s *RepositoryTestSuite) TestErrorTags() {
 		ctx, cancel := context.WithTimeout(s.T().Context(), s.Timeout)
 		defer cancel()
 
-		_, err := s.repo.ReadUser(ctx, NewID[UserID]())
+		_, err := s.repo.ReadUser(ctx, id.New[UserID]())
 		s.Require().Error(err)
 		s.True(errtag.HasTag[ErrTagNotFound[User]](err))
 
@@ -898,7 +900,7 @@ func genNamespace() *Namespace {
 func genOperatorData(ns *Namespace) OperatorData {
 	return OperatorData{
 		OperatorIdentity: OperatorIdentity{
-			ID:          NewID[OperatorID](),
+			ID:          id.New[OperatorID](),
 			NamespaceID: ns.ID,
 			JWT:         testutil.RandString(50),
 		},
@@ -910,7 +912,7 @@ func genOperatorData(ns *Namespace) OperatorData {
 func genAccountData(op OperatorData) AccountData {
 	return AccountData{
 		AccountIdentity: AccountIdentity{
-			ID:          NewID[AccountID](),
+			ID:          id.New[AccountID](),
 			NamespaceID: op.NamespaceID,
 			OperatorID:  op.ID,
 			JWT:         testutil.RandString(50),
@@ -924,7 +926,7 @@ func genAccountData(op OperatorData) AccountData {
 func genUserData(acc AccountData) UserData {
 	return UserData{
 		UserIdentity: UserIdentity{
-			ID:          NewID[UserID](),
+			ID:          id.New[UserID](),
 			NamespaceID: acc.NamespaceID,
 			OperatorID:  acc.OperatorID,
 			AccountID:   acc.ID,

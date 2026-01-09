@@ -11,7 +11,7 @@ import (
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/sqlite"
-	"github.com/coro-sh/coro/testutil"
+	"github.com/joshjon/kit/testutil"
 )
 
 func TestStore_Namespace(t *testing.T) {

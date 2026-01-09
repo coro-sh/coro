@@ -9,9 +9,12 @@ import (
 	"strings"
 
 	"github.com/cohesivestack/valgo"
+	"github.com/joshjon/kit/config"
 	"github.com/urfave/cli/v2"
 
 	"github.com/coro-sh/coro/app"
+	"github.com/coro-sh/coro/logkey"
+
 	"github.com/joshjon/kit/log"
 )
 
@@ -59,27 +62,27 @@ func main() {
 				switch f.service {
 				case serviceTypeAll:
 					var cfg app.AllConfig
-					app.LoadConfig(f.configFile, &cfg)
+					config.Load(f.configFile, &cfg)
 					logger = loggerFromConfig(cfg.Logger).With(logkey.Service, serviceTypeAll)
 					return app.RunAll(ctx, logger, cfg, true)
 				case serviceTypeUI:
 					var cfg app.UIConfig
-					app.LoadConfig(f.configFile, &cfg)
+					config.Load(f.configFile, &cfg)
 					logger = loggerFromConfig(cfg.Logger).With(logkey.Service, serviceTypeUI)
 					return app.RunUI(ctx, logger, cfg)
 				case serviceTypeAllBackend:
 					var cfg app.AllConfig
-					app.LoadConfig(f.configFile, &cfg)
+					config.Load(f.configFile, &cfg)
 					logger = loggerFromConfig(cfg.Logger).With(logkey.Service, serviceTypeAllBackend)
 					return app.RunAll(ctx, logger, cfg, false)
 				case serviceTypeController:
 					var cfg app.ControllerConfig
-					app.LoadConfig(f.configFile, &cfg)
+					config.Load(f.configFile, &cfg)
 					logger = loggerFromConfig(cfg.Logger).With(logkey.Service, serviceTypeController)
 					return app.RunController(ctx, logger, cfg)
 				case serviceTypeBroker:
 					var cfg app.BrokerConfig
-					app.LoadConfig(f.configFile, &cfg)
+					config.Load(f.configFile, &cfg)
 					logger = loggerFromConfig(cfg.Logger).With(logkey.Service, serviceTypeBroker)
 					return app.RunBroker(ctx, logger, cfg)
 				default:

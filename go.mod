@@ -2,17 +2,14 @@ module github.com/coro-sh/coro
 
 go 1.25
 
-replace github.com/joshjon/kit => ../../../golang/kit
-
 require (
-	github.com/caarlos0/env/v11 v11.3.1
 	github.com/coder/websocket v1.8.14
 	github.com/cohesivestack/valgo v0.7.1
 	github.com/coro-sh/coro-ui-server v0.0.2
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgerrcode v0.0.0-20250907135507-afb5586c32a6
 	github.com/jackc/pgx/v5 v5.8.0
-	github.com/joshjon/kit v0.0.0-20260108000541-9be952f9b0f5
+	github.com/joshjon/kit v0.0.0-20260109013433-073c8eda69ed
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/nats-io/jwt/v2 v2.7.4
 	github.com/nats-io/nats-server/v2 v2.11.3
@@ -26,7 +23,6 @@ require (
 	golang.org/x/sync v0.19.0
 	golang.org/x/text v0.32.0
 	google.golang.org/protobuf v1.36.7
-	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.42.2
 )
 
@@ -35,6 +31,7 @@ require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
+	github.com/caarlos0/env/v11 v11.3.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/cubicdaiya/gonp v1.0.4 // indirect
@@ -107,6 +104,7 @@ require (
 	google.golang.org/grpc v1.74.2 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/libc v1.66.10 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect

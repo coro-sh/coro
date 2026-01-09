@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/coro-sh/coro/entity"
 	"github.com/joshjon/kit/errtag"
+	"github.com/joshjon/kit/id"
+
+	"github.com/coro-sh/coro/entity"
 )
 
 type OperatorTokenType string
@@ -45,7 +47,7 @@ func (o *OperatorIssuer) Generate(ctx context.Context, operatorID entity.Operato
 	return token, nil
 }
 
-func (o *OperatorIssuer) Verify(ctx context.Context, token string) (id entity.OperatorID, err error) {
+func (o *OperatorIssuer) Verify(ctx context.Context, token string) (entity.OperatorID, error) {
 	var zeroID entity.OperatorID
 	tokenTypePrefix := string(o.tknType) + "_"
 
@@ -60,7 +62,7 @@ func (o *OperatorIssuer) Verify(ctx context.Context, token string) (id entity.Op
 
 	opIDSuffix := strings.TrimPrefix(token, tokenTypePrefix)[:opIDSuffixLen]
 	opIDStr := fmt.Sprintf("%s_%s", zeroID.Prefix(), opIDSuffix)
-	operatorID, err := entity.ParseID[entity.OperatorID](opIDStr)
+	operatorID, err := id.Parse[entity.OperatorID](opIDStr)
 	if err != nil {
 		return zeroID, errtag.Tag[errtag.Unauthorized](fmt.Errorf("parse operator id: %w", err))
 	}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/joshjon/kit/id"
 	"github.com/nats-io/jwt/v2"
 	"github.com/nats-io/nkeys"
 	"go.jetify.com/typeid"
@@ -61,7 +62,7 @@ type Operator struct {
 
 // NewOperator creates a new Operator.
 func NewOperator(name string, namespaceID NamespaceID) (*Operator, error) {
-	id := NewID[OperatorID]()
+	id := id.New[OperatorID]()
 
 	nk, err := NewNkey(id.String(), TypeOperator, false)
 	if err != nil {

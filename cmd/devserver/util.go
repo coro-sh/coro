@@ -20,8 +20,8 @@ import (
 	"github.com/coro-sh/coro/command"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/natsutil"
-	"github.com/coro-sh/coro/testutil"
 	"github.com/joshjon/kit/log"
+	"github.com/joshjon/kit/testutil"
 )
 
 func exitOnInvalidFlags(c *cli.Context, v *valgo.Validation) {

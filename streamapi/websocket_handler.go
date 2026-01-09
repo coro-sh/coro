@@ -1,4 +1,4 @@
-package command
+package streamapi
 
 import (
 	"errors"
@@ -10,22 +10,29 @@ import (
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 	"github.com/google/uuid"
+	"github.com/joshjon/kit/id"
 	"github.com/joshjon/kit/log"
 	"github.com/joshjon/kit/server"
 	"github.com/labstack/echo/v4"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/coro-sh/coro/command"
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/entityapi"
 	"github.com/coro-sh/coro/logkey"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
+	"github.com/coro-sh/coro/websocketutil"
 )
 
 // streamWebSocketSubprotocol specifies the WebSocket subprotocol name.
-const streamWebSocketSubprotocol = constants.AppName + "_stream"
+const (
+	streamWebSocketSubprotocol = constants.AppName + "_stream"
+	consumerHeartbeatInterval  = command.MaxConsumerIdleHeartbeat / 2
+)
 
 type ConsumerStarter interface {
-	ConsumeStream(account *entity.Account, streamName string, startSeq uint64, handler func(msg *commandv1.ReplyMessage)) (StreamConsumer, error)
+	ConsumeStream(account *entity.Account, streamName string, startSeq uint64, handler func(msg *commandv1.ReplyMessage)) (command.StreamConsumer, error)
 }
 
 type StreamWebSocketHandlerOption func(h *StreamWebSocketHandler)
@@ -64,7 +71,7 @@ func NewStreamWebSocketHandler(accounts AccountReader, consumerStarter ConsumerS
 }
 
 func (s *StreamWebSocketHandler) Register(g *echo.Group) {
-	account := g.Group(fmt.Sprintf("/namespaces/:%s/accounts/:%s", entity.PathParamNamespaceID, entity.PathParamAccountID))
+	account := g.Group(fmt.Sprintf("/namespaces/:%s/accounts/:%s", entityapi.PathParamNamespaceID, entityapi.PathParamAccountID))
 	account.GET(fmt.Sprintf("/streams/:%s/consume", PathParamStreamName), s.HandleConsume)
 }
 
@@ -81,7 +88,7 @@ func (s *StreamWebSocketHandler) HandleConsume(c echo.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	accID := entity.MustParseID[entity.AccountID](req.AccountID)
+	accID := id.MustParse[entity.AccountID](req.AccountID)
 
 	c.Set(logkey.AccountID, accID)
 	c.Set(logkey.StreamName, req.StreamName)
@@ -97,7 +104,7 @@ func (s *StreamWebSocketHandler) HandleConsume(c echo.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	if err = entity.VerifyEntityNamespace(c, acc); err != nil {
+	if err = entityapi.VerifyEntityNamespace(c, acc); err != nil {
 		return err
 	}
 
@@ -118,7 +125,7 @@ func (s *StreamWebSocketHandler) HandleConsume(c echo.Context) (err error) {
 	var errDetails []string
 
 	defer func() {
-		code, reason := getWebSocketCloseCodeAndReason(err)
+		code, reason := websocketutil.GetCloseErrCodeAndReason(err)
 		if code == websocket.StatusNormalClosure {
 			err = nil // not an actual failure
 		}
@@ -132,7 +139,7 @@ func (s *StreamWebSocketHandler) HandleConsume(c echo.Context) (err error) {
 				logger.Error("failed to write error message", "error", werr)
 			}
 		}
-		closeWebSocketConn(conn, logger, code, reason)
+		websocketutil.CloseConn(conn, code, reason, logger)
 		wg.Wait()
 		s.numConns.Add(-1)
 	}()

@@ -3,6 +3,7 @@ package sqlite
 import (
 	"time"
 
+	"github.com/joshjon/kit/id"
 	"github.com/joshjon/kit/ref"
 
 	"github.com/coro-sh/coro/entity"
@@ -11,7 +12,7 @@ import (
 
 func unmarshalNamespace(in *sqlc.Namespace) *entity.Namespace {
 	return &entity.Namespace{
-		ID:    entity.MustParseID[entity.NamespaceID](in.ID),
+		ID:    id.MustParse[entity.NamespaceID](in.ID),
 		Name:  in.Name,
 		Owner: in.Owner,
 	}
@@ -20,8 +21,8 @@ func unmarshalNamespace(in *sqlc.Namespace) *entity.Namespace {
 func unmarshalOperator(in *sqlc.Operator) entity.OperatorData {
 	return entity.OperatorData{
 		OperatorIdentity: entity.OperatorIdentity{
-			ID:          entity.MustParseID[entity.OperatorID](in.ID),
-			NamespaceID: entity.MustParseID[entity.NamespaceID](in.NamespaceID),
+			ID:          id.MustParse[entity.OperatorID](in.ID),
+			NamespaceID: id.MustParse[entity.NamespaceID](in.NamespaceID),
 			JWT:         in.Jwt,
 		},
 		Name:      in.Name,
@@ -32,9 +33,9 @@ func unmarshalOperator(in *sqlc.Operator) entity.OperatorData {
 func unmarshalAccount(in *sqlc.Account) entity.AccountData {
 	out := entity.AccountData{
 		AccountIdentity: entity.AccountIdentity{
-			ID:          entity.MustParseID[entity.AccountID](in.ID),
-			NamespaceID: entity.MustParseID[entity.NamespaceID](in.NamespaceID),
-			OperatorID:  entity.MustParseID[entity.OperatorID](in.OperatorID),
+			ID:          id.MustParse[entity.AccountID](in.ID),
+			NamespaceID: id.MustParse[entity.NamespaceID](in.NamespaceID),
+			OperatorID:  id.MustParse[entity.OperatorID](in.OperatorID),
 			JWT:         in.Jwt,
 		},
 		Name:      in.Name,
@@ -49,10 +50,10 @@ func unmarshalAccount(in *sqlc.Account) entity.AccountData {
 func unmarshalUser(in *sqlc.User) entity.UserData {
 	out := entity.UserData{
 		UserIdentity: entity.UserIdentity{
-			ID:          entity.MustParseID[entity.UserID](in.ID),
-			NamespaceID: entity.MustParseID[entity.NamespaceID](in.NamespaceID),
-			OperatorID:  entity.MustParseID[entity.OperatorID](in.OperatorID),
-			AccountID:   entity.MustParseID[entity.AccountID](in.AccountID),
+			ID:          id.MustParse[entity.UserID](in.ID),
+			NamespaceID: id.MustParse[entity.NamespaceID](in.NamespaceID),
+			OperatorID:  id.MustParse[entity.OperatorID](in.OperatorID),
+			AccountID:   id.MustParse[entity.AccountID](in.AccountID),
 		},
 		Name: in.Name,
 		JWT:  in.Jwt,

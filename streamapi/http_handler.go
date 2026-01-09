@@ -1,4 +1,4 @@
-package command
+package streamapi
 
 import (
 	"context"
@@ -7,12 +7,14 @@ import (
 	"strings"
 
 	"github.com/joshjon/kit/errtag"
+	"github.com/joshjon/kit/id"
 	"github.com/joshjon/kit/server"
 	"github.com/labstack/echo/v4"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/entityapi"
 	"github.com/coro-sh/coro/logkey"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 )
@@ -49,7 +51,7 @@ func NewStreamHTTPHandler(accounts AccountReader, streams StreamReader) *StreamH
 }
 
 func (h *StreamHTTPHandler) Register(g *echo.Group) {
-	account := g.Group(fmt.Sprintf("/namespaces/:%s/accounts/:%s", entity.PathParamNamespaceID, entity.PathParamAccountID))
+	account := g.Group(fmt.Sprintf("/namespaces/:%s/accounts/:%s", entityapi.PathParamNamespaceID, entityapi.PathParamAccountID))
 	account.GET("/streams", h.ListStreams)
 	account.GET(fmt.Sprintf("/streams/:%s", PathParamStreamName), h.GetStream)
 	account.GET(fmt.Sprintf("/streams/:%s/messages", PathParamStreamName), h.FetchStreamMessages)
@@ -64,7 +66,7 @@ func (h *StreamHTTPHandler) ListStreams(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	accID := entity.MustParseID[entity.AccountID](req.AccountID)
+	accID := id.MustParse[entity.AccountID](req.AccountID)
 	c.Set(logkey.AccountID, accID)
 
 	acc, err := h.accReader.ReadAccount(ctx, accID)
@@ -72,7 +74,7 @@ func (h *StreamHTTPHandler) ListStreams(c echo.Context) error {
 		return err
 	}
 
-	if err = entity.VerifyEntityNamespace(c, acc); err != nil {
+	if err = entityapi.VerifyEntityNamespace(c, acc); err != nil {
 		return err
 	}
 
@@ -104,7 +106,7 @@ func (h *StreamHTTPHandler) GetStream(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	accID := entity.MustParseID[entity.AccountID](req.AccountID)
+	accID := id.MustParse[entity.AccountID](req.AccountID)
 	c.Set(logkey.AccountID, accID)
 	c.Set(logkey.StreamName, req.StreamName)
 
@@ -113,7 +115,7 @@ func (h *StreamHTTPHandler) GetStream(c echo.Context) error {
 		return err
 	}
 
-	if err = entity.VerifyEntityNamespace(c, acc); err != nil {
+	if err = entityapi.VerifyEntityNamespace(c, acc); err != nil {
 		return err
 	}
 
@@ -144,7 +146,7 @@ func (h *StreamHTTPHandler) FetchStreamMessages(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	accID := entity.MustParseID[entity.AccountID](req.AccountID)
+	accID := id.MustParse[entity.AccountID](req.AccountID)
 	c.Set(logkey.AccountID, accID)
 	c.Set(logkey.StreamName, req.StreamName)
 	c.Set(logkey.ConsumerStartSequence, req.StartSequence)
@@ -155,7 +157,7 @@ func (h *StreamHTTPHandler) FetchStreamMessages(c echo.Context) error {
 		return err
 	}
 
-	if err = entity.VerifyEntityNamespace(c, acc); err != nil {
+	if err = entityapi.VerifyEntityNamespace(c, acc); err != nil {
 		return err
 	}
 
@@ -176,7 +178,7 @@ func (h *StreamHTTPHandler) GetStreamMessageContent(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	accID := entity.MustParseID[entity.AccountID](req.AccountID)
+	accID := id.MustParse[entity.AccountID](req.AccountID)
 	c.Set(logkey.AccountID, accID)
 
 	acc, err := h.accReader.ReadAccount(ctx, accID)
@@ -184,7 +186,7 @@ func (h *StreamHTTPHandler) GetStreamMessageContent(c echo.Context) error {
 		return err
 	}
 
-	if err = entity.VerifyEntityNamespace(c, acc); err != nil {
+	if err = entityapi.VerifyEntityNamespace(c, acc); err != nil {
 		return err
 	}
 
