@@ -1,6 +1,9 @@
 package entity
 
-import "go.jetify.com/typeid"
+import (
+	"github.com/joshjon/kit/id"
+	"go.jetify.com/typeid"
+)
 
 type namespacePrefix struct{}
 
@@ -20,7 +23,7 @@ type Namespace struct {
 // NewNamespace creates a new Namespace.
 func NewNamespace(name string, owner string) *Namespace {
 	return &Namespace{
-		ID:    NewID[NamespaceID](),
+		ID:    id.New[NamespaceID](),
 		Name:  name,
 		Owner: owner,
 	}

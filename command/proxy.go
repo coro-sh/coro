@@ -13,8 +13,9 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/log"
+	"github.com/joshjon/kit/errtag"
+	"github.com/joshjon/kit/log"
+
 	"github.com/coro-sh/coro/natsutil"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 )

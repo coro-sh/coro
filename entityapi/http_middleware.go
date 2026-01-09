@@ -1,0 +1,71 @@
+package entityapi
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/cohesivestack/valgo"
+	"github.com/joshjon/kit/errtag"
+	"github.com/joshjon/kit/id"
+	"github.com/labstack/echo/v4"
+
+	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/logkey"
+)
+
+const namespaceContextKey = "req_namespace"
+
+// NamespaceContextMiddleware extracts the NamespaceID from the request path and
+// sets it in the handler context.
+func NamespaceContextMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if !IsNamespacePath(c) {
+				return next(c) // skip if path is not scoped to a namespace
+			}
+			nsIDStr := c.Param(PathParamNamespaceID)
+			if err := valgo.In("params", valgo.Is(IDValidator[entity.NamespaceID](nsIDStr, "namespace_id"))).Error(); err != nil {
+				return err
+			}
+			nsID := id.MustParse[entity.NamespaceID](nsIDStr)
+			c.Set(namespaceContextKey, nsID)
+			c.Set(logkey.NamespaceID, nsID)
+			return next(c)
+		}
+	}
+}
+
+// InternalNamespaceMiddleware is a middleware to prevent access to the
+// internal namespace.
+func InternalNamespaceMiddleware(internalNamespaceID entity.NamespaceID) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if !IsNamespacePath(c) {
+				return next(c) // skip if path is not scoped to a namespace
+			}
+			nsID, err := NamespaceIDFromContext(c)
+			if err != nil {
+				return err
+			}
+			if nsID == internalNamespaceID {
+				return errtag.NewTagged[errtag.Unauthorized]("namespace is reserved for internal use only")
+			}
+
+			return next(c)
+		}
+	}
+}
+
+func NamespaceIDFromContext(c echo.Context) (entity.NamespaceID, error) {
+	nsID, ok := c.Get(namespaceContextKey).(entity.NamespaceID)
+	if !ok {
+		return entity.NamespaceID{}, errtag.NewTagged[errtag.InvalidArgument]("namespace id not found in context",
+			errtag.WithMsg("Namespace ID not found in request path"),
+		)
+	}
+	return nsID, nil
+}
+
+func IsNamespacePath(c echo.Context) bool {
+	return strings.Contains(c.Path(), fmt.Sprintf("/namespaces/:%s", PathParamNamespaceID))
+}

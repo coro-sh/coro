@@ -7,14 +7,14 @@ import (
 
 	"github.com/nats-io/nats.go/jetstream"
 
-	"github.com/coro-sh/coro/errtag"
+	"github.com/joshjon/kit/errtag"
+
 	"github.com/coro-sh/coro/natsutil"
 	"github.com/coro-sh/coro/syncutil"
 )
 
 const (
-	maxConsumerIdleHeartbeat  = 30 * time.Second
-	consumerHeartbeatInterval = maxConsumerIdleHeartbeat / 2
+	MaxConsumerIdleHeartbeat  = 30 * time.Second
 )
 
 var errConsumerNotFound = errtag.NewTagged[errtag.NotFound]("consumer not found")
@@ -34,7 +34,7 @@ func NewConsumerPool(natsURL string) *ConsumerPool {
 	return &ConsumerPool{
 		natsURL:          natsURL,
 		consumers:        syncutil.NewMap[string, *consumerEntry](),
-		maxIdleHeartbeat: maxConsumerIdleHeartbeat,
+		maxIdleHeartbeat: MaxConsumerIdleHeartbeat,
 	}
 }
 

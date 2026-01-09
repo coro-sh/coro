@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/cohesivestack/valgo"
+	"github.com/joshjon/kit/log"
+	"github.com/joshjon/kit/valgoutil"
 	"github.com/urfave/cli/v2"
 
 	"github.com/coro-sh/coro/app"
 	"github.com/coro-sh/coro/client"
-	"github.com/coro-sh/coro/log"
-	"github.com/coro-sh/coro/valgoutil"
 )
 
 const (

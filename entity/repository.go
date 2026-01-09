@@ -3,7 +3,8 @@ package entity
 import (
 	"context"
 
-	"github.com/coro-sh/coro/paginate"
+	"github.com/joshjon/kit/paginate"
+
 	"github.com/coro-sh/coro/tx"
 )
 

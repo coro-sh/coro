@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/joshjon/kit/id"
 	"github.com/nats-io/jwt/v2"
 	"github.com/nats-io/nkeys"
 	"go.jetify.com/typeid"
@@ -269,7 +270,7 @@ func newAccount(name string, operator *Operator, claimsModifiers ...func(claims 
 		return nil, errors.New("signing key must be from an operator")
 	}
 
-	id := NewID[AccountID]()
+	id := id.New[AccountID]()
 
 	nk, err := NewNkey(id.String(), TypeAccount, false)
 	if err != nil {

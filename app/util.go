@@ -6,22 +6,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joshjon/kit/encrypt"
+	"github.com/joshjon/kit/errtag"
+	"github.com/joshjon/kit/log"
+	"github.com/joshjon/kit/server"
 	natserver "github.com/nats-io/nats-server/v2/server"
 	"go.jetify.com/typeid"
 
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/embedns"
-	"github.com/coro-sh/coro/encrypt"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/log"
-	"github.com/coro-sh/coro/server"
 )
 
 func NewEntityStore(repo entity.Repository, encKey *string) (*entity.Store, error) {
 	var storeOpts []entity.StoreOption
 	if encKey != nil {
-		enc, err := encrypt.NewAES(*encKey)
+		enc, err := encrypt.NewAES([]byte(*encKey))
 		if err != nil {
 			return nil, fmt.Errorf("create aes encrypter: %w", err)
 		}

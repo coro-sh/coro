@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/testutil"
+	"github.com/joshjon/kit/testutil"
 )
 
 const (
@@ -71,7 +71,7 @@ func TestNewEmbeddedNATS(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			op, err := entity.NewOperator(testutil.RandName(), entity.NewID[entity.NamespaceID]())
+			op, err := entity.NewOperator(testutil.RandName(), id.New[entity.NamespaceID]())
 			require.NoError(t, err)
 			sysAcc, sysUsr, err := op.SetNewSystemAccountAndUser()
 			require.NoError(t, err)

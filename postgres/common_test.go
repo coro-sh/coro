@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joshjon/kit/pgdb"
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/postgres/migrations"
@@ -16,10 +17,10 @@ func setupTestDB(t *testing.T) *pgxpool.Pool {
 	defer cancel()
 
 	recreateDB(ctx, t)
-	pool, err := Dial(ctx, "postgres", "postgres", "localhost:5432", AppDBName)
+	pool, err := pgdb.Dial(ctx, "postgres", "postgres", "localhost:5432", AppDBName)
 	require.NoError(t, err)
 
-	err = MigrateDatabase(pool, migrations.FS)
+	err = pgdb.Migrate(pool, migrations.FS)
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
@@ -33,7 +34,7 @@ func setupTestDB(t *testing.T) *pgxpool.Pool {
 }
 
 func recreateDB(ctx context.Context, t *testing.T) {
-	pool, err := Dial(ctx, "postgres", "postgres", "localhost:5432", "postgres")
+	pool, err := pgdb.Dial(ctx, "postgres", "postgres", "localhost:5432", "postgres")
 	require.NoError(t, err)
 	err = pool.Ping(ctx)
 	require.NoError(t, err)

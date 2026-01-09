@@ -14,22 +14,28 @@ import (
 	"time"
 
 	uiserver "github.com/coro-sh/coro-ui-server"
+	"github.com/joshjon/kit/pgdb"
+	"github.com/joshjon/kit/sqlitedb"
 	"github.com/labstack/echo/v4"
+
+	"github.com/joshjon/kit/log"
+	"github.com/joshjon/kit/server"
 
 	"github.com/coro-sh/coro/command"
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/log"
+	"github.com/coro-sh/coro/entityapi"
 	"github.com/coro-sh/coro/postgres"
-	"github.com/coro-sh/coro/server"
+	"github.com/coro-sh/coro/proxyapi"
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/sqlite/migrations"
+	"github.com/coro-sh/coro/streamapi"
 	"github.com/coro-sh/coro/tkn"
 )
 
 func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool, opts ...server.Option) error {
 	pgDialOps := getPostgresDialOpts(cfg.Postgres)
-	pg, err := postgres.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
+	pg, err := pgdb.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
 	if err != nil {
 		return err
 	}
@@ -64,7 +70,7 @@ func RunUI(ctx context.Context, logger log.Logger, cfg UIConfig, opts ...server.
 
 func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig, opts ...server.Option) error {
 	pgDialOps := getPostgresDialOpts(cfg.Postgres)
-	pg, err := postgres.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
+	pg, err := pgdb.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
 	if err != nil {
 		return err
 	}
@@ -86,8 +92,8 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 	srvOpts := []server.Option{
 		server.WithLogger(logger),
 		server.WithMiddleware(
-			entity.NamespaceContextMiddleware(),
-			entity.InternalNamespaceMiddleware(intNS.ID),
+			entityapi.NamespaceContextMiddleware(),
+			entityapi.InternalNamespaceMiddleware(intNS.ID),
 		),
 	}
 	if len(cfg.CorsOrigins) > 0 {
@@ -102,7 +108,7 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 		return err
 	}
 
-	var entityHandlerOpts []entity.HTTPHandlerOption[*entity.Store]
+	var entityHandlerOpts []entityapi.HTTPHandlerOption[*entity.Store]
 	if cfg.Broker != nil {
 		_, _, bSysUsr, err := InitBrokerNATSEntities(ctx, store, logger, intNS.ID)
 		if err != nil {
@@ -122,22 +128,22 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 			return fmt.Errorf("dial broker publisher: %w", err)
 		}
 
-		entityHandlerOpts = append(entityHandlerOpts, entity.WithCommander[*entity.Store](commander))
+		entityHandlerOpts = append(entityHandlerOpts, entityapi.WithCommander[*entity.Store](commander))
 		opTknRW := postgres.NewOperatorTokenReadWriter(pg)
 		opTknIssuer := tkn.NewOperatorIssuer(opTknRW, tkn.OperatorTokenTypeProxy)
-		srv.Register("/api/v1", command.NewProxyHTTPHandler(opTknIssuer, store, commander))
-		srv.Register("/api/v1", command.NewStreamHTTPHandler(store, commander))
-		srv.Register("/api/v1", command.NewStreamWebSocketHandler(store, commander, command.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
+		srv.Register("/api/v1", proxyapi.NewProxyHTTPHandler(opTknIssuer, store, commander))
+		srv.Register("/api/v1", streamapi.NewStreamHTTPHandler(store, commander))
+		srv.Register("/api/v1", streamapi.NewStreamWebSocketHandler(store, commander, streamapi.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
 	}
 
-	srv.Register("/api/v1", entity.NewHTTPHandler(store, entityHandlerOpts...))
+	srv.Register("/api/v1", entityapi.NewHTTPHandler(store, entityHandlerOpts...))
 
 	return Serve(ctx, srv, logger)
 }
 
 func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ...server.Option) error {
 	pgDialOps := getPostgresDialOpts(cfg.Postgres)
-	pg, err := postgres.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
+	pg, err := pgdb.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
 	if err != nil {
 		return err
 	}
@@ -196,10 +202,10 @@ func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ..
 }
 
 func RunDevServer(ctx context.Context, logger log.Logger, serverPort int, withUI bool) error {
-	db, err := sqlite.Open(ctx, sqlite.WithInMemory())
+	db, err := sqlitedb.Open(ctx, sqlitedb.WithInMemory())
 	defer db.Close()
 
-	if err = sqlite.MigrateDatabase(db, migrations.FS); err != nil {
+	if err = sqlitedb.Migrate(db, migrations.FS); err != nil {
 		return err
 	}
 
@@ -256,8 +262,8 @@ func runAll(
 		server.WithLogger(logger),
 		server.WithCORS(cfg.CorsOrigins...),
 		server.WithMiddleware(
-			entity.NamespaceContextMiddleware(),
-			entity.InternalNamespaceMiddleware(intNS.ID),
+			entityapi.NamespaceContextMiddleware(),
+			entityapi.InternalNamespaceMiddleware(intNS.ID),
 		),
 	}
 	if cfg.TLS != nil {
@@ -279,11 +285,11 @@ func runAll(
 		return fmt.Errorf("dial broker publisher: %w", err)
 	}
 
-	srv.Register("/api/v1", entity.NewHTTPHandler(store, entity.WithCommander[*entity.Store](commander)))
+	srv.Register("/api/v1", entityapi.NewHTTPHandler(store, entityapi.WithCommander[*entity.Store](commander)))
 	srv.Register("/api/v1", brokerHandler)
-	srv.Register("/api/v1", command.NewProxyHTTPHandler(opTknIssuer, store, commander))
-	srv.Register("/api/v1", command.NewStreamHTTPHandler(store, commander))
-	srv.Register("/api/v1", command.NewStreamWebSocketHandler(store, commander, command.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
+	srv.Register("/api/v1", proxyapi.NewProxyHTTPHandler(opTknIssuer, store, commander))
+	srv.Register("/api/v1", streamapi.NewStreamHTTPHandler(store, commander))
+	srv.Register("/api/v1", streamapi.NewStreamWebSocketHandler(store, commander, streamapi.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
 
 	if withUI {
 		var uiHandler, err = uiserver.AssetsHandler()
@@ -330,10 +336,10 @@ func NewHTTPClient(tlsCfg *TLSConfig) (*http.Client, error) {
 	return client, nil
 }
 
-func getPostgresDialOpts(cfg PostgresConfig) []postgres.DialOption {
-	var pgOpts []postgres.DialOption
+func getPostgresDialOpts(cfg PostgresConfig) []pgdb.DialOption {
+	var pgOpts []pgdb.DialOption
 	if cfg.TLS != nil {
-		pgOpts = append(pgOpts, postgres.WithTLS(postgres.TLSConfig{
+		pgOpts = append(pgOpts, pgdb.WithTLS(pgdb.TLSConfig{
 			CertFile:           cfg.TLS.CertFile,
 			KeyFile:            cfg.TLS.KeyFile,
 			CACertFile:         cfg.TLS.CACertFile,

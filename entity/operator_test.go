@@ -7,12 +7,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/coro-sh/coro/testutil"
+	"github.com/joshjon/kit/testutil"
 )
 
 func TestNewOperator(t *testing.T) {
 	name := testutil.RandName()
-	got, err := NewOperator(name, NewID[NamespaceID]())
+	got, err := NewOperator(name, id.New[NamespaceID]())
 	require.NoError(t, err)
 
 	assert.False(t, got.ID.IsZero())
@@ -40,7 +40,7 @@ func TestNewOperator(t *testing.T) {
 }
 
 func TestNewOperatorFromJWT(t *testing.T) {
-	operator, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
+	operator, err := NewOperator(testutil.RandName(), id.New[NamespaceID]())
 	require.NoError(t, err)
 
 	t.Run("valid data", func(t *testing.T) {
@@ -61,7 +61,7 @@ func TestNewOperatorFromJWT(t *testing.T) {
 }
 
 func TestOperator_SetName(t *testing.T) {
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
+	op, err := NewOperator(testutil.RandName(), id.New[NamespaceID]())
 	require.NoError(t, err)
 
 	err = op.SetName("foo")
@@ -73,7 +73,7 @@ func TestOperator_SetName(t *testing.T) {
 }
 
 func TestOperator_SetSystemAccount(t *testing.T) {
-	op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
+	op, err := NewOperator(testutil.RandName(), id.New[NamespaceID]())
 	require.NoError(t, err)
 
 	acc, err := NewAccount("test_account", op)
@@ -135,7 +135,7 @@ func TestOperator_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			op, err := NewOperator(testutil.RandName(), NewID[NamespaceID]())
+			op, err := NewOperator(testutil.RandName(), id.New[NamespaceID]())
 			require.NoError(t, err)
 
 			tt.modify(op)

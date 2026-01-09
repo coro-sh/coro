@@ -17,12 +17,12 @@ import (
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/embedns"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/log"
-	"github.com/coro-sh/coro/ref"
-	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/sqlite"
-	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tkn"
+	"github.com/joshjon/kit/log"
+	"github.com/joshjon/kit/ref"
+	"github.com/joshjon/kit/server"
+	"github.com/joshjon/kit/testutil"
 )
 
 const testTimeout = 5 * time.Second
@@ -51,7 +51,7 @@ func TestClusteredNotifications(t *testing.T) {
 	proxyTkn, err := tknIssuer.Generate(ctx, op.ID)
 	require.NoError(t, err)
 
-	bOp, err := entity.NewOperator("broker_test_operator", entity.NewID[entity.NamespaceID]())
+	bOp, err := entity.NewOperator("broker_test_operator", id.New[entity.NamespaceID]())
 	require.NoError(t, err)
 
 	bSysAcc, bSysUsr, err := bOp.SetNewSystemAccountAndUser()

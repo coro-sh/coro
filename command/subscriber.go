@@ -11,9 +11,10 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
+	"github.com/joshjon/kit/log"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/coro-sh/coro/log"
+	"github.com/coro-sh/coro/logkey"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 )
 
@@ -181,8 +182,8 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler SubscriberHandler) {
 				}
 
 				errMetaKeyVals = append(errMetaKeyVals,
-					log.KeyBrokerMessageID, pubMsg.Id,
-					log.KeyBrokerMessageOperation, opType,
+					logkey.BrokerMessageID, pubMsg.Id,
+					logkey.BrokerMessageOperation, opType,
 				)
 
 				err = handler(pubMsg, func(ctx context.Context, replyMsg *commandv1.ReplyMessage) error {

@@ -1,19 +1,11 @@
 package app
 
 import (
-	"embed"
-	"errors"
 	"fmt"
-	"io"
-	"os"
-	"strings"
 
-	"github.com/caarlos0/env/v11"
 	"github.com/cohesivestack/valgo"
-	"gopkg.in/yaml.v3"
-
-	"github.com/coro-sh/coro/log"
-	"github.com/coro-sh/coro/valgoutil"
+	"github.com/joshjon/kit/log"
+	"github.com/joshjon/kit/valgoutil"
 )
 
 const (
@@ -40,7 +32,7 @@ type UIConfig struct {
 	Port       int          `yaml:"port" env:"PORT"` // default: 8400
 	Logger     LoggerConfig `yaml:"logger" envPrefix:"LOGGER_"`
 	APIAddress string       `yaml:"apiAddress" env:"API_ADDRESS"` // default: http://localhost:5400
-	TLS        *TLSConfig   `yaml:"tls" envPrefix:"TLS"`
+	TLS        *TLSConfig   `yaml:"tls" envPrefix:"TLS_"`
 }
 
 func (c *UIConfig) InitDefaults() {
@@ -106,7 +98,7 @@ func (c *BrokerConfig) Validation() *valgo.Validation {
 type BaseConfig struct {
 	Port   int          `yaml:"port" env:"PORT"` // default: 5400
 	Logger LoggerConfig `yaml:"logger" envPrefix:"LOGGER_"`
-	TLS    *TLSConfig   `yaml:"tls" envPrefix:"TLS"`
+	TLS    *TLSConfig   `yaml:"tls" envPrefix:"TLS_"`
 	// EncryptionSecretKey (optional):
 	// Enables encryption for sensitive data like nkeys and proxy tokens.
 	// The key must be one of the following lengths: 16, 24, or 32 bytes,
@@ -176,7 +168,7 @@ type PostgresConfig struct {
 	HostPort string     `yaml:"hostPort"  env:"HOST_PORT"`
 	User     string     `yaml:"user"  env:"USER"`
 	Password string     `yaml:"password"  env:"PASSWORD"`
-	TLS      *TLSConfig `yaml:"tls" envPrefix:"TLS"`
+	TLS      *TLSConfig `yaml:"tls" envPrefix:"TLS_"`
 }
 
 func (c PostgresConfig) Validation() *valgo.Validation {
@@ -221,75 +213,4 @@ func (c *EmbeddedNATSConfig) Validation() *valgo.Validation {
 	}
 
 	return v
-}
-
-type loadConfigOptions struct {
-	fs *embed.FS
-}
-
-type LoadConfigOption func(*loadConfigOptions)
-
-func WithFS(fs embed.FS) LoadConfigOption {
-	return func(o *loadConfigOptions) {
-		o.fs = &fs
-	}
-}
-
-type Configurable interface {
-	InitDefaults()
-	Validation() *valgo.Validation
-}
-
-func LoadConfig(configFile string, out Configurable, opts ...LoadConfigOption) {
-	var options loadConfigOptions
-	for _, opt := range opts {
-		opt(&options)
-	}
-
-	err := func() error {
-		out.InitDefaults()
-
-		if configFile != "" {
-			var file io.ReadCloser
-			var err error
-
-			if options.fs != nil {
-				file, err = options.fs.Open(configFile)
-			} else {
-				file, err = os.Open(configFile)
-			}
-			if err != nil {
-				return fmt.Errorf("open config file: %w", err)
-			}
-			defer file.Close()
-
-			decoder := yaml.NewDecoder(file)
-			if err = decoder.Decode(out); err != nil {
-				return fmt.Errorf("decode config file: %w", err)
-			}
-		}
-
-		if err := env.Parse(out); err != nil {
-			return fmt.Errorf("parse config environment variables: %w", err)
-		}
-
-		if err := out.Validation().Error(); err != nil {
-			return err
-		}
-
-		return nil
-	}()
-
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Config errors:")
-		var verr *valgo.Error
-		if errors.As(err, &verr) {
-			for _, valErr := range verr.Errors() {
-				fmt.Fprintf(os.Stderr, "  %s: %s\n", valErr.Name(), strings.Join(valErr.Messages(), ","))
-			}
-		} else {
-			fmt.Fprintln(os.Stderr, fmt.Errorf("  %s", err.Error()))
-		}
-		os.Exit(1)
-	}
 }
