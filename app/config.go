@@ -101,9 +101,11 @@ type BaseConfig struct {
 	TLS    *TLSConfig   `yaml:"tls" envPrefix:"TLS_"`
 	// EncryptionSecretKey (optional):
 	// Enables encryption for sensitive data like nkeys and proxy tokens.
-	// The key must be one of the following lengths: 16, 24, or 32 bytes,
-	// corresponding to AES-128, AES-192, and AES-256, respectively. A key can
-	// be generated using a tool such as openssl e.g. `openssl rand -hex 32`.
+	// The key must decode to 16, 24, or 32 bytes (AES-128/192/256).
+	// Hex-encoded keys can be generated using:
+	//   openssl rand -hex 16 # AES-128
+	//   openssl rand -hex 24 # AES-192
+	//   openssl rand -hex 32 # AES-256
 	EncryptionSecretKey *string        `yaml:"encryptionSecretKey" env:"ENCRYPTION_SECRET_KEY"`
 	Postgres            PostgresConfig `yaml:"postgres" envPrefix:"POSTGRES_"`
 }
@@ -120,8 +122,7 @@ func (c *BaseConfig) Validation() *valgo.Validation {
 	v.In("postgres", c.Postgres.Validation())
 
 	if c.EncryptionSecretKey != nil {
-		v.Is(valgo.String(*c.EncryptionSecretKey, "encryptionSecretKey").
-			OfLength(16).Or().OfLength(24).Or().OfLength(32))
+		v.Is(valgoutil.HexAESKeyValidator(*c.EncryptionSecretKey, "encryptionSecretKey"))
 	}
 
 	if c.TLS != nil {

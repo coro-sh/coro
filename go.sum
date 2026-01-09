@@ -130,8 +130,8 @@ github.com/jinzhu/inflection v1.0.0 h1:K317FqzuhWc8YvSVlFMCCUb36O/S9MCKRDI7QkRKD
 github.com/jinzhu/inflection v1.0.0/go.mod h1:h+uFLlag+Qp1Va5pdKtLDYj+kHp5pxUVkryuEj+Srlc=
 github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8HmY=
 github.com/josharian/intern v1.0.0/go.mod h1:5DoeVV0s6jJacbCEi61lwdGj/aVlrQvzHFFd8Hwg//Y=
-github.com/joshjon/kit v0.0.0-20260109013433-073c8eda69ed h1:VTOOwCPWrZO8aDA6z3CSgjuWa3zMOh8b0viCcQopKIY=
-github.com/joshjon/kit v0.0.0-20260109013433-073c8eda69ed/go.mod h1:0iSoQf63y32KN4+iz621fnaH1lROl8ZkKe/akNnm67Q=
+github.com/joshjon/kit v0.0.0-20260109053709-813f931495c8 h1:RMg4Tese9RhHMig6p8q1n6P6P5c70txO1VYmqgDvYOY=
+github.com/joshjon/kit v0.0.0-20260109053709-813f931495c8/go.mod h1:0iSoQf63y32KN4+iz621fnaH1lROl8ZkKe/akNnm67Q=
 github.com/juju/gnuflag v0.0.0-20171113085948-2ce1bb71843d/go.mod h1:2PavIy+JPciBPrBUjwbNvtwB6RQlve+hkpll6QSNmOE=
 github.com/klauspost/compress v1.18.0 h1:c/Cqfb0r+Yi+JtIEq73FWXVkRonBlf0CRNYc8Zttxdo=
 github.com/klauspost/compress v1.18.0/go.mod h1:2Pp+KzxcywXVXMr50+X0Q/Lsb43OQHYWRCY2AiWywWQ=
