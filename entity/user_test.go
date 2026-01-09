@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joshjon/kit/ref"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/constants"
-	"github.com/coro-sh/coro/ref"
 	"github.com/coro-sh/coro/testutil"
 )
 

@@ -12,7 +12,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/coro-sh/coro/app"
-	"github.com/coro-sh/coro/log"
+	"github.com/joshjon/kit/log"
 )
 
 const (
@@ -60,27 +60,27 @@ func main() {
 				case serviceTypeAll:
 					var cfg app.AllConfig
 					app.LoadConfig(f.configFile, &cfg)
-					logger = loggerFromConfig(cfg.Logger).With(log.KeyService, serviceTypeAll)
+					logger = loggerFromConfig(cfg.Logger).With(logkey.Service, serviceTypeAll)
 					return app.RunAll(ctx, logger, cfg, true)
 				case serviceTypeUI:
 					var cfg app.UIConfig
 					app.LoadConfig(f.configFile, &cfg)
-					logger = loggerFromConfig(cfg.Logger).With(log.KeyService, serviceTypeUI)
+					logger = loggerFromConfig(cfg.Logger).With(logkey.Service, serviceTypeUI)
 					return app.RunUI(ctx, logger, cfg)
 				case serviceTypeAllBackend:
 					var cfg app.AllConfig
 					app.LoadConfig(f.configFile, &cfg)
-					logger = loggerFromConfig(cfg.Logger).With(log.KeyService, serviceTypeAllBackend)
+					logger = loggerFromConfig(cfg.Logger).With(logkey.Service, serviceTypeAllBackend)
 					return app.RunAll(ctx, logger, cfg, false)
 				case serviceTypeController:
 					var cfg app.ControllerConfig
 					app.LoadConfig(f.configFile, &cfg)
-					logger = loggerFromConfig(cfg.Logger).With(log.KeyService, serviceTypeController)
+					logger = loggerFromConfig(cfg.Logger).With(logkey.Service, serviceTypeController)
 					return app.RunController(ctx, logger, cfg)
 				case serviceTypeBroker:
 					var cfg app.BrokerConfig
 					app.LoadConfig(f.configFile, &cfg)
-					logger = loggerFromConfig(cfg.Logger).With(log.KeyService, serviceTypeBroker)
+					logger = loggerFromConfig(cfg.Logger).With(logkey.Service, serviceTypeBroker)
 					return app.RunBroker(ctx, logger, cfg)
 				default:
 					return fmt.Errorf("invalid service type: %s", f.service)
@@ -117,12 +117,12 @@ func parseFlags(c *cli.Context) flags {
 }
 
 func exitOnInvalidFlags(c *cli.Context, v *valgo.Validation) {
-	if v.Error() == nil {
+	if v.ToError() == nil {
 		return
 	}
 	fmt.Fprintln(os.Stderr, "Flag errors:")
 
-	for _, verr := range v.Error().(*valgo.Error).Errors() {
+	for _, verr := range v.ToError().(*valgo.Error).Errors() {
 		fmt.Fprintf(os.Stderr, "  %s: %s\n", verr.Name(), strings.Join(verr.Messages(), ","))
 	}
 

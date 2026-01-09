@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/coro-sh/coro/errtag"
+	"github.com/joshjon/kit/errtag"
 )
 
 // PGXTxer is implemented by types that can begin a pgx-backed transaction.

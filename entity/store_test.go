@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/joshjon/kit/errtag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/errtag"
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/testutil"
 )

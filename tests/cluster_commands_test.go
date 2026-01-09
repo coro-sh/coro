@@ -17,12 +17,12 @@ import (
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/embedns"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/log"
-	"github.com/coro-sh/coro/ref"
-	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tkn"
+	"github.com/joshjon/kit/log"
+	"github.com/joshjon/kit/ref"
+	"github.com/joshjon/kit/server"
 )
 
 const testTimeout = 5 * time.Second

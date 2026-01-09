@@ -6,7 +6,7 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/coro-sh/coro/errtag"
+	"github.com/joshjon/kit/errtag"
 )
 
 type ErrTagNkeyNotFound struct{ errtag.NotFound }

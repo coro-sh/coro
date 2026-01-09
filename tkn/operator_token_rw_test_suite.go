@@ -10,9 +10,9 @@ import (
 
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/errtag"
 	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tx"
+	"github.com/joshjon/kit/errtag"
 )
 
 const defaultTimeout = 5 * time.Second

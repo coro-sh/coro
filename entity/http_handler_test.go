@@ -10,6 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joshjon/kit/errtag"
+	"github.com/joshjon/kit/paginate"
+	"github.com/joshjon/kit/ref"
+	"github.com/joshjon/kit/server"
 	"github.com/nats-io/jwt/v2"
 	natsrv "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
@@ -18,10 +22,6 @@ import (
 
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/paginate"
-	"github.com/coro-sh/coro/ref"
-	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/testutil"
 )
 

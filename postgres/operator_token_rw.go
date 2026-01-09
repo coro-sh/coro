@@ -6,8 +6,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/joshjon/kit/errtag"
+
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/errtag"
 	"github.com/coro-sh/coro/postgres/sqlc"
 	"github.com/coro-sh/coro/tkn"
 	"github.com/coro-sh/coro/tx"

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/errtag"
+	"github.com/joshjon/kit/errtag"
 )
 
 type OperatorTokenType string

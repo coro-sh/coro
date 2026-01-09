@@ -3,8 +3,9 @@ package entity
 import (
 	"github.com/labstack/echo/v4"
 
+	"github.com/joshjon/kit/errtag"
+
 	"github.com/coro-sh/coro/constants"
-	"github.com/coro-sh/coro/errtag"
 )
 
 type NamespaceIDGetter interface {

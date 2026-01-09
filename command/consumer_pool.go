@@ -7,9 +7,9 @@ import (
 
 	"github.com/nats-io/nats.go/jetstream"
 
-	"github.com/coro-sh/coro/errtag"
 	"github.com/coro-sh/coro/natsutil"
 	"github.com/coro-sh/coro/syncutil"
+	"github.com/joshjon/kit/errtag"
 )
 
 const (

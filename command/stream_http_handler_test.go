@@ -14,9 +14,9 @@ import (
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
-	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/testutil"
+	"github.com/joshjon/kit/server"
 )
 
 func TestStreamHTTPHandler_ListStreams(t *testing.T) {

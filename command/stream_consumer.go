@@ -9,8 +9,8 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/log"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
+	"github.com/joshjon/kit/log"
 )
 
 type streamConsumer struct {

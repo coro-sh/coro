@@ -10,14 +10,15 @@ import (
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 	"github.com/google/uuid"
+	"github.com/joshjon/kit/log"
+	"github.com/joshjon/kit/server"
 	"github.com/labstack/echo/v4"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/log"
+	"github.com/coro-sh/coro/logkey"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
-	"github.com/coro-sh/coro/server"
 )
 
 // streamWebSocketSubprotocol specifies the WebSocket subprotocol name.
@@ -82,14 +83,14 @@ func (s *StreamWebSocketHandler) HandleConsume(c echo.Context) (err error) {
 	}
 	accID := entity.MustParseID[entity.AccountID](req.AccountID)
 
-	c.Set(log.KeyAccountID, accID)
-	c.Set(log.KeyStreamName, req.StreamName)
-	c.Set(log.KeyConsumerStartSequence, req.StartSequence)
+	c.Set(logkey.AccountID, accID)
+	c.Set(logkey.StreamName, req.StreamName)
+	c.Set(logkey.ConsumerStartSequence, req.StartSequence)
 
 	logger = logger.With(
-		log.KeyAccountID, accID,
-		log.KeyStreamName, req.StreamName,
-		log.KeyConsumerStartSequence, req.StartSequence,
+		logkey.AccountID, accID,
+		logkey.StreamName, req.StreamName,
+		logkey.ConsumerStartSequence, req.StartSequence,
 	)
 
 	acc, err := s.accReader.ReadAccount(ctx, accID)

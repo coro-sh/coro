@@ -8,9 +8,10 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/joshjon/kit/server"
+
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/log"
-	"github.com/coro-sh/coro/server"
+	"github.com/coro-sh/coro/logkey"
 	"github.com/coro-sh/coro/tkn"
 )
 
@@ -57,7 +58,7 @@ func (h *ProxyHTTPHandler) GenerateProxyToken(c echo.Context) error {
 		return err
 	}
 	opID := entity.MustParseID[entity.OperatorID](req.OperatorID)
-	c.Set(log.KeyOperatorID, opID)
+	c.Set(logkey.OperatorID, opID)
 
 	op, err := h.opReader.ReadOperator(ctx, opID)
 	if err != nil {
@@ -89,7 +90,7 @@ func (h *ProxyHTTPHandler) GetProxyStatus(c echo.Context) error {
 		return err
 	}
 	opID := entity.MustParseID[entity.OperatorID](req.OperatorID)
-	c.Set(log.KeyOperatorID, opID)
+	c.Set(logkey.OperatorID, opID)
 
 	op, err := h.opReader.ReadOperator(ctx, opID)
 	if err != nil {

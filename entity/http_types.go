@@ -57,7 +57,7 @@ type UpdateOperatorRequest struct {
 func (r UpdateOperatorRequest) Validate() error {
 	v := valgo.In("params", valgo.Is(IDValidator[OperatorID](r.ID, "operator_id")))
 	v.Is(operatorNameValidator(r.Name, "name"))
-	return v.Error()
+	return v.ToError()
 }
 
 type GetOperatorRequest struct {
@@ -125,7 +125,7 @@ func (r CreateAccountRequest) Validate() error {
 		v.In("limits", r.Limits.validation())
 	}
 	v.In("params", valgo.Is(IDValidator[OperatorID](r.OperatorID, "operator_id")))
-	return v.Error()
+	return v.ToError()
 }
 
 type GetAccountRequest struct {
@@ -160,7 +160,7 @@ func (r UpdateAccountRequest) Validate() error {
 	if r.Limits != nil {
 		v.In("limits", r.Limits.validation())
 	}
-	return v.Error()
+	return v.ToError()
 }
 
 type ListAccountsRequest struct {
@@ -199,7 +199,7 @@ type CreateUserRequest struct {
 func (r CreateUserRequest) Validate() error {
 	v := valgo.Is(userNameValidator(r.Name, "name"))
 	v.In("params", valgo.Is(IDValidator[AccountID](r.AccountID, "account_id")))
-	return v.Error()
+	return v.ToError()
 }
 
 type UpdateUserRequest struct {
@@ -214,7 +214,7 @@ func (r UpdateUserRequest) Validate() error {
 	if r.Limits != nil {
 		v.In("limits", r.Limits.validation())
 	}
-	return v.Error()
+	return v.ToError()
 }
 
 type GetUserRequest struct {

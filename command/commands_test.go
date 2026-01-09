@@ -20,10 +20,10 @@ import (
 	"github.com/coro-sh/coro/embedns"
 	"github.com/coro-sh/coro/entity"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
-	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tkn"
+	"github.com/joshjon/kit/server"
 )
 
 const testTimeout = 5 * time.Second

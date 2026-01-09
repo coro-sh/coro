@@ -14,14 +14,17 @@ import (
 	"time"
 
 	uiserver "github.com/coro-sh/coro-ui-server"
+	"github.com/joshjon/kit/pgdb"
+	"github.com/joshjon/kit/sqlitedb"
 	"github.com/labstack/echo/v4"
+
+	"github.com/joshjon/kit/log"
+	"github.com/joshjon/kit/server"
 
 	"github.com/coro-sh/coro/command"
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/log"
 	"github.com/coro-sh/coro/postgres"
-	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/sqlite/migrations"
 	"github.com/coro-sh/coro/tkn"
@@ -29,7 +32,7 @@ import (
 
 func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool, opts ...server.Option) error {
 	pgDialOps := getPostgresDialOpts(cfg.Postgres)
-	pg, err := postgres.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
+	pg, err := pgdb.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
 	if err != nil {
 		return err
 	}
@@ -64,7 +67,7 @@ func RunUI(ctx context.Context, logger log.Logger, cfg UIConfig, opts ...server.
 
 func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig, opts ...server.Option) error {
 	pgDialOps := getPostgresDialOpts(cfg.Postgres)
-	pg, err := postgres.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
+	pg, err := pgdb.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
 	if err != nil {
 		return err
 	}
@@ -137,7 +140,7 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 
 func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ...server.Option) error {
 	pgDialOps := getPostgresDialOpts(cfg.Postgres)
-	pg, err := postgres.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
+	pg, err := pgdb.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
 	if err != nil {
 		return err
 	}
@@ -196,10 +199,10 @@ func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ..
 }
 
 func RunDevServer(ctx context.Context, logger log.Logger, serverPort int, withUI bool) error {
-	db, err := sqlite.Open(ctx, sqlite.WithInMemory())
+	db, err := sqlitedb.Open(ctx, sqlitedb.WithInMemory())
 	defer db.Close()
 
-	if err = sqlite.MigrateDatabase(db, migrations.FS); err != nil {
+	if err = sqlitedb.Migrate(db, migrations.FS); err != nil {
 		return err
 	}
 
@@ -330,10 +333,10 @@ func NewHTTPClient(tlsCfg *TLSConfig) (*http.Client, error) {
 	return client, nil
 }
 
-func getPostgresDialOpts(cfg PostgresConfig) []postgres.DialOption {
-	var pgOpts []postgres.DialOption
+func getPostgresDialOpts(cfg PostgresConfig) []pgdb.DialOption {
+	var pgOpts []pgdb.DialOption
 	if cfg.TLS != nil {
-		pgOpts = append(pgOpts, postgres.WithTLS(postgres.TLSConfig{
+		pgOpts = append(pgOpts, pgdb.WithTLS(pgdb.TLSConfig{
 			CertFile:           cfg.TLS.CertFile,
 			KeyFile:            cfg.TLS.KeyFile,
 			CACertFile:         cfg.TLS.CACertFile,

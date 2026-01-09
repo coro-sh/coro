@@ -10,10 +10,10 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/cohesivestack/valgo"
+	"github.com/joshjon/kit/valgoutil"
 	"gopkg.in/yaml.v3"
 
-	"github.com/coro-sh/coro/log"
-	"github.com/coro-sh/coro/valgoutil"
+	"github.com/joshjon/kit/log"
 )
 
 const (
@@ -273,7 +273,7 @@ func LoadConfig(configFile string, out Configurable, opts ...LoadConfigOption) {
 			return fmt.Errorf("parse config environment variables: %w", err)
 		}
 
-		if err := out.Validation().Error(); err != nil {
+		if err := out.Validation().ToError(); err != nil {
 			return err
 		}
 

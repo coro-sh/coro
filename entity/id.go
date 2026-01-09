@@ -1,9 +1,8 @@
 package entity
 
 import (
+	kid "github.com/joshjon/kit/id"
 	"go.jetify.com/typeid"
-
-	cid "github.com/coro-sh/coro/id"
 )
 
 // ID is a generic identifier interface that combines all entity ID types
@@ -17,16 +16,16 @@ type ID interface {
 // NewID creates a new instance of the specified ID type. It panics if the ID
 // cannot be generated.
 func NewID[I ID, PI typeid.SubtypePtr[I]]() I {
-	return cid.New[I, PI]()
+	return kid.New[I, PI]()
 }
 
 // ParseID parses a string representation of an ID into the specified ID type.
 func ParseID[I ID, PI typeid.SubtypePtr[I]](id string) (I, error) {
-	return cid.Parse[I, PI](id)
+	return kid.Parse[I, PI](id)
 }
 
 // MustParseID parses a string representation of an ID into the specified ID
 // type and panics if it cannot be parsed.
 func MustParseID[I ID, PI typeid.SubtypePtr[I]](id string) I {
-	return cid.MustParse[I, PI](id)
+	return kid.MustParse[I, PI](id)
 }

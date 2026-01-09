@@ -9,9 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/joshjon/kit/server"
+
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/testutil"
 	"github.com/coro-sh/coro/tkn"

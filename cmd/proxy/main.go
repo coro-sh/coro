@@ -11,11 +11,11 @@ import (
 	"strings"
 
 	"github.com/cohesivestack/valgo"
+	"github.com/joshjon/kit/log"
+	"github.com/joshjon/kit/valgoutil"
 	"github.com/urfave/cli/v2"
 
 	"github.com/coro-sh/coro/command"
-	"github.com/coro-sh/coro/log"
-	"github.com/coro-sh/coro/valgoutil"
 )
 
 func main() {
@@ -244,12 +244,12 @@ func loadConfig(c *cli.Context) config {
 }
 
 func exitOnInvalidFlags(c *cli.Context, v *valgo.Validation) {
-	if v.Error() == nil {
+	if v.ToError() == nil {
 		return
 	}
 	fmt.Fprintln(os.Stderr, "Flag errors:")
 
-	for _, verr := range v.Error().(*valgo.Error).Errors() {
+	for _, verr := range v.ToError().(*valgo.Error).Errors() {
 		fmt.Fprintf(os.Stderr, "  %s: %s\n", verr.Name(), strings.Join(verr.Messages(), ","))
 	}
 

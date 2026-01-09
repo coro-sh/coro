@@ -15,6 +15,8 @@ import (
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 	"github.com/google/uuid"
+	"github.com/joshjon/kit/errtag"
+	"github.com/joshjon/kit/log"
 	"github.com/labstack/echo/v4"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
@@ -22,8 +24,7 @@ import (
 
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/log"
+	"github.com/coro-sh/coro/logkey"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 )
 
@@ -63,7 +64,7 @@ type BrokerWebsocketOption func(b *BrokerWebSocketHandler)
 // WithBrokerWebsocketLogger configures a BrokerWebSocketHandler to use the specified logger.
 func WithBrokerWebsocketLogger(logger log.Logger) BrokerWebsocketOption {
 	return func(b *BrokerWebSocketHandler) {
-		b.logger = logger.With(log.KeyComponent, "broker.websocket_handler")
+		b.logger = logger.With(logkey.Component, "broker.websocket_handler")
 	}
 }
 
@@ -198,7 +199,7 @@ func (b *BrokerWebSocketHandler) Handle(c echo.Context) (err error) {
 
 	getLogger().Info("websocket handshake accepted")
 	opID := sysUser.OperatorID
-	logger = logger.With(log.KeyOperatorID, opID, log.KeySystemUserID, sysUser.ID)
+	logger = logger.With(logkey.OperatorID, opID, logkey.SystemUserID, sysUser.ID)
 
 	b.connections.Store(opID, time.Now())
 	defer func() { b.connections.Delete(opID) }()
@@ -249,7 +250,7 @@ func (b *BrokerWebSocketHandler) Handle(c echo.Context) (err error) {
 					ctx, cancel := context.WithTimeout(rctx, brokerWriteTimeout)
 					defer cancel()
 
-					metaKV := []any{"nats.subject", fwdMsg.Subject, log.KeyBrokerMessageReplyInbox, fwdMsg.Reply}
+					metaKV := []any{"nats.subject", fwdMsg.Subject, logkey.BrokerMessageReplyInbox, fwdMsg.Reply}
 
 					// Unmarshal the message so we can log the message ID
 					msgpb := &commandv1.PublishMessage{}
@@ -259,7 +260,7 @@ func (b *BrokerWebSocketHandler) Handle(c echo.Context) (err error) {
 					}
 					msgID := msgpb.Id
 
-					metaKV = append(metaKV, log.KeyBrokerMessageID, msgpb.Id)
+					metaKV = append(metaKV, logkey.BrokerMessageID, msgpb.Id)
 
 					if werr := conn.Write(ctx, websocket.MessageText, fwdMsg.Data); werr != nil {
 						subWorkerErrsCh <- wrapBrokerErr(fmt.Errorf("writer worker: write notify message %s to websocket: %w", msgID, werr), metaKV...)
@@ -349,8 +350,8 @@ func (b *BrokerWebSocketHandler) Handle(c echo.Context) (err error) {
 							select {
 							case nextReplyMsg := <-replyInboxCh:
 								metaKV := []any{
-									log.KeyBrokerMessageID, nextReplyMsg.Id,
-									log.KeyBrokerMessageReplyInbox, nextReplyMsg.Inbox,
+									logkey.BrokerMessageID, nextReplyMsg.Id,
+									logkey.BrokerMessageReplyInbox, nextReplyMsg.Inbox,
 								}
 
 								msgb, err := proto.Marshal(nextReplyMsg)
@@ -489,7 +490,7 @@ func (b *BrokerWebSocketHandler) startPingOperatorWorker() error {
 
 		for msg := range msgs {
 			opIDStr := strings.TrimPrefix(msg.Subject, pingOperatorSubjectBase+".OPERATOR.")
-			logger := b.logger.With(log.KeyOperatorID, opIDStr)
+			logger := b.logger.With(logkey.OperatorID, opIDStr)
 
 			opID, err := entity.ParseID[entity.OperatorID](opIDStr)
 			if err != nil {

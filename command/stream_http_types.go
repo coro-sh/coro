@@ -44,7 +44,7 @@ func (r FetchStreamMessagesRequest) Validate() error {
 	v.In("query_params", valgo.Is(
 		valgo.Uint32(r.BatchSize, "batch_size").LessOrEqualTo(1000),
 	))
-	return v.Error()
+	return v.ToError()
 }
 
 type GetStreamMessageContentRequest struct {

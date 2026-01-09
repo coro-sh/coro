@@ -19,8 +19,8 @@ import (
 
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/errtag"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
+	"github.com/joshjon/kit/errtag"
 )
 
 const (

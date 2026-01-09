@@ -6,10 +6,10 @@ import (
 	"errors"
 
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/errtag"
 	"github.com/coro-sh/coro/sqlite/sqlc"
 	"github.com/coro-sh/coro/tkn"
 	"github.com/coro-sh/coro/tx"
+	"github.com/joshjon/kit/errtag"
 )
 
 var _ tkn.OperatorTokenReadWriter = (*OperatorTokenReadWriter)(nil)

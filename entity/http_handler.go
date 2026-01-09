@@ -8,14 +8,14 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/joshjon/kit/ref"
+	"github.com/joshjon/kit/server"
 	"github.com/labstack/echo/v4"
 	"github.com/nats-io/jwt/v2"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/coro-sh/coro/constants"
-	"github.com/coro-sh/coro/log"
-	"github.com/coro-sh/coro/ref"
-	"github.com/coro-sh/coro/server"
+	"github.com/coro-sh/coro/logkey"
 )
 
 const (
@@ -122,7 +122,7 @@ func (h *HTTPHandler[S]) CreateNamespace(c echo.Context) (err error) {
 	}
 
 	ns := NewNamespace(req.Name, owner)
-	c.Set(log.KeyNamespaceID, ns.ID)
+	c.Set(logkey.NamespaceID, ns.ID)
 
 	if err = h.store.CreateNamespace(ctx, ns); err != nil {
 		return err
@@ -167,7 +167,7 @@ func (h *HTTPHandler[S]) DeleteNamespace(c echo.Context) error {
 	}
 
 	nsID := MustParseID[NamespaceID](req.ID)
-	c.Set(log.KeyNamespaceID, nsID)
+	c.Set(logkey.NamespaceID, nsID)
 
 	if err = h.store.DeleteNamespace(ctx, nsID); err != nil {
 		return err
@@ -190,7 +190,7 @@ func (h *HTTPHandler[S]) CreateOperator(c echo.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	c.Set(log.KeyOperatorID, op.ID)
+	c.Set(logkey.OperatorID, op.ID)
 
 	data, err := op.Data()
 	if err != nil {
@@ -201,8 +201,8 @@ func (h *HTTPHandler[S]) CreateOperator(c echo.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	c.Set(log.KeySystemAccountID, sysAcc.ID)
-	c.Set(log.KeySystemUserID, sysUser.ID)
+	c.Set(logkey.SystemAccountID, sysAcc.ID)
+	c.Set(logkey.SystemUserID, sysUser.ID)
 
 	err = h.store.BeginTxFunc(ctx, func(ctx context.Context, store S) error {
 		if err = store.CreateOperator(ctx, op); err != nil {
@@ -235,7 +235,7 @@ func (h *HTTPHandler[S]) UpdateOperator(c echo.Context) error {
 	}
 
 	opID := MustParseID[OperatorID](req.ID)
-	c.Set(log.KeyOperatorID, opID)
+	c.Set(logkey.OperatorID, opID)
 
 	op, err := h.store.ReadOperator(ctx, opID)
 	if err != nil {
@@ -280,7 +280,7 @@ func (h *HTTPHandler[S]) GetOperator(c echo.Context) error {
 	}
 
 	opID := MustParseID[OperatorID](req.ID)
-	c.Set(log.KeyOperatorID, opID)
+	c.Set(logkey.OperatorID, opID)
 
 	op, err := h.store.ReadOperator(ctx, opID)
 	if err != nil {
@@ -317,7 +317,7 @@ func (h *HTTPHandler[S]) DeleteOperator(c echo.Context) error {
 	}
 
 	opID := MustParseID[OperatorID](req.ID)
-	c.Set(log.KeyOperatorID, opID)
+	c.Set(logkey.OperatorID, opID)
 
 	op, err := h.store.ReadOperator(ctx, opID)
 	if err != nil {
@@ -345,7 +345,7 @@ func (h *HTTPHandler[S]) ListOperators(c echo.Context) error {
 	}
 
 	nsID := MustParseID[NamespaceID](req.NamespaceID)
-	c.Set(log.KeyNamespaceID, nsID)
+	c.Set(logkey.NamespaceID, nsID)
 
 	ops, cursor, err := PaginateOperators(ctx, c, h.store, nsID)
 	if err != nil {
@@ -397,7 +397,7 @@ func (h *HTTPHandler[S]) CreateAccount(c echo.Context) error {
 	}
 
 	opID := MustParseID[OperatorID](req.OperatorID)
-	c.Set(log.KeyOperatorID, opID)
+	c.Set(logkey.OperatorID, opID)
 
 	op, err := h.store.ReadOperator(ctx, opID)
 	if err != nil {
@@ -412,7 +412,7 @@ func (h *HTTPHandler[S]) CreateAccount(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	c.Set(log.KeyAccountID, acc.ID)
+	c.Set(logkey.AccountID, acc.ID)
 
 	if req.Limits != nil {
 		if err = acc.Update(op, toUpdateAccountParams(req.Name, req.Limits)); err != nil {
@@ -461,13 +461,13 @@ func (h *HTTPHandler[S]) UpdateAccount(c echo.Context) error {
 	}
 
 	accID := MustParseID[AccountID](req.ID)
-	c.Set(log.KeyAccountID, accID)
+	c.Set(logkey.AccountID, accID)
 
 	acc, err := h.store.ReadAccount(ctx, accID)
 	if err != nil {
 		return err
 	}
-	c.Set(log.KeyOperatorID, acc.OperatorID)
+	c.Set(logkey.OperatorID, acc.OperatorID)
 
 	if err = VerifyEntityNamespace(c, acc); err != nil {
 		return err
@@ -525,13 +525,13 @@ func (h *HTTPHandler[S]) GetAccount(c echo.Context) error {
 	}
 
 	accID := MustParseID[AccountID](req.ID)
-	c.Set(log.KeyAccountID, accID)
+	c.Set(logkey.AccountID, accID)
 
 	acc, err := h.store.ReadAccount(ctx, accID)
 	if err != nil {
 		return err
 	}
-	c.Set(log.KeyOperatorID, acc.OperatorID)
+	c.Set(logkey.OperatorID, acc.OperatorID)
 
 	if err = VerifyEntityNamespace(c, acc); err != nil {
 		return err
@@ -567,7 +567,7 @@ func (h *HTTPHandler[S]) ListAccounts(c echo.Context) error {
 	}
 
 	opID := MustParseID[OperatorID](req.OperatorID)
-	c.Set(log.KeyOperatorID, opID)
+	c.Set(logkey.OperatorID, opID)
 
 	accs, cursor, err := PaginateAccounts(ctx, c, h.store, opID)
 	if err != nil {
@@ -609,7 +609,7 @@ func (h *HTTPHandler[S]) DeleteAccount(c echo.Context) error {
 	}
 
 	accID := MustParseID[AccountID](req.ID)
-	c.Set(log.KeyAccountID, accID)
+	c.Set(logkey.AccountID, accID)
 
 	op, err := h.store.ReadAccount(ctx, accID)
 	if err != nil {
@@ -636,13 +636,13 @@ func (h *HTTPHandler[S]) CreateUser(c echo.Context) error {
 		return err
 	}
 	accID := MustParseID[AccountID](req.AccountID)
-	c.Set(log.KeyAccountID, accID)
+	c.Set(logkey.AccountID, accID)
 
 	acc, err := h.store.ReadAccount(ctx, accID)
 	if err != nil {
 		return err
 	}
-	c.Set(log.KeyOperatorID, acc.OperatorID)
+	c.Set(logkey.OperatorID, acc.OperatorID)
 
 	if err = VerifyEntityNamespace(c, acc); err != nil {
 		return err
@@ -656,7 +656,7 @@ func (h *HTTPHandler[S]) CreateUser(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	c.Set(log.KeyUserID, usr.ID)
+	c.Set(logkey.UserID, usr.ID)
 
 	if req.Limits != nil {
 		if err = usr.Update(acc, toUpdateUserParams(req.Name, req.Limits)); err != nil {
@@ -700,14 +700,14 @@ func (h *HTTPHandler[S]) UpdateUser(c echo.Context) error {
 	}
 
 	userID := MustParseID[UserID](req.ID)
-	c.Set(log.KeyUserID, userID)
+	c.Set(logkey.UserID, userID)
 
 	usr, err := h.store.ReadUser(ctx, userID)
 	if err != nil {
 		return err
 	}
-	c.Set(log.KeyOperatorID, usr.OperatorID)
-	c.Set(log.KeyAccountID, usr.AccountID)
+	c.Set(logkey.OperatorID, usr.OperatorID)
+	c.Set(logkey.AccountID, usr.AccountID)
 
 	if err = VerifyEntityNamespace(c, usr); err != nil {
 		return err
@@ -764,14 +764,14 @@ func (h *HTTPHandler[S]) GetUser(c echo.Context) error {
 		return err
 	}
 	userID := MustParseID[UserID](req.ID)
-	c.Set(log.KeyUserID, userID)
+	c.Set(logkey.UserID, userID)
 
 	usr, err := h.store.ReadUser(ctx, userID)
 	if err != nil {
 		return err
 	}
-	c.Set(log.KeyOperatorID, usr.OperatorID)
-	c.Set(log.KeyAccountID, usr.AccountID)
+	c.Set(logkey.OperatorID, usr.OperatorID)
+	c.Set(logkey.AccountID, usr.AccountID)
 
 	if err = VerifyEntityNamespace(c, usr); err != nil {
 		return err
@@ -813,7 +813,7 @@ func (h *HTTPHandler[S]) ListUsers(c echo.Context) error {
 	}
 
 	accID := MustParseID[AccountID](req.AccountID)
-	c.Set(log.KeyAccountID, accID)
+	c.Set(logkey.AccountID, accID)
 
 	acc, err := h.store.ReadAccount(ctx, accID)
 	if err != nil {
@@ -869,7 +869,7 @@ func (h *HTTPHandler[S]) DeleteUser(c echo.Context) error {
 	}
 
 	userID := MustParseID[UserID](req.ID)
-	c.Set(log.KeyUserID, userID)
+	c.Set(logkey.UserID, userID)
 
 	op, err := h.store.ReadUser(ctx, userID)
 	if err != nil {
@@ -911,14 +911,14 @@ func (h *HTTPHandler[S]) GetUserCreds(c echo.Context) error {
 		return err
 	}
 	userID := MustParseID[UserID](req.ID)
-	c.Set(log.KeyUserID, userID)
+	c.Set(logkey.UserID, userID)
 
 	usr, err := h.store.ReadUser(ctx, userID)
 	if err != nil {
 		return err
 	}
-	c.Set(log.KeyOperatorID, usr.OperatorID)
-	c.Set(log.KeyAccountID, usr.AccountID)
+	c.Set(logkey.OperatorID, usr.OperatorID)
+	c.Set(logkey.AccountID, usr.AccountID)
 
 	if err = VerifyEntityNamespace(c, usr); err != nil {
 		return err
@@ -973,14 +973,14 @@ func (h *HTTPHandler[S]) ListUserJWTIssuances(c echo.Context) error {
 		return err
 	}
 	userID := MustParseID[UserID](req.ID)
-	c.Set(log.KeyUserID, userID)
+	c.Set(logkey.UserID, userID)
 
 	usr, err := h.store.ReadUser(ctx, userID)
 	if err != nil {
 		return err
 	}
-	c.Set(log.KeyOperatorID, usr.OperatorID)
-	c.Set(log.KeyAccountID, usr.AccountID)
+	c.Set(logkey.OperatorID, usr.OperatorID)
+	c.Set(logkey.AccountID, usr.AccountID)
 
 	if err = VerifyEntityNamespace(c, usr); err != nil {
 		return err
@@ -1015,7 +1015,7 @@ func (h *HTTPHandler[S]) GetNATSConfig(c echo.Context) error {
 		return err
 	}
 	opID := MustParseID[OperatorID](req.ID)
-	c.Set(log.KeyOperatorID, opID)
+	c.Set(logkey.OperatorID, opID)
 
 	op, err := h.store.ReadOperator(ctx, opID)
 	if err != nil {
@@ -1039,7 +1039,7 @@ func (h *HTTPHandler[S]) GetNATSConfig(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	c.Set(log.KeySystemAccountID, sysAcc.ID)
+	c.Set(logkey.SystemAccountID, sysAcc.ID)
 
 	content, err := NewDirResolverConfig(op, sysAcc, DefaultResolverDir)
 	if err != nil {

@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	"github.com/cohesivestack/valgo"
+	"github.com/joshjon/kit/errtag"
 	"github.com/labstack/echo/v4"
 
-	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/log"
+	"github.com/coro-sh/coro/logkey"
 )
 
 const namespaceContextKey = "req_namespace"
@@ -27,7 +27,7 @@ func NamespaceContextMiddleware() echo.MiddlewareFunc {
 			}
 			nsID := MustParseID[NamespaceID](nsIDStr)
 			c.Set(namespaceContextKey, nsID)
-			c.Set(log.KeyNamespaceID, nsID)
+			c.Set(logkey.NamespaceID, nsID)
 			return next(c)
 		}
 	}

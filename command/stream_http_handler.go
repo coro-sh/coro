@@ -6,15 +6,15 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/joshjon/kit/errtag"
+	"github.com/joshjon/kit/server"
 	"github.com/labstack/echo/v4"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/errtag"
-	"github.com/coro-sh/coro/log"
+	"github.com/coro-sh/coro/logkey"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
-	"github.com/coro-sh/coro/server"
 )
 
 const (
@@ -65,7 +65,7 @@ func (h *StreamHTTPHandler) ListStreams(c echo.Context) error {
 		return err
 	}
 	accID := entity.MustParseID[entity.AccountID](req.AccountID)
-	c.Set(log.KeyAccountID, accID)
+	c.Set(logkey.AccountID, accID)
 
 	acc, err := h.accReader.ReadAccount(ctx, accID)
 	if err != nil {
@@ -105,8 +105,8 @@ func (h *StreamHTTPHandler) GetStream(c echo.Context) error {
 		return err
 	}
 	accID := entity.MustParseID[entity.AccountID](req.AccountID)
-	c.Set(log.KeyAccountID, accID)
-	c.Set(log.KeyStreamName, req.StreamName)
+	c.Set(logkey.AccountID, accID)
+	c.Set(logkey.StreamName, req.StreamName)
 
 	acc, err := h.accReader.ReadAccount(ctx, accID)
 	if err != nil {
@@ -145,10 +145,10 @@ func (h *StreamHTTPHandler) FetchStreamMessages(c echo.Context) error {
 		return err
 	}
 	accID := entity.MustParseID[entity.AccountID](req.AccountID)
-	c.Set(log.KeyAccountID, accID)
-	c.Set(log.KeyStreamName, req.StreamName)
-	c.Set(log.KeyConsumerStartSequence, req.StartSequence)
-	c.Set(log.KeyConsumerFetchBatchSize, req.BatchSize)
+	c.Set(logkey.AccountID, accID)
+	c.Set(logkey.StreamName, req.StreamName)
+	c.Set(logkey.ConsumerStartSequence, req.StartSequence)
+	c.Set(logkey.ConsumerFetchBatchSize, req.BatchSize)
 
 	acc, err := h.accReader.ReadAccount(ctx, accID)
 	if err != nil {
@@ -177,7 +177,7 @@ func (h *StreamHTTPHandler) GetStreamMessageContent(c echo.Context) error {
 		return err
 	}
 	accID := entity.MustParseID[entity.AccountID](req.AccountID)
-	c.Set(log.KeyAccountID, accID)
+	c.Set(logkey.AccountID, accID)
 
 	acc, err := h.accReader.ReadAccount(ctx, accID)
 	if err != nil {

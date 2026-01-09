@@ -1,7 +1,7 @@
 package tx
 
 import (
-	"github.com/coro-sh/coro/errtag"
+	"github.com/joshjon/kit/errtag"
 )
 
 type ErrTagTransactionTimeout struct{ errtag.Internal }

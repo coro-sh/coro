@@ -3,8 +3,9 @@ package sqlite
 import (
 	"time"
 
+	"github.com/joshjon/kit/ref"
+
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/ref"
 	"github.com/coro-sh/coro/sqlite/sqlc"
 )
 

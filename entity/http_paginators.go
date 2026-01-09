@@ -4,10 +4,8 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/joshjon/kit/paginate"
 	"github.com/labstack/echo/v4"
-	"go.jetify.com/typeid"
-
-	"github.com/coro-sh/coro/paginate"
 )
 
 type Lister interface {
@@ -26,7 +24,7 @@ func PaginateNamespaces(ctx context.Context, c echo.Context, store Lister, owner
 		return store.ListNamespaces(ctx, owner, filter)
 	}
 	return paginate.Paginate(c, paginate.Config[*Namespace, NamespaceID]{
-		CursorParser: IDCursorParser[NamespaceID](),
+		CursorParser: paginate.IDCursorParser[NamespaceID](),
 		CursorGetter: cursorGetter,
 		Lister:       lister,
 	})
@@ -40,7 +38,7 @@ func PaginateOperators(ctx context.Context, c echo.Context, store Lister, nsID N
 		return store.ListOperators(ctx, nsID, filter)
 	}
 	return paginate.Paginate(c, paginate.Config[*Operator, OperatorID]{
-		CursorParser: IDCursorParser[OperatorID](),
+		CursorParser: paginate.IDCursorParser[OperatorID](),
 		CursorGetter: cursorGetter,
 		Lister:       lister,
 	})
@@ -54,7 +52,7 @@ func PaginateAccounts(ctx context.Context, c echo.Context, store Lister, opID Op
 		return store.ListAccounts(ctx, opID, filter)
 	}
 	return paginate.Paginate(c, paginate.Config[*Account, AccountID]{
-		CursorParser: IDCursorParser[AccountID](),
+		CursorParser: paginate.IDCursorParser[AccountID](),
 		CursorGetter: cursorGetter,
 		Lister:       lister,
 	})
@@ -68,7 +66,7 @@ func PaginateUsers(ctx context.Context, c echo.Context, store Lister, accID Acco
 		return store.ListUsers(ctx, accID, filter)
 	}
 	return paginate.Paginate(c, paginate.Config[*User, UserID]{
-		CursorParser: IDCursorParser[UserID](),
+		CursorParser: paginate.IDCursorParser[UserID](),
 		CursorGetter: cursorGetter,
 		Lister:       lister,
 	})
@@ -86,14 +84,4 @@ func PaginateUserJWTIssuances(ctx context.Context, c echo.Context, store Lister,
 		CursorGetter: cursorGetter,
 		Lister:       lister,
 	})
-}
-
-func IDCursorParser[T ID, PT typeid.SubtypePtr[T]]() paginate.CursorParserFunc[T] {
-	return func(rawCursor string) (*T, error) {
-		entityID, err := ParseID[T, PT](rawCursor)
-		if err != nil {
-			return nil, err
-		}
-		return &entityID, nil
-	}
 }

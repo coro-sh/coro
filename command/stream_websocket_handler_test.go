@@ -9,6 +9,7 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
+	"github.com/joshjon/kit/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
@@ -16,7 +17,6 @@ import (
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
-	"github.com/coro-sh/coro/server"
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/testutil"
 )

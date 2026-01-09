@@ -10,7 +10,7 @@ import (
 	"modernc.org/sqlite"
 	lib "modernc.org/sqlite/lib"
 
-	"github.com/coro-sh/coro/errtag"
+	"github.com/joshjon/kit/errtag"
 )
 
 // SQLiteTxer starts SQLite transactions (typically *sql.DB).

@@ -19,18 +19,18 @@ import (
 	"github.com/coro-sh/coro/client"
 	"github.com/coro-sh/coro/command"
 	"github.com/coro-sh/coro/entity"
-	"github.com/coro-sh/coro/log"
 	"github.com/coro-sh/coro/natsutil"
 	"github.com/coro-sh/coro/testutil"
+	"github.com/joshjon/kit/log"
 )
 
 func exitOnInvalidFlags(c *cli.Context, v *valgo.Validation) {
-	if v.Error() == nil {
+	if v.ToError() == nil {
 		return
 	}
 	fmt.Fprintln(os.Stderr, "Flag errors:")
 
-	for _, verr := range v.Error().(*valgo.Error).Errors() {
+	for _, verr := range v.ToError().(*valgo.Error).Errors() {
 		fmt.Fprintf(os.Stderr, "  %s: %s\n", verr.Name(), strings.Join(verr.Messages(), ","))
 	}
 
