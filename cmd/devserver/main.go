@@ -110,7 +110,7 @@ func cmdRun(ctx context.Context, logger log.Logger, cfg config) error {
 
 	errCh := make(chan error)
 	go func() {
-		if err := app.RunDevServer(ctx, logger, cfg.port, cfg.enableUI); err != nil {
+		if err := app.RunDevServer(ctx, logger, cfg.port, cfg.enableUI, cfg.corsOrigins...); err != nil {
 			errCh <- err
 		}
 	}()

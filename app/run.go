@@ -201,7 +201,7 @@ func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ..
 	return Serve(ctx, srv, logger)
 }
 
-func RunDevServer(ctx context.Context, logger log.Logger, serverPort int, withUI bool) error {
+func RunDevServer(ctx context.Context, logger log.Logger, serverPort int, withUI bool, corsOrigins ...string) error {
 	db, err := sqlitedb.Open(ctx, sqlitedb.WithInMemory())
 	defer db.Close()
 
@@ -217,6 +217,7 @@ func RunDevServer(ctx context.Context, logger log.Logger, serverPort int, withUI
 				Structured: false,
 			},
 		},
+		CorsOrigins: corsOrigins,
 	}
 
 	return runAll(ctx, logger, appCfg, withUI, sqlite.NewEntityRepository(db), sqlite.NewOperatorTokenReadWriter(db))
