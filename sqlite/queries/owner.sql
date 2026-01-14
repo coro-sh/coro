@@ -13,10 +13,10 @@ WHERE n.owner = ?;
 SELECT COUNT(*) AS count
 FROM account AS a
          JOIN namespace AS n ON n.id = a.namespace_id
-WHERE n.owner = ?;
+WHERE n.owner = ? AND a.name != 'SYS';
 
 -- name: CountOwnerUsers :one
 SELECT COUNT(*) AS count
 FROM "user" AS u
          JOIN namespace AS n ON n.id = u.namespace_id
-WHERE n.owner = ?;
+WHERE n.owner = ? AND u.name != 'sys';
