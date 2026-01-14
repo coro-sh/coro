@@ -54,7 +54,7 @@ func RunUI(ctx context.Context, logger log.Logger, cfg UIConfig, opts ...server.
 		return err
 	}
 
-	uiHandler, err := uiserver.AssetsHandler()
+	uiHandler, err := uiserver.DistHandler(uiserver.BuildCloud)
 	if err != nil {
 		return err
 	}
@@ -293,7 +293,7 @@ func runAll(
 	srv.Register("/api/v1", streamapi.NewStreamWebSocketHandler(store, commander, streamapi.WithStreamWebSocketHandlerCORS(cfg.CorsOrigins...)))
 
 	if withUI {
-		var uiHandler, err = uiserver.AssetsHandler()
+		var uiHandler, err = uiserver.DistHandler(uiserver.BuildLocal)
 		if err != nil {
 			return err
 		}
