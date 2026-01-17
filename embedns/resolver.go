@@ -7,10 +7,10 @@ import (
 	"github.com/coro-sh/coro/entity"
 )
 
-const inMemResolverTemplate = `# Operator named %s
+const inMemResolverTemplate = `# Operator
 operator: %s
 
-# System Account named %s
+# System Account
 system_account: %s
 
 # Configuration of the nats based resolver
@@ -25,11 +25,6 @@ resolver_preload: {
 `
 
 func newInMemResolverConfig(op *entity.Operator, sysAcc *entity.Account) (string, error) {
-	opData, err := op.Data()
-	if err != nil {
-		return "", err
-	}
-
 	ok, err := sysAcc.IsSystemAccount()
 	if err != nil {
 		return "", fmt.Errorf("check system account: %w", err)
@@ -44,7 +39,7 @@ func newInMemResolverConfig(op *entity.Operator, sysAcc *entity.Account) (string
 
 	cfgContent := fmt.Sprintf(
 		inMemResolverTemplate,
-		opData.Name, op.JWT, sysAccData.Name, sysAccData.PublicKey, sysAccData.PublicKey, sysAcc.JWT,
+		op.JWT, sysAccData.PublicKey, sysAccData.PublicKey, sysAcc.JWT,
 	)
 
 	return cfgContent, nil

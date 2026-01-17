@@ -7,12 +7,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joshjon/kit/id"
+	"github.com/joshjon/kit/testutil"
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/entity"
-	"github.com/joshjon/kit/testutil"
 )
 
 const (

@@ -7,10 +7,10 @@ import (
 
 const DefaultResolverDir = "./data"
 
-const dirResolverConfigTemplate = `# Operator named %s
+const dirResolverConfigTemplate = `# Operator
 operator: %s
 
-# System Account named %s
+# System Account
 system_account: %s
 
 jetstream {
@@ -65,11 +65,6 @@ resolver_preload: {
 // NewDirResolverConfig creates a configuration for a directory resolver.
 // The returned string can be written to a file and used to start a NATS server.
 func NewDirResolverConfig(op *Operator, sysAcc *Account, dirpath string) (string, error) {
-	opData, err := op.Data()
-	if err != nil {
-		return "", err
-	}
-
 	ok, err := sysAcc.IsSystemAccount()
 	if err != nil {
 		return "", fmt.Errorf("check system account: %w", err)
@@ -84,7 +79,7 @@ func NewDirResolverConfig(op *Operator, sysAcc *Account, dirpath string) (string
 
 	cfgContent := fmt.Sprintf(
 		dirResolverConfigTemplate,
-		opData.Name, op.JWT, sysAccData.Name, sysAccData.PublicKey, dirpath, dirpath, sysAccData.PublicKey, sysAcc.JWT,
+		op.JWT, sysAccData.PublicKey, dirpath, dirpath, sysAccData.PublicKey, sysAcc.JWT,
 	)
 
 	return cfgContent, nil
