@@ -14,11 +14,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/joshjon/kit/testutil"
+
+	"github.com/coro-sh/coro/command"
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/entityapi"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 	"github.com/coro-sh/coro/sqlite"
-	"github.com/joshjon/kit/testutil"
 )
 
 func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {
@@ -47,7 +50,7 @@ func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {
 
 	handler := NewStreamWebSocketHandler(store, consumerStarter)
 
-	srv, err := server.NewServer(testutil.GetFreePort(t), server.WithMiddleware(entity.NamespaceContextMiddleware()))
+	srv, err := server.NewServer(testutil.GetFreePort(t), server.WithMiddleware(entityapi.NamespaceContextMiddleware()))
 	require.NoError(t, err)
 	srv.Register("", handler)
 	go srv.Start()
@@ -69,7 +72,7 @@ func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {
 
 	// first reply will have empty data to indicate consumer has started
 	pubMsgCh <- &commandv1.ReplyMessage{
-		Id:    NewMessageID().String(),
+		Id:    command.NewMessageID().String(),
 		Inbox: testutil.RandName(),
 		Data:  nil,
 	}
@@ -87,7 +90,7 @@ func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {
 			require.NoError(t, err)
 
 			pubMsgCh <- &commandv1.ReplyMessage{
-				Id:    NewMessageID().String(),
+				Id:    command.NewMessageID().String(),
 				Inbox: testutil.RandName(),
 				Data:  data,
 			}
@@ -99,7 +102,7 @@ func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {
 		var res server.Response[*commandv1.StreamConsumerMessage]
 		err = wsjson.Read(ctx, ws, &res)
 		require.NoError(t, err)
-		want := recvCtx(t, ctx, wantConsumerMsgs)
+		want := testutil.AssertReceiveChanContext(t, ctx, wantConsumerMsgs)
 		require.True(t, proto.Equal(want, res.Data))
 	}
 

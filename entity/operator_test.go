@@ -3,6 +3,7 @@ package entity
 import (
 	"testing"
 
+	"github.com/joshjon/kit/id"
 	"github.com/nats-io/jwt/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

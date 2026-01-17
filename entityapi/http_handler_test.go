@@ -1,4 +1,4 @@
-package entityapi_test // avoid import cycle with sqlite package
+package entityapi_test // avoids import cycle with sqlite package
 
 import (
 	"context"
@@ -202,9 +202,9 @@ func TestServer_CreateAccount(t *testing.T) {
 	defer fixture.Stop()
 	op := fixture.AddOperator(ctx)
 
-	req := entity.CreateAccountRequest{
+	req := entityapi.CreateAccountRequest{
 		Name: testutil.RandName(),
-		Limits: &entity.AccountLimits{
+		Limits: &entityapi.AccountLimits{
 			Subscriptions:       ref.Ptr(rand.Int64N(100)),
 			PayloadSize:         ref.Ptr(rand.Int64N(100)),
 			Imports:             ref.Ptr(rand.Int64N(100)),
@@ -233,9 +233,9 @@ func TestServer_UpdateAccount(t *testing.T) {
 	defer fixture.Stop()
 	acc := fixture.AddAccount(ctx)
 
-	req := entity.UpdateAccountRequest{
+	req := entityapi.UpdateAccountRequest{
 		Name: testutil.RandName(),
-		Limits: &entity.AccountLimits{
+		Limits: &entityapi.AccountLimits{
 			Subscriptions: ref.Ptr(rand.Int64N(100)),
 			PayloadSize:   ref.Ptr(rand.Int64N(100)),
 			Imports:       ref.Ptr(rand.Int64N(100)),
@@ -244,7 +244,7 @@ func TestServer_UpdateAccount(t *testing.T) {
 		},
 	}
 
-	res := testutil.Put[server.Response[entity.AccountResponse]](t, fixture.AccountURL(acc.NamespaceID, acc.ID), req)
+	res := testutil.Put[server.Response[entityapi.AccountResponse]](t, fixture.AccountURL(acc.NamespaceID, acc.ID), req)
 	got := res.Data
 
 	accData, err := acc.Data()
@@ -266,7 +266,7 @@ func TestServer_GetAccount(t *testing.T) {
 	defer fixture.Stop()
 	acc := fixture.AddAccount(ctx)
 
-	res := testutil.Get[server.Response[entity.AccountResponse]](t, fixture.AccountURL(acc.NamespaceID, acc.ID))
+	res := testutil.Get[server.Response[entityapi.AccountResponse]](t, fixture.AccountURL(acc.NamespaceID, acc.ID))
 	got := res.Data
 
 	accData, err := acc.Data()
@@ -275,7 +275,7 @@ func TestServer_GetAccount(t *testing.T) {
 	accClaims, err := acc.Claims()
 	require.NoError(t, err)
 
-	assert.Equal(t, entity.LoadAccountLimits(accData, accClaims), got.Limits)
+	assert.Equal(t, entityapi.LoadAccountLimits(accData, accClaims), got.Limits)
 }
 
 func TestHTTPHandler_ListAccounts(t *testing.T) {
@@ -302,7 +302,7 @@ func TestHTTPHandler_ListAccounts(t *testing.T) {
 
 		wantResps[i] = entityapi.AccountResponse{
 			AccountData: wantData,
-			Limits:      entity.LoadAccountLimits(wantData, accClaims),
+			Limits:      entityapi.LoadAccountLimits(wantData, accClaims),
 		}
 	}
 
@@ -354,9 +354,9 @@ func TestServer_CreateUser(t *testing.T) {
 	defer fixture.Stop()
 	acc := fixture.AddAccount(ctx)
 
-	req := entity.CreateUserRequest{
+	req := entityapi.CreateUserRequest{
 		Name: testutil.RandName(),
-		Limits: &entity.UserLimits{
+		Limits: &entityapi.UserLimits{
 			Subscriptions:   ref.Ptr(rand.Int64N(100)),
 			PayloadSize:     ref.Ptr(rand.Int64N(100)),
 			JWTDurationSecs: ref.Ptr(rand.Int64N(100000)),
@@ -382,9 +382,9 @@ func TestServer_UpdateUser(t *testing.T) {
 	defer fixture.Stop()
 	usr := fixture.AddUser(ctx)
 
-	req := entity.UpdateUserRequest{
+	req := entityapi.UpdateUserRequest{
 		Name: testutil.RandName(),
-		Limits: &entity.UserLimits{
+		Limits: &entityapi.UserLimits{
 			Subscriptions:   ref.Ptr(rand.Int64N(100)),
 			PayloadSize:     ref.Ptr(rand.Int64N(100)),
 			JWTDurationSecs: ref.Ptr(rand.Int64N(100000)),
@@ -424,7 +424,7 @@ func TestServer_GetUser(t *testing.T) {
 	assert.Equal(t, usrData, got.UserData)
 	assert.Equal(t, usr.JWT(), got.JWT)
 
-	assert.Equal(t, entity.LoadUserLimits(usrData, usrClaims), got.Limits)
+	assert.Equal(t, entityapi.LoadUserLimits(usrData, usrClaims), got.Limits)
 }
 
 func TestServer_GetUserCreds(t *testing.T) {
@@ -509,7 +509,7 @@ func TestHTTPHandler_ListUsers(t *testing.T) {
 		wantResps[i] = entityapi.UserResponse{
 			UserData:  wantData,
 			PublicKey: wantPubKey,
-			Limits:    entity.LoadUserLimits(wantData, usrClaims),
+			Limits:    entityapi.LoadUserLimits(wantData, usrClaims),
 		}
 	}
 

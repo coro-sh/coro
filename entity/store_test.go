@@ -1,22 +1,21 @@
 package entity_test // avoid import cycle with sqlite package
 
 import (
-	"context"
 	"testing"
 
 	"github.com/joshjon/kit/errtag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/joshjon/kit/testutil"
+
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/sqlite"
-	"github.com/joshjon/kit/testutil"
 )
 
 func TestStore_Namespace(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
+	ctx := testutil.Context(t)
 	s := sqlite.NewTestEntityStore(t)
 
 	want := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
@@ -39,8 +38,7 @@ func TestStore_Namespace(t *testing.T) {
 }
 
 func TestStore_Operator(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
+	ctx := testutil.Context(t)
 	s := sqlite.NewTestEntityStore(t)
 
 	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
@@ -84,8 +82,7 @@ func TestStore_Operator(t *testing.T) {
 }
 
 func TestStore_Account(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
+	ctx := testutil.Context(t)
 	s := sqlite.NewTestEntityStore(t)
 
 	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
@@ -138,8 +135,7 @@ func TestStore_Account(t *testing.T) {
 }
 
 func TestStore_User(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
+	ctx := testutil.Context(t)
 	s := sqlite.NewTestEntityStore(t)
 
 	ns := entity.NewNamespace(testutil.RandName(), constants.DefaultNamespaceOwner)
@@ -193,8 +189,7 @@ func TestStore_User(t *testing.T) {
 }
 
 func TestStore_Nkey(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), testTimeout)
-	defer cancel()
+	ctx := testutil.Context(t)
 	s := sqlite.NewTestEntityStore(t)
 
 	want, err := entity.NewNkey(testutil.RandString(10), entity.TypeOperator, false)

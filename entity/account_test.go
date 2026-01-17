@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/joshjon/kit/id"
+	"github.com/joshjon/kit/testutil"
 	"github.com/nats-io/jwt/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/constants"
-	"github.com/joshjon/kit/testutil"
 )
 
 func TestNewAccount(t *testing.T) {

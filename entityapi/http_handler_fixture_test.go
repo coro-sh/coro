@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/joshjon/kit/log"
 	"github.com/joshjon/kit/server"
+	"github.com/joshjon/kit/testutil"
+	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/entityapi"
 	"github.com/coro-sh/coro/sqlite"
-	"github.com/joshjon/kit/testutil"
 )
 
 const (
@@ -38,10 +38,10 @@ func NewHTTPHandlerTestFixture(t *testing.T) *HTTPHandlerTestFixture {
 	logger := log.NewLogger(log.WithDevelopment())
 	srv, err := server.NewServer(testutil.GetFreePort(t),
 		server.WithLogger(logger),
-		server.WithMiddleware(entity.NamespaceContextMiddleware()),
+		server.WithMiddleware(entityapi.NamespaceContextMiddleware()),
 	)
 	require.NoError(t, err)
-	srv.Register("", entity.NewHTTPHandler(store, entity.WithCommander[*entity.Store](new(commanderStub))))
+	srv.Register("", entityapi.NewHTTPHandler(store, entityapi.WithCommander[*entity.Store](new(commanderStub))))
 
 	go srv.Start()
 	err = srv.WaitHealthy(10, time.Millisecond)

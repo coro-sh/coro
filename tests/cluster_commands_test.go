@@ -8,6 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joshjon/kit/id"
+	"github.com/joshjon/kit/log"
+	"github.com/joshjon/kit/ref"
+	"github.com/joshjon/kit/server"
+	"github.com/joshjon/kit/testutil"
 	"github.com/nats-io/jwt/v2"
 	natsrv "github.com/nats-io/nats-server/v2/server"
 	"github.com/stretchr/testify/assert"
@@ -17,12 +22,10 @@ import (
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/embedns"
 	"github.com/coro-sh/coro/entity"
+	"github.com/coro-sh/coro/entityapi"
+	"github.com/coro-sh/coro/proxyapi"
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/tkn"
-	"github.com/joshjon/kit/log"
-	"github.com/joshjon/kit/ref"
-	"github.com/joshjon/kit/server"
-	"github.com/joshjon/kit/testutil"
 )
 
 const testTimeout = 5 * time.Second
@@ -107,9 +110,9 @@ func TestClusteredNotifications(t *testing.T) {
 	defer pxy.Stop()
 
 	// Create a new account via server 1
-	req := entity.CreateAccountRequest{Name: testutil.RandName()}
+	req := entityapi.CreateAccountRequest{Name: testutil.RandName()}
 	accSrv1URL := fmt.Sprintf("%s/namespaces/%s/operators/%s/accounts", srv1.Address(), namespace.ID, op.ID)
-	createRes := testutil.Post[server.Response[entity.AccountResponse]](t, accSrv1URL, req)
+	createRes := testutil.Post[server.Response[entityapi.AccountResponse]](t, accSrv1URL, req)
 	gotCreated := createRes.Data
 	assert.False(t, gotCreated.ID.IsZero())
 
@@ -122,11 +125,11 @@ func TestClusteredNotifications(t *testing.T) {
 
 	// Update the account via server 2
 	accSrv2URL := fmt.Sprintf("%s/namespaces/%s/accounts/%s", srv2.Address(), namespace.ID, gotCreated.ID)
-	updateReq := entity.UpdateAccountRequest{
+	updateReq := entityapi.UpdateAccountRequest{
 		Name:   gotCreated.Name,
-		Limits: &entity.AccountLimits{Subscriptions: ref.Ptr(rand.Int64N(100))},
+		Limits: &entityapi.AccountLimits{Subscriptions: ref.Ptr(rand.Int64N(100))},
 	}
-	updateRes := testutil.Put[server.Response[entity.AccountResponse]](t, accSrv2URL, updateReq)
+	updateRes := testutil.Put[server.Response[entityapi.AccountResponse]](t, accSrv2URL, updateReq)
 	gotUpdated := updateRes.Data
 	assert.Equal(t, gotUpdated.Limits, *updateReq.Limits)
 
@@ -166,7 +169,7 @@ func SetupTestServer(
 
 	srv, err := server.NewServer(testutil.GetFreePort(t),
 		server.WithLogger(logger),
-		server.WithMiddleware(entity.NamespaceContextMiddleware()),
+		server.WithMiddleware(entityapi.NamespaceContextMiddleware()),
 	)
 	require.NoError(t, err)
 
@@ -176,8 +179,8 @@ func SetupTestServer(
 	brokerHandler, err := command.NewBrokerWebSocketHandler(bSysUser, brokerNats, tknIssuer, store, command.WithBrokerWebsocketLogger(logger))
 	require.NoError(t, err)
 
-	srv.Register("", entity.NewHTTPHandler(store, entity.WithCommander[*entity.Store](commander)))
-	srv.Register("", command.NewProxyHTTPHandler(tknIssuer, store, commander))
+	srv.Register("", entityapi.NewHTTPHandler(store, entityapi.WithCommander[*entity.Store](commander)))
+	srv.Register("", proxyapi.NewProxyHTTPHandler(tknIssuer, store, commander))
 	srv.Register("", brokerHandler)
 
 	go srv.Start()

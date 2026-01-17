@@ -5,12 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joshjon/kit/id"
 	"github.com/joshjon/kit/ref"
+	"github.com/joshjon/kit/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/constants"
-	"github.com/joshjon/kit/testutil"
 )
 
 func TestNewUser(t *testing.T) {

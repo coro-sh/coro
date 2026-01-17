@@ -17,11 +17,11 @@ import (
 )
 
 const (
-	serverCertFile = "../testutil/testdata/certs/server-cert.pem"
-	serverKeyFile  = "../testutil/testdata/certs/server-key.pem"
-	clientCertFile = "../testutil/testdata/certs/client-cert.pem"
-	clientKeyFile  = "../testutil/testdata/certs/client-key.pem"
-	caCertFile     = "../testutil/testdata/certs/ca-cert.pem"
+	serverCertFile = "./testdata/server-cert.pem"
+	serverKeyFile  = "./testdata/server-key.pem"
+	clientCertFile = "./testdata/client-cert.pem"
+	clientKeyFile  = "./testdata/client-key.pem"
+	caCertFile     = "./testdata/ca-cert.pem"
 )
 
 func TestNewEmbeddedNATS(t *testing.T) {
