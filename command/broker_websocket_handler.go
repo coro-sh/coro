@@ -474,7 +474,7 @@ func (b *BrokerWebSocketHandler) acceptHandshake(ctx context.Context, c echo.Con
 }
 
 func (b *BrokerWebSocketHandler) startPingOperatorWorker() error {
-	msgs := make(chan *nats.Msg, 5000)
+	msgs := make(chan *nats.Msg, 100)
 	subj := pingOperatorSubjectBase + ".OPERATOR.>"
 	sub, err := b.nc.ChanSubscribe(subj, msgs)
 	if err != nil {

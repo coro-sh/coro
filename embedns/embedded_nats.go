@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/nats-io/nats-server/v2/server"
 
@@ -106,6 +107,10 @@ func NewEmbeddedNATS(cfg EmbeddedNATSConfig) (*server.Server, error) {
 			Port: clusterPort,
 		}
 	}
+
+	opts.MaxPayload = 256 * 1024        // 256KB max message size
+	opts.MaxPending = 5 * 1024 * 1024   // 5MB max pending bytes per connection
+	opts.WriteDeadline = 10 * time.Second
 
 	return server.NewServer(opts)
 }
