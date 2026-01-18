@@ -1,10 +1,6 @@
 PROTO_FILES := $(wildcard proto/*)
 BUF_VERSION := 1.54.0
 
-.PHONY:run
-run:
-	go run main.go --service all --config local/config_all.yaml
-
 .PHONY: unit-test
 unit-test:
 	go test ./... -race
