@@ -51,7 +51,7 @@ Refer to the [configuration guide](docs/config.md) for a full list of configurat
 After cloning the repository, install git hooks for automated code quality checks:
 
 ```bash
-go run github.com/evilmartians/lefthook install
+go tool lefthook install
 ```
 
 This sets up pre-commit hooks that run formatting checks, linting, and tests on changed files.
