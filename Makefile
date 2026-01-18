@@ -5,9 +5,14 @@ BUF_VERSION := 1.54.0
 run:
 	go run main.go --service all --config local/config_all.yaml
 
-.PHONY: test
-unit:
-	go test ./... -race -count=1
+.PHONY: unit-test
+unit-test:
+	go test ./... -race
+
+.PHONY: integration-test
+integration-test:
+	go test -tags=integration ./... -race -count=1
+
 
 # SQLC
 
@@ -15,7 +20,6 @@ unit:
 sqlc-gen:
 	go generate postgres/gen.go
 	go generate sqlite/gen.go
-
 
 # Postgres
 
@@ -26,7 +30,13 @@ start-postgres:
 
 .PHONY: stop-postgres
 stop-postgres:
-	docker stop coro-postgres && docker rm -f coro-postgres
+	@if docker ps -a --format '{{.Names}}' | grep -q '^coro-postgres$$'; then \
+		docker stop coro-postgres >/dev/null 2>&1 || true; \
+		docker rm -f coro-postgres >/dev/null 2>&1 || true; \
+	fi
+
+.PHONY: restart-postgres
+restart-postgres: stop-postgres start-postgres
 
 # Buf
 
@@ -45,8 +55,8 @@ buf-gen: $(PROTO_FILES) buf-format buf-lint
 
 # OpenAPI
 
-.PHONY: client-gen
-client-gen:
+.PHONY: oapi-client-gen
+oapi-client-gen:
 	go generate -run "oapi-codegen" ./client/oapicodegen/gen.go
 
 # Dev Server

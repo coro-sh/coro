@@ -46,6 +46,18 @@ Refer to the [configuration guide](docs/config.md) for a full list of configurat
 
 ## Development
 
+### Setup
+
+After cloning the repository, install git hooks for automated code quality checks:
+
+```bash
+go run github.com/evilmartians/lefthook install
+```
+
+This sets up pre-commit hooks that run formatting checks, linting, and tests on changed files.
+
+### Dev Server
+
 An all-in-one development server can be easily started with `make dev-server`.
 
 This command will:
