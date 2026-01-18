@@ -1,0 +1,97 @@
+# Lefthook configuration for Coro
+# See: https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: true
+  commands:
+    # Formatting checks
+    gofmt:
+      glob: "*.go"
+      run: |
+        unformatted=$(gofmt -l {staged_files})
+        if [ -n "$unformatted" ]; then
+          echo "The following files are not formatted:"
+          echo "$unformatted"
+          echo ""
+          echo "Run: gofmt -w ."
+          exit 1
+        fi
+
+    # Go module tidiness check
+    gomod:
+      glob: "go.{mod,sum}"
+      run: |
+        go mod tidy
+        if ! git diff --exit-code go.mod go.sum; then
+          echo "go.mod or go.sum is not tidy. Run: go mod tidy"
+          exit 1
+        fi
+
+    # Linting
+    golangci-lint:
+      glob: "*.go"
+      run: golangci-lint run --new-from-rev=HEAD~1
+
+    # Proto file linting (only if proto files changed)
+    buf-lint:
+      glob: "proto/**/*.proto"
+      run: make buf-lint
+
+    # Check for common debugging artifacts
+    debug-check:
+      glob: "*.go"
+      run: |
+        matches=$(grep -rn "fmt.Print\|spew.Dump\|panic(" {staged_files} || true)
+        if [ -n "$matches" ]; then
+          echo "Warning: Found potential debugging code:"
+          echo "$matches"
+          echo ""
+          echo "Remove debugging statements before committing"
+          exit 1
+        fi
+
+    # Quick unit tests on changed packages
+    unit-tests:
+      glob: "*.go"
+      run: |
+        # Get unique packages from staged files
+        packages=$(echo "{staged_files}" | xargs -n1 dirname | sort -u | sed 's|^|./|' | tr '\n' ' ')
+        if [ -n "$packages" ]; then
+          go test $packages -race -count=1 -short
+        fi
+
+pre-push:
+  parallel: false
+  commands:
+    # Full unit test suite
+    all-unit-tests:
+      run: make unit-test
+
+    # Integration tests - ensure postgres is fresh
+    integration-tests:
+      run: |
+        echo "Restarting postgres for integration tests..."
+        make restart-postgres
+        echo "Running integration tests..."
+        make integration-test
+
+    # Ensure all code generation is up to date
+    codegen-check:
+      run: |
+        # Run code generation
+        make sqlc-gen
+        make oapi-client-gen
+        # Check if any generated files changed (exit code 0 = no changes, 1 = changes)
+        if ! git diff --exit-code postgres/sqlc sqlite/sqlc client/ >/dev/null 2>&1; then
+          echo "Generated code is out of sync. Run code generation:"
+          echo "  make sqlc-gen"
+          echo "  make oapi-client-gen"
+          git diff --stat postgres/sqlc sqlite/sqlc client/
+          exit 1
+        fi
+
+    # Final build check
+    build:
+      run: |
+        mkdir -p build
+        go build -o build/ ./...
