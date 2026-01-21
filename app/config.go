@@ -185,7 +185,7 @@ func (c *PostgresConfig) InitDefaults() {
 
 func (c *PostgresConfig) Validation() *valgo.Validation {
 	v := valgo.Is(
-		valgoutil.HostPortValidator(c.HostPort, "hostPort"),
+		valgo.String(c.HostPort, "hostPort").Not().Blank(),
 		valgo.String(c.Database, "database").Not().Blank(),
 		valgo.String(c.User, "user").Not().Blank(),
 	)
