@@ -6,6 +6,8 @@ import (
 	"github.com/cohesivestack/valgo"
 	"github.com/joshjon/kit/log"
 	"github.com/joshjon/kit/valgoutil"
+
+	"github.com/coro-sh/coro/postgres"
 )
 
 const (
@@ -113,6 +115,7 @@ type BaseConfig struct {
 func (c *BaseConfig) InitDefaults() {
 	c.Port = defaultServerPort
 	c.Logger.InitDefaults()
+	c.Postgres.InitDefaults()
 }
 
 func (c *BaseConfig) Validation() *valgo.Validation {
@@ -166,15 +169,24 @@ func (c *TLSConfig) Validation() *valgo.Validation {
 }
 
 type PostgresConfig struct {
+	// Database defaults to "coro". Overriding is discouraged for compatibility with pgtool.
+	Database string     `yaml:"database" env:"DATABASE"`
 	HostPort string     `yaml:"hostPort"  env:"HOST_PORT"`
 	User     string     `yaml:"user"  env:"USER"`
 	Password string     `yaml:"password"  env:"PASSWORD"`
 	TLS      *TLSConfig `yaml:"tls" envPrefix:"TLS_"`
 }
 
-func (c PostgresConfig) Validation() *valgo.Validation {
+func (c *PostgresConfig) InitDefaults() {
+	if c.Database == "" {
+		c.Database = postgres.AppDBName
+	}
+}
+
+func (c *PostgresConfig) Validation() *valgo.Validation {
 	v := valgo.Is(
 		valgoutil.HostPortValidator(c.HostPort, "hostPort"),
+		valgo.String(c.Database, "database").Not().Blank(),
 		valgo.String(c.User, "user").Not().Blank(),
 	)
 	if c.TLS != nil {

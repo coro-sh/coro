@@ -35,7 +35,7 @@ import (
 
 func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool, opts ...server.Option) error {
 	pgDialOps := getPostgresDialOpts(cfg.Postgres)
-	pg, err := pgdb.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
+	pg, err := pgdb.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, cfg.Postgres.Database, pgDialOps...)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func RunUI(ctx context.Context, logger log.Logger, cfg UIConfig, opts ...server.
 
 func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig, opts ...server.Option) error {
 	pgDialOps := getPostgresDialOpts(cfg.Postgres)
-	pg, err := pgdb.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
+	pg, err := pgdb.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, cfg.Postgres.Database, pgDialOps...)
 	if err != nil {
 		return err
 	}
@@ -143,7 +143,7 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 
 func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ...server.Option) error {
 	pgDialOps := getPostgresDialOpts(cfg.Postgres)
-	pg, err := pgdb.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, postgres.AppDBName, pgDialOps...)
+	pg, err := pgdb.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, cfg.Postgres.Database, pgDialOps...)
 	if err != nil {
 		return err
 	}

@@ -2,7 +2,8 @@
 
 ## Overview
 
-Coro provides a flexible and modular configuration system for running its various services. Configuration can be managed using YAML files and environment variables.
+Coro provides a flexible and modular configuration system for running its various services. Configuration can be managed
+using YAML files and environment variables.
 
 This guide outlines the available configuration options and their purpose.
 
@@ -35,24 +36,25 @@ Coro can be run in different service modes using the `--service` flag:
 
 Runs Controller, Broker, and UI together using an in-memory SQLite database (dev/testing only).
 
-| YAML Field               | Type     | Environment Variable       | Required | Default | Description                                                          |
-|--------------------------|----------|----------------------------|----------|---------|----------------------------------------------------------------------|
-| `port`                   | int      | `PORT`                     | false    | `5400`  | Port to run the server on                                            |
-| `logger.level`           | string   | `LOGGER_LEVEL`             | false    | `info`  | Logging level: `debug`, `info`, `warn`, `error`                      |
-| `logger.structured`      | bool     | `LOGGER_STRUCTURED`        | false    | `true`  | Enable structured JSON logging                                       |
-| `tls.certFile`           | string   | `TLS_CERT_FILE`            | false    |         | Path to TLS certificate file                                         |
-| `tls.keyFile`            | string   | `TLS_KEY_FILE`             | false    |         | Path to TLS private key file                                         |
-| `tls.caCertFile`         | string   | `TLS_CA_CERT_FILE`         | false    |         | Path to TLS CA certificate file                                      |
-| `tls.insecureSkipVerify` | bool     | `TLS_INSECURE_SKIP_VERIFY` | false    | `false` | Skip TLS verification (not recommended for production)               |
-| `encryptionSecretKey`    | string   | `ENCRYPTION_SECRET_KEY`    | false    |         | Hex-encoded AES key (16, 24, or 32 bytes) for encrypting nkeys       |
-| `postgres.hostPort`      | string   | `POSTGRES_HOST_PORT`       | true     |         | PostgreSQL host and port (`host:port`)                               |
-| `postgres.user`          | string   | `POSTGRES_USER`            | true     |         | PostgreSQL username                                                  |
-| `postgres.password`      | string   | `POSTGRES_PASSWORD`        | false    |         | PostgreSQL password                                                  |
-| `postgres.tls.certFile`  | string   | `POSTGRES_TLS_CERT_FILE`   | false    |         | Path to PostgreSQL client TLS certificate                            |
-| `postgres.tls.keyFile`   | string   | `POSTGRES_TLS_KEY_FILE`    | false    |         | Path to PostgreSQL client TLS key                                    |
-| `postgres.tls.caCertFile`| string   | `POSTGRES_TLS_CA_CERT_FILE`| false    |         | Path to PostgreSQL CA certificate                                    |
-| `postgres.tls.insecureSkipVerify` | bool | `POSTGRES_TLS_INSECURE_SKIP_VERIFY` | false | `false` | Skip PostgreSQL TLS verification                          |
-| `corsOrigins`            | []string | `CORS_ORIGINS`             | false    |         | Allowed CORS origins (comma-separated in env)                        |
+| YAML Field                        | Type     | Environment Variable                | Required | Default | Description                                                    |
+|-----------------------------------|----------|-------------------------------------|----------|---------|----------------------------------------------------------------|
+| `port`                            | int      | `PORT`                              | false    | `5400`  | Port to run the server on                                      |
+| `logger.level`                    | string   | `LOGGER_LEVEL`                      | false    | `info`  | Logging level: `debug`, `info`, `warn`, `error`                |
+| `logger.structured`               | bool     | `LOGGER_STRUCTURED`                 | false    | `true`  | Enable structured JSON logging                                 |
+| `tls.certFile`                    | string   | `TLS_CERT_FILE`                     | false    |         | Path to TLS certificate file                                   |
+| `tls.keyFile`                     | string   | `TLS_KEY_FILE`                      | false    |         | Path to TLS private key file                                   |
+| `tls.caCertFile`                  | string   | `TLS_CA_CERT_FILE`                  | false    |         | Path to TLS CA certificate file                                |
+| `tls.insecureSkipVerify`          | bool     | `TLS_INSECURE_SKIP_VERIFY`          | false    | `false` | Skip TLS verification (not recommended for production)         |
+| `encryptionSecretKey`             | string   | `ENCRYPTION_SECRET_KEY`             | false    |         | Hex-encoded AES key (16, 24, or 32 bytes) for encrypting nkeys |
+| `postgres.hostPort`               | string   | `POSTGRES_HOST_PORT`                | true     |         | PostgreSQL host and port (`host:port`)                         |
+| `postgres.database`               | string   | `POSTGRES_DATABASE`                 | false    | `coro`  | PostgreSQL database name                                       |
+| `postgres.user`                   | string   | `POSTGRES_USER`                     | true     |         | PostgreSQL username                                            |
+| `postgres.password`               | string   | `POSTGRES_PASSWORD`                 | false    |         | PostgreSQL password                                            |
+| `postgres.tls.certFile`           | string   | `POSTGRES_TLS_CERT_FILE`            | false    |         | Path to PostgreSQL client TLS certificate                      |
+| `postgres.tls.keyFile`            | string   | `POSTGRES_TLS_KEY_FILE`             | false    |         | Path to PostgreSQL client TLS key                              |
+| `postgres.tls.caCertFile`         | string   | `POSTGRES_TLS_CA_CERT_FILE`         | false    |         | Path to PostgreSQL CA certificate                              |
+| `postgres.tls.insecureSkipVerify` | bool     | `POSTGRES_TLS_INSECURE_SKIP_VERIFY` | false    | `false` | Skip PostgreSQL TLS verification                               |
+| `corsOrigins`                     | []string | `CORS_ORIGINS`                      | false    |         | Allowed CORS origins (comma-separated in env)                  |
 
 **Example:**
 
@@ -64,6 +66,7 @@ logger:
 encryptionSecretKey: "00deaa689d7b85e4a68d416678e206cb"
 postgres:
   hostPort: "localhost:5432"
+  database: "coro"
   user: "coro"
   password: "securepassword"
 corsOrigins:
@@ -77,27 +80,29 @@ corsOrigins:
 
 Runs the Controller service which manages Operators, Accounts, and Users.
 
-| YAML Field               | Type     | Environment Variable       | Required   | Default | Description                                                          |
-|--------------------------|----------|----------------------------|------------|---------|----------------------------------------------------------------------|
-| `port`                   | int      | `PORT`                     | false      | `5400`  | Port to run the Controller on                                        |
-| `logger.level`           | string   | `LOGGER_LEVEL`             | false      | `info`  | Logging level: `debug`, `info`, `warn`, `error`                      |
-| `logger.structured`      | bool     | `LOGGER_STRUCTURED`        | false      | `true`  | Enable structured JSON logging                                       |
-| `tls.certFile`           | string   | `TLS_CERT_FILE`            | false      |         | Path to TLS certificate file                                         |
-| `tls.keyFile`            | string   | `TLS_KEY_FILE`             | false      |         | Path to TLS private key file                                         |
-| `tls.caCertFile`         | string   | `TLS_CA_CERT_FILE`         | false      |         | Path to TLS CA certificate file                                      |
-| `tls.insecureSkipVerify` | bool     | `TLS_INSECURE_SKIP_VERIFY` | false      | `false` | Skip TLS verification (not recommended for production)               |
-| `encryptionSecretKey`    | string   | `ENCRYPTION_SECRET_KEY`    | false      |         | Hex-encoded AES key (16, 24, or 32 bytes) for encrypting nkeys       |
-| `postgres.hostPort`      | string   | `POSTGRES_HOST_PORT`       | true       |         | PostgreSQL host and port (`host:port`)                               |
-| `postgres.user`          | string   | `POSTGRES_USER`            | true       |         | PostgreSQL username                                                  |
-| `postgres.password`      | string   | `POSTGRES_PASSWORD`        | false      |         | PostgreSQL password                                                  |
-| `postgres.tls.certFile`  | string   | `POSTGRES_TLS_CERT_FILE`   | false      |         | Path to PostgreSQL client TLS certificate                            |
-| `postgres.tls.keyFile`   | string   | `POSTGRES_TLS_KEY_FILE`    | false      |         | Path to PostgreSQL client TLS key                                    |
-| `postgres.tls.caCertFile`| string   | `POSTGRES_TLS_CA_CERT_FILE`| false      |         | Path to PostgreSQL CA certificate                                    |
-| `postgres.tls.insecureSkipVerify` | bool | `POSTGRES_TLS_INSECURE_SKIP_VERIFY` | false | `false` | Skip PostgreSQL TLS verification                          |
-| `corsOrigins`            | []string | `CORS_ORIGINS`             | false      |         | Allowed CORS origins (comma-separated in env)                        |
-| `broker.natsURLs`        | []string | `BROKER_NATS_URLS`         | conditional|         | Broker embedded NATS URLs (required if connecting to external Broker)|
+| YAML Field                        | Type     | Environment Variable                | Required    | Default | Description                                                           |
+|-----------------------------------|----------|-------------------------------------|-------------|---------|-----------------------------------------------------------------------|
+| `port`                            | int      | `PORT`                              | false       | `5400`  | Port to run the Controller on                                         |
+| `logger.level`                    | string   | `LOGGER_LEVEL`                      | false       | `info`  | Logging level: `debug`, `info`, `warn`, `error`                       |
+| `logger.structured`               | bool     | `LOGGER_STRUCTURED`                 | false       | `true`  | Enable structured JSON logging                                        |
+| `tls.certFile`                    | string   | `TLS_CERT_FILE`                     | false       |         | Path to TLS certificate file                                          |
+| `tls.keyFile`                     | string   | `TLS_KEY_FILE`                      | false       |         | Path to TLS private key file                                          |
+| `tls.caCertFile`                  | string   | `TLS_CA_CERT_FILE`                  | false       |         | Path to TLS CA certificate file                                       |
+| `tls.insecureSkipVerify`          | bool     | `TLS_INSECURE_SKIP_VERIFY`          | false       | `false` | Skip TLS verification (not recommended for production)                |
+| `encryptionSecretKey`             | string   | `ENCRYPTION_SECRET_KEY`             | false       |         | Hex-encoded AES key (16, 24, or 32 bytes) for encrypting nkeys        |
+| `postgres.hostPort`               | string   | `POSTGRES_HOST_PORT`                | true        |         | PostgreSQL host and port (`host:port`)                                |
+| `postgres.database`               | string   | `POSTGRES_DATABASE`                 | false       | `coro`  | PostgreSQL database name                                              |
+| `postgres.user`                   | string   | `POSTGRES_USER`                     | true        |         | PostgreSQL username                                                   |
+| `postgres.password`               | string   | `POSTGRES_PASSWORD`                 | false       |         | PostgreSQL password                                                   |
+| `postgres.tls.certFile`           | string   | `POSTGRES_TLS_CERT_FILE`            | false       |         | Path to PostgreSQL client TLS certificate                             |
+| `postgres.tls.keyFile`            | string   | `POSTGRES_TLS_KEY_FILE`             | false       |         | Path to PostgreSQL client TLS key                                     |
+| `postgres.tls.caCertFile`         | string   | `POSTGRES_TLS_CA_CERT_FILE`         | false       |         | Path to PostgreSQL CA certificate                                     |
+| `postgres.tls.insecureSkipVerify` | bool     | `POSTGRES_TLS_INSECURE_SKIP_VERIFY` | false       | `false` | Skip PostgreSQL TLS verification                                      |
+| `corsOrigins`                     | []string | `CORS_ORIGINS`                      | false       |         | Allowed CORS origins (comma-separated in env)                         |
+| `broker.natsURLs`                 | []string | `BROKER_NATS_URLS`                  | conditional |         | Broker embedded NATS URLs (required if connecting to external Broker) |
 
-**Note:** The `broker` section is only required when the Controller needs to communicate with a separate Broker service. When running in all-in-one mode, this is not needed.
+**Note:** The `broker` section is only required when the Controller needs to communicate with a separate Broker service.
+When running in all-in-one mode, this is not needed.
 
 **Example:**
 
@@ -113,6 +118,7 @@ tls:
   caCertFile: "/etc/coro/tls/ca.pem"
 postgres:
   hostPort: "db.example.com:5432"
+  database: "coro"
   user: "coro"
   password: "securepassword"
   tls:
@@ -131,25 +137,26 @@ corsOrigins:
 
 Runs the Broker service which manages WebSocket connections from proxy agents and routes commands.
 
-| YAML Field                | Type     | Environment Variable        | Required | Default | Description                                                          |
-|---------------------------|----------|-----------------------------|----------|---------|----------------------------------------------------------------------|
-| `port`                    | int      | `PORT`                      | false    | `5400`  | Port to run the Broker on                                            |
-| `logger.level`            | string   | `LOGGER_LEVEL`              | false    | `info`  | Logging level: `debug`, `info`, `warn`, `error`                      |
-| `logger.structured`       | bool     | `LOGGER_STRUCTURED`         | false    | `true`  | Enable structured JSON logging                                       |
-| `tls.certFile`            | string   | `TLS_CERT_FILE`             | false    |         | Path to TLS certificate file                                         |
-| `tls.keyFile`             | string   | `TLS_KEY_FILE`              | false    |         | Path to TLS private key file                                         |
-| `tls.caCertFile`          | string   | `TLS_CA_CERT_FILE`          | false    |         | Path to TLS CA certificate file                                      |
-| `tls.insecureSkipVerify`  | bool     | `TLS_INSECURE_SKIP_VERIFY`  | false    | `false` | Skip TLS verification (not recommended for production)               |
-| `encryptionSecretKey`     | string   | `ENCRYPTION_SECRET_KEY`     | false    |         | Hex-encoded AES key (16, 24, or 32 bytes) for encrypting tokens      |
-| `postgres.hostPort`       | string   | `POSTGRES_HOST_PORT`        | true     |         | PostgreSQL host and port (`host:port`)                               |
-| `postgres.user`           | string   | `POSTGRES_USER`             | true     |         | PostgreSQL username                                                  |
-| `postgres.password`       | string   | `POSTGRES_PASSWORD`         | false    |         | PostgreSQL password                                                  |
-| `postgres.tls.certFile`   | string   | `POSTGRES_TLS_CERT_FILE`    | false    |         | Path to PostgreSQL client TLS certificate                            |
-| `postgres.tls.keyFile`    | string   | `POSTGRES_TLS_KEY_FILE`     | false    |         | Path to PostgreSQL client TLS key                                    |
-| `postgres.tls.caCertFile` | string   | `POSTGRES_TLS_CA_CERT_FILE` | false    |         | Path to PostgreSQL CA certificate                                    |
-| `postgres.tls.insecureSkipVerify` | bool | `POSTGRES_TLS_INSECURE_SKIP_VERIFY` | false | `false` | Skip PostgreSQL TLS verification                          |
-| `embeddedNats.hostPort`   | string   | `EMBEDDED_NATS_HOST_PORT`   | true     |         | Host and port for embedded NATS server (`host:port`)                 |
-| `embeddedNats.nodeRoutes` | []string | `EMBEDDED_NATS_NODE_ROUTES` | false    |         | Routes to other Broker nodes for clustering (NATS URLs)              |
+| YAML Field                        | Type     | Environment Variable                | Required | Default | Description                                                                                     |
+|-----------------------------------|----------|-------------------------------------|----------|---------|-------------------------------------------------------------------------------------------------|
+| `port`                            | int      | `PORT`                              | false    | `5400`  | Port to run the Broker on                                                                       |
+| `logger.level`                    | string   | `LOGGER_LEVEL`                      | false    | `info`  | Logging level: `debug`, `info`, `warn`, `error`                                                 |
+| `logger.structured`               | bool     | `LOGGER_STRUCTURED`                 | false    | `true`  | Enable structured JSON logging                                                                  |
+| `tls.certFile`                    | string   | `TLS_CERT_FILE`                     | false    |         | Path to TLS certificate file                                                                    |
+| `tls.keyFile`                     | string   | `TLS_KEY_FILE`                      | false    |         | Path to TLS private key file                                                                    |
+| `tls.caCertFile`                  | string   | `TLS_CA_CERT_FILE`                  | false    |         | Path to TLS CA certificate file                                                                 |
+| `tls.insecureSkipVerify`          | bool     | `TLS_INSECURE_SKIP_VERIFY`          | false    | `false` | Skip TLS verification (not recommended for production)                                          |
+| `encryptionSecretKey`             | string   | `ENCRYPTION_SECRET_KEY`             | false    |         | Hex-encoded AES key (16, 24, or 32 bytes) for encrypting tokens                                 |
+| `postgres.hostPort`               | string   | `POSTGRES_HOST_PORT`                | true     |         | PostgreSQL host and port (`host:port`)                                                          |
+| `postgres.database`               | string   | `POSTGRES_DATABASE`                 | false    | `coro`  | PostgreSQL database name (overriding default value is discouraged for compatibility with pgtool |
+| `postgres.user`                   | string   | `POSTGRES_USER`                     | true     |         | PostgreSQL username                                                                             |
+| `postgres.password`               | string   | `POSTGRES_PASSWORD`                 | false    |         | PostgreSQL password                                                                             |
+| `postgres.tls.certFile`           | string   | `POSTGRES_TLS_CERT_FILE`            | false    |         | Path to PostgreSQL client TLS certificate                                                       |
+| `postgres.tls.keyFile`            | string   | `POSTGRES_TLS_KEY_FILE`             | false    |         | Path to PostgreSQL client TLS key                                                               |
+| `postgres.tls.caCertFile`         | string   | `POSTGRES_TLS_CA_CERT_FILE`         | false    |         | Path to PostgreSQL CA certificate                                                               |
+| `postgres.tls.insecureSkipVerify` | bool     | `POSTGRES_TLS_INSECURE_SKIP_VERIFY` | false    | `false` | Skip PostgreSQL TLS verification                                                                |
+| `embeddedNats.hostPort`           | string   | `EMBEDDED_NATS_HOST_PORT`           | true     |         | Host and port for embedded NATS server (`host:port`)                                            |
+| `embeddedNats.nodeRoutes`         | []string | `EMBEDDED_NATS_NODE_ROUTES`         | false    |         | Routes to other Broker nodes for clustering (NATS URLs)                                         |
 
 **Example (Single Broker):**
 
@@ -161,6 +168,7 @@ logger:
 encryptionSecretKey: "00deaa689d7b85e4a68d416678e206cb"
 postgres:
   hostPort: "db.example.com:5432"
+  database: "coro"
   user: "coro"
   password: "securepassword"
 embeddedNats:
@@ -177,6 +185,7 @@ logger:
 encryptionSecretKey: "00deaa689d7b85e4a68d416678e206cb"
 postgres:
   hostPort: "db.example.com:5432"
+  database: "coro"
   user: "coro"
   password: "securepassword"
 embeddedNats:
@@ -192,16 +201,16 @@ embeddedNats:
 
 Runs the UI service which serves the web interface and proxies API requests to the Controller.
 
-| YAML Field               | Type   | Environment Variable       | Required | Default                 | Description                                                          |
-|--------------------------|--------|----------------------------|----------|-------------------------|----------------------------------------------------------------------|
-| `port`                   | int    | `PORT`                     | false    | `8400`                  | Port to run the UI on                                                |
-| `logger.level`           | string | `LOGGER_LEVEL`             | false    | `info`                  | Logging level: `debug`, `info`, `warn`, `error`                      |
-| `logger.structured`      | bool   | `LOGGER_STRUCTURED`        | false    | `true`                  | Enable structured JSON logging                                       |
-| `apiAddress`             | string | `API_ADDRESS`              | false    | `http://localhost:5400` | Controller API address to proxy requests to                          |
-| `tls.certFile`           | string | `TLS_CERT_FILE`            | false    |                         | Path to TLS certificate file                                         |
-| `tls.keyFile`            | string | `TLS_KEY_FILE`             | false    |                         | Path to TLS private key file                                         |
-| `tls.caCertFile`         | string | `TLS_CA_CERT_FILE`         | false    |                         | Path to TLS CA certificate file (for proxying to Controller API)     |
-| `tls.insecureSkipVerify` | bool   | `TLS_INSECURE_SKIP_VERIFY` | false    | `false`                 | Skip TLS verification when proxying to Controller                    |
+| YAML Field               | Type   | Environment Variable       | Required | Default                 | Description                                                      |
+|--------------------------|--------|----------------------------|----------|-------------------------|------------------------------------------------------------------|
+| `port`                   | int    | `PORT`                     | false    | `8400`                  | Port to run the UI on                                            |
+| `logger.level`           | string | `LOGGER_LEVEL`             | false    | `info`                  | Logging level: `debug`, `info`, `warn`, `error`                  |
+| `logger.structured`      | bool   | `LOGGER_STRUCTURED`        | false    | `true`                  | Enable structured JSON logging                                   |
+| `apiAddress`             | string | `API_ADDRESS`              | false    | `http://localhost:5400` | Controller API address to proxy requests to                      |
+| `tls.certFile`           | string | `TLS_CERT_FILE`            | false    |                         | Path to TLS certificate file                                     |
+| `tls.keyFile`            | string | `TLS_KEY_FILE`             | false    |                         | Path to TLS private key file                                     |
+| `tls.caCertFile`         | string | `TLS_CA_CERT_FILE`         | false    |                         | Path to TLS CA certificate file (for proxying to Controller API) |
+| `tls.insecureSkipVerify` | bool   | `TLS_INSECURE_SKIP_VERIFY` | false    | `false`                 | Skip TLS verification when proxying to Controller                |
 
 **Example:**
 
@@ -223,7 +232,8 @@ tls:
 
 ### Encryption Secret Key
 
-The `encryptionSecretKey` is used to encrypt sensitive data like nkeys and proxy tokens in the database. It must be a hex-encoded string that decodes to 16, 24, or 32 bytes for AES-128, AES-192, or AES-256 respectively.
+The `encryptionSecretKey` is used to encrypt sensitive data like nkeys and proxy tokens in the database. It must be a
+hex-encoded string that decodes to 16, 24, or 32 bytes for AES-128, AES-192, or AES-256 respectively.
 
 Generate a key using OpenSSL:
 
@@ -238,7 +248,8 @@ openssl rand -hex 24
 openssl rand -hex 32
 ```
 
-**Important:** Keep this key secure and consistent across all service instances. Changing the key will make existing encrypted data unreadable.
+**Important:** Keep this key secure and consistent across all service instances. Changing the key will make existing
+encrypted data unreadable.
 
 ### TLS Configuration
 
@@ -252,22 +263,26 @@ For production deployments, TLS is strongly recommended for all connections.
 
 ### CORS Origins
 
-When running the Controller with a separate UI or allowing web applications to access the API, configure `corsOrigins` to specify allowed origins.
+When running the Controller with a separate UI or allowing web applications to access the API, configure `corsOrigins`
+to specify allowed origins.
 
 Environment variable format (comma-separated):
+
 ```bash
 export CORS_ORIGINS="https://app.example.com,https://staging.example.com"
 ```
 
 ### Embedded NATS Clustering
 
-When running multiple Broker instances for high availability, configure `embeddedNats.nodeRoutes` to list the NATS URLs of other brokers. Each broker will form a cluster and share WebSocket connections and messages.
+When running multiple Broker instances for high availability, configure `embeddedNats.nodeRoutes` to list the NATS URLs
+of other brokers. Each broker will form a cluster and share WebSocket connections and messages.
 
 ---
 
 ## Environment Variable Override
 
-All configuration values can be overridden using environment variables. The variable names follow the pattern shown in the tables above with prefixes based on the nesting level.
+All configuration values can be overridden using environment variables. The variable names follow the pattern shown in
+the tables above with prefixes based on the nesting level.
 
 **Example:**
 
@@ -276,6 +291,7 @@ export PORT=5400
 export LOGGER_LEVEL=debug
 export LOGGER_STRUCTURED=true
 export POSTGRES_HOST_PORT=localhost:5432
+export POSTGRES_DATABASE=coro
 export POSTGRES_USER=coro
 export POSTGRES_PASSWORD=secret
 export ENCRYPTION_SECRET_KEY=00deaa689d7b85e4a68d416678e206cb

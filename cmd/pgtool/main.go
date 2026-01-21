@@ -11,8 +11,14 @@ import (
 )
 
 func main() {
+	// Check for database name from environment variable
+	dbName := os.Getenv("POSTGRES_DATABASE")
+	if dbName == "" {
+		dbName = postgres.AppDBName
+	}
+
 	r, err := pgctl.NewRunner(pgctl.RunnerConfig{
-		DBName:     postgres.AppDBName,
+		DBName:     dbName,
 		Migrations: migrations.FS,
 	})
 	if err != nil {
