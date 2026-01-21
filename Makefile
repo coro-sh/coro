@@ -61,3 +61,45 @@ oapi-client-gen:
 # Usage: make dev-server CORS_ORIGINS="http://localhost:8080 http://localhost:5173"
 dev-server:
 	go run ./cmd/devserver -ui $(foreach origin,$(CORS_ORIGINS),-cors-origin $(origin))
+
+# Release Management
+
+.PHONY: show-version
+show-version:
+	@./scripts/version.sh show
+
+.PHONY: tag-major
+tag-major:
+	@./scripts/version.sh tag major
+
+.PHONY: tag-minor
+tag-minor:
+	@./scripts/version.sh tag minor
+
+.PHONY: tag-patch
+tag-patch:
+	@./scripts/version.sh tag patch
+
+.PHONY: release
+release:
+	@./scripts/release.sh --skip-tag
+
+.PHONY: release-patch
+release-patch:
+	@./scripts/release.sh --bump patch
+
+.PHONY: release-minor
+release-minor:
+	@./scripts/release.sh --bump minor
+
+.PHONY: release-major
+release-major:
+	@./scripts/release.sh --bump major
+
+.PHONY: release-snapshot
+release-snapshot:
+	@./scripts/release.sh --snapshot
+
+.PHONY: release-dry-run
+release-dry-run:
+	@./scripts/release.sh --bump patch --dry-run
