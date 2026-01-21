@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -27,9 +28,10 @@ const (
 )
 
 type proxyOptions struct {
-	logger          log.Logger
-	brokerTLSConfig *TLSConfig
-	natsTLSConfig   *tls.Config
+	logger              log.Logger
+	brokerTLSConfig     *TLSConfig
+	natsTLSConfig       *tls.Config
+	brokerCustomHeaders http.Header
 }
 
 // ProxyOption configure a Proxy.
@@ -54,6 +56,13 @@ func WithProxyBrokerTLS(tlsConfig TLSConfig) ProxyOption {
 func WithProxyNatsTLS(tlsConfig *tls.Config) ProxyOption {
 	return func(opts *proxyOptions) {
 		opts.natsTLSConfig = tlsConfig
+	}
+}
+
+// WithProxyBrokerCustomHeaders sets custom HTTP headers for the Broker WebSocket connection.
+func WithProxyBrokerCustomHeaders(headers http.Header) ProxyOption {
+	return func(opts *proxyOptions) {
+		opts.brokerCustomHeaders = headers
 	}
 }
 
@@ -84,6 +93,9 @@ func NewProxy(ctx context.Context, natsURL string, brokerWebSocketURL string, to
 	}
 	if options.brokerTLSConfig != nil {
 		brokerOpts = append(brokerOpts, WithCommandSubscriberTLS(*options.brokerTLSConfig))
+	}
+	if options.brokerCustomHeaders != nil {
+		brokerOpts = append(brokerOpts, WithCommandSubscriberCustomHeaders(options.brokerCustomHeaders))
 	}
 	cmdSub, err := NewCommandSubscriber(ctx, brokerWebSocketURL, token, brokerOpts...)
 	if err != nil {

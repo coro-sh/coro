@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -113,6 +114,12 @@ func run(ctx context.Context, args []string, logger log.Logger) error {
 			Usage:   "skip operator nats tls verification (TLS/mTLS)",
 			EnvVars: []string{"NATS_SKIP_INSECURE"},
 		},
+		&cli.StringSliceFlag{
+			Name:    "broker-header",
+			Aliases: []string{"bh"},
+			Usage:   "custom header for broker connection (format: 'Key: Value', can be specified multiple times)",
+			EnvVars: []string{"BROKER_HEADERS"},
+		},
 	}
 
 	app.Commands = []*cli.Command{
@@ -165,12 +172,29 @@ func cmdRun(ctx context.Context, logger log.Logger, cfg config) error {
 		}
 	}
 
+	// Parse broker headers
+	var brokerCustomHeaders http.Header
+	if len(cfg.brokerHeaders) > 0 {
+		brokerCustomHeaders = make(http.Header)
+		for _, header := range cfg.brokerHeaders {
+			parts := strings.SplitN(header, ":", 2)
+			if len(parts) == 2 {
+				key := strings.TrimSpace(parts[0])
+				value := strings.TrimSpace(parts[1])
+				brokerCustomHeaders.Add(key, value)
+			}
+		}
+	}
+
 	proxyOptions := []command.ProxyOption{command.WithProxyLogger(logger)}
 	if brokerTLSConfig != nil {
 		proxyOptions = append(proxyOptions, command.WithProxyBrokerTLS(*brokerTLSConfig))
 	}
 	if natsTLSConfig != nil {
 		proxyOptions = append(proxyOptions, command.WithProxyNatsTLS(natsTLSConfig))
+	}
+	if brokerCustomHeaders != nil {
+		proxyOptions = append(proxyOptions, command.WithProxyBrokerCustomHeaders(brokerCustomHeaders))
 	}
 
 	errCh := make(chan error)
@@ -215,6 +239,7 @@ type config struct {
 	natsKeyFile      string
 	natsCACertFile   string
 	natsSkipVerify   bool
+	brokerHeaders    []string
 }
 
 func (c config) validate() *valgo.Validation {
@@ -238,6 +263,7 @@ func loadConfig(c *cli.Context) config {
 		natsKeyFile:      c.String("nats-key"),
 		natsCACertFile:   c.String("nats-ca-cert"),
 		natsSkipVerify:   c.Bool("nats-skip-verify"),
+		brokerHeaders:    c.StringSlice("broker-header"),
 	}
 	exitOnInvalidFlags(c, cfg.validate())
 	return cfg
