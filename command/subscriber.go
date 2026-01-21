@@ -27,9 +27,10 @@ type SubscriberHandler func(msg *commandv1.PublishMessage, replier SubscriptionR
 type SubscriberErrorHandler func(err error, metaKeyVals ...any)
 
 type commandSubscriberOptions struct {
-	tls        *TLSConfig
-	logger     log.Logger
-	errHandler SubscriberErrorHandler
+	tls           *TLSConfig
+	logger        log.Logger
+	errHandler    SubscriberErrorHandler
+	customHeaders http.Header
 }
 
 // TLSConfig holds TLS configuration for secure WebSocket connections.
@@ -62,6 +63,13 @@ func WithCommandSubscriberTLS(tls TLSConfig) SubscriberOption {
 func WithSubscriberErrorHandler(errHandler SubscriberErrorHandler) SubscriberOption {
 	return func(s *commandSubscriberOptions) {
 		s.errHandler = errHandler
+	}
+}
+
+// WithCommandSubscriberCustomHeaders sets custom HTTP headers for the WebSocket connection.
+func WithCommandSubscriberCustomHeaders(headers http.Header) SubscriberOption {
+	return func(s *commandSubscriberOptions) {
+		s.customHeaders = headers
 	}
 }
 
@@ -98,6 +106,13 @@ func NewCommandSubscriber(ctx context.Context,
 
 	header := make(http.Header)
 	header.Set(apiKeyHeader, token)
+
+	// Merge custom headers if provided
+	for key, values := range options.customHeaders {
+		for _, value := range values {
+			header.Add(key, value)
+		}
+	}
 
 	httpClient := http.DefaultClient
 	if options.tls != nil {
