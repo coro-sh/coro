@@ -145,3 +145,19 @@ func (q *Queries) ReadNamespaceByName(ctx context.Context, arg ReadNamespaceByNa
 	err := row.Scan(&i.ID, &i.Name, &i.Owner)
 	return &i, err
 }
+
+const updateNamespace = `-- name: UpdateNamespace :exec
+UPDATE namespace
+SET name = ?2
+WHERE id = ?1
+`
+
+type UpdateNamespaceParams struct {
+	ID   string
+	Name string
+}
+
+func (q *Queries) UpdateNamespace(ctx context.Context, arg UpdateNamespaceParams) error {
+	_, err := q.db.ExecContext(ctx, updateNamespace, arg.ID, arg.Name)
+	return err
+}

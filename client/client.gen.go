@@ -160,6 +160,12 @@ type UpdateAccountRequest struct {
 	Name   string         `json:"name"`
 }
 
+// UpdateNamespaceRequest defines model for UpdateNamespaceRequest.
+type UpdateNamespaceRequest struct {
+	// Name The updated name of the Namespace
+	Name string `json:"name"`
+}
+
 // UpdateOperatorRequest defines model for UpdateOperatorRequest.
 type UpdateOperatorRequest struct {
 	Name string `json:"name"`
@@ -277,6 +283,9 @@ type ListAccountsParams struct {
 // CreateNamespaceJSONRequestBody defines body for CreateNamespace for application/json ContentType.
 type CreateNamespaceJSONRequestBody = CreateNamespaceRequest
 
+// UpdateNamespaceJSONRequestBody defines body for UpdateNamespace for application/json ContentType.
+type UpdateNamespaceJSONRequestBody = UpdateNamespaceRequest
+
 // UpdateAccountJSONRequestBody defines body for UpdateAccount for application/json ContentType.
 type UpdateAccountJSONRequestBody UpdateAccountJSONBody
 
@@ -378,6 +387,11 @@ type clientInterface interface {
 
 	// DeleteNamespace request
 	DeleteNamespace(ctx context.Context, namespaceId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateNamespaceWithBody request with any body
+	UpdateNamespaceWithBody(ctx context.Context, namespaceId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateNamespace(ctx context.Context, namespaceId string, body UpdateNamespaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteAccount request
 	DeleteAccount(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -502,6 +516,30 @@ func (c *oapiClient) CreateNamespace(ctx context.Context, body CreateNamespaceJS
 
 func (c *oapiClient) DeleteNamespace(ctx context.Context, namespaceId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := newDeleteNamespaceRequest(c.Server, namespaceId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *oapiClient) UpdateNamespaceWithBody(ctx context.Context, namespaceId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := newUpdateNamespaceRequestWithBody(c.Server, namespaceId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *oapiClient) UpdateNamespace(ctx context.Context, namespaceId string, body UpdateNamespaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := newUpdateNamespaceRequest(c.Server, namespaceId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1007,6 +1045,53 @@ func newDeleteNamespaceRequest(server string, namespaceId string) (*http.Request
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// newUpdateNamespaceRequest calls the generic UpdateNamespace builder with application/json body
+func newUpdateNamespaceRequest(server string, namespaceId string, body UpdateNamespaceJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return newUpdateNamespaceRequestWithBody(server, namespaceId, "application/json", bodyReader)
+}
+
+// newUpdateNamespaceRequestWithBody generates requests for UpdateNamespace with any type of body
+func newUpdateNamespaceRequestWithBody(server string, namespaceId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "namespace_id", runtime.ParamLocationPath, namespaceId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/namespaces/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -2291,6 +2376,11 @@ type clientWithResponsesInterface interface {
 	// DeleteNamespaceWithResponse request
 	DeleteNamespaceWithResponse(ctx context.Context, namespaceId string, reqEditors ...RequestEditorFn) (*DeleteNamespaceResponse, error)
 
+	// UpdateNamespaceWithBodyWithResponse request with any body
+	UpdateNamespaceWithBodyWithResponse(ctx context.Context, namespaceId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateNamespaceResponse, error)
+
+	UpdateNamespaceWithResponse(ctx context.Context, namespaceId string, body UpdateNamespaceJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateNamespaceResponse, error)
+
 	// DeleteAccountWithResponse request
 	DeleteAccountWithResponse(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*DeleteAccountResponse, error)
 
@@ -2472,6 +2562,41 @@ func (r DeleteNamespaceResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r DeleteNamespaceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateNamespaceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Data Namespace `json:"data"`
+	}
+	JSON400 *ResponseError
+	JSON404 *ResponseError
+}
+
+// GetBody returns the raw response body
+// Note: this is a custom method added to the template
+func (r *UpdateNamespaceResponse) GetBody() []byte {
+	if r == nil {
+		return nil
+	}
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateNamespaceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateNamespaceResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -3353,6 +3478,23 @@ func (c *clientWithResponses) DeleteNamespaceWithResponse(ctx context.Context, n
 	return parseDeleteNamespaceResponse(rsp)
 }
 
+// UpdateNamespaceWithBodyWithResponse request with arbitrary body returning *UpdateNamespaceResponse
+func (c *clientWithResponses) UpdateNamespaceWithBodyWithResponse(ctx context.Context, namespaceId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateNamespaceResponse, error) {
+	rsp, err := c.UpdateNamespaceWithBody(ctx, namespaceId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return parseUpdateNamespaceResponse(rsp)
+}
+
+func (c *clientWithResponses) UpdateNamespaceWithResponse(ctx context.Context, namespaceId string, body UpdateNamespaceJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateNamespaceResponse, error) {
+	rsp, err := c.UpdateNamespace(ctx, namespaceId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return parseUpdateNamespaceResponse(rsp)
+}
+
 // DeleteAccountWithResponse request returning *DeleteAccountResponse
 func (c *clientWithResponses) DeleteAccountWithResponse(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*DeleteAccountResponse, error) {
 	rsp, err := c.DeleteAccount(ctx, namespaceId, accountId, reqEditors...)
@@ -3709,6 +3851,48 @@ func parseDeleteNamespaceResponse(rsp *http.Response) (*DeleteNamespaceResponse,
 	}
 
 	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// parseUpdateNamespaceResponse parses an HTTP response from a UpdateNamespaceWithResponse call
+func parseUpdateNamespaceResponse(rsp *http.Response) (*UpdateNamespaceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateNamespaceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Data Namespace `json:"data"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
 		var dest ResponseError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {

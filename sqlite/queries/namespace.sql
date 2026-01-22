@@ -2,6 +2,11 @@
 INSERT INTO namespace (id, name, owner)
 VALUES (?1, ?2, ?3);
 
+-- name: UpdateNamespace :exec
+UPDATE namespace
+SET name = ?2
+WHERE id = ?1;
+
 -- name: ReadNamespaceByName :one
 SELECT *
 FROM namespace

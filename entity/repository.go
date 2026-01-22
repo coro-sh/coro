@@ -24,6 +24,7 @@ type Repository interface {
 
 type NamespaceRepository interface {
 	CreateNamespace(ctx context.Context, namespace *Namespace) error
+	UpdateNamespace(ctx context.Context, namespace *Namespace) error
 	ReadNamespace(ctx context.Context, id NamespaceID) (*Namespace, error)
 	ReadNamespaceByName(ctx context.Context, name string, owner string) (*Namespace, error)
 	BatchReadNamespaces(ctx context.Context, ids []NamespaceID) ([]*Namespace, error)
