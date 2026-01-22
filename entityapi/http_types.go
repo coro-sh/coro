@@ -28,6 +28,17 @@ func (r CreateNamespaceRequest) Validate() error {
 	return valgo.Is(namespaceNameValidator(r.Name, "name")).Error()
 }
 
+type UpdateNamespaceRequest struct {
+	ID   string `param:"namespace_id" json:"-"`
+	Name string `json:"name"`
+}
+
+func (r UpdateNamespaceRequest) Validate() error {
+	v := valgo.In("params", valgo.Is(IDValidator[entity.NamespaceID](r.ID, "namespace_id")))
+	v.Is(namespaceNameValidator(r.Name, "name"))
+	return v.ToError()
+}
+
 type DeleteNamespaceRequest struct {
 	ID string `param:"namespace_id" json:"-"`
 }

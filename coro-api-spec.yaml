@@ -78,6 +78,47 @@ paths:
                 $ref: '#/components/schemas/ResponseError'
 
   /namespaces/{namespace_id}:
+    put:
+      summary: Update Namespace
+      operationId: updateNamespace
+      tags:
+        - Namespaces
+      parameters:
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNamespaceRequest'
+      responses:
+        '200':
+          description: Namespace updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Namespace'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseError'
     delete:
       summary: Delete Namespace
       operationId: deleteNamespace
@@ -1247,6 +1288,15 @@ components:
         name:
           type: string
           description: The name of the Namespace
+
+    UpdateNamespaceRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: The updated name of the Namespace
 
     Namespace:
       required:

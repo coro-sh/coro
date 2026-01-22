@@ -743,9 +743,9 @@ type PublishMessage_CommandFetchStreamMessages struct {
 	StreamName string `protobuf:"bytes,2,opt,name=stream_name,json=streamName,proto3" json:"stream_name,omitempty"`
 	// Optional sequence number from which to fetch message from (defaults to 1)
 	StartSequence uint64 `protobuf:"varint,3,opt,name=start_sequence,json=startSequence,proto3" json:"start_sequence,omitempty"`
-	// Optional max number of messages to retrieve (defaults to 100). Only
-	// applies to messages that are currently available in the stream and will
-	// not wait for new messages to arrive, even if batch size is not met.
+	// Optional number of messages to retrieve up to a max of 1000 (defaults to
+	// 100). Only applies to messages that are currently available in the stream
+	// and will not wait for new messages to arrive, even if batch size is not met.
 	BatchSize     uint32 `protobuf:"varint,4,opt,name=batch_size,json=batchSize,proto3" json:"batch_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

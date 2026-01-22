@@ -45,6 +45,17 @@ func (c *Client) ListNamespaces(ctx context.Context, params *ListNamespacesParam
 	return nil, getResErr(res)
 }
 
+func (c *Client) UpdateNamespace(ctx context.Context, namespaceID string, req UpdateNamespaceRequest, reqEditors ...RequestEditorFn) (Namespace, error) {
+	res, err := c.oac.UpdateNamespaceWithResponse(ctx, namespaceID, req, reqEditors...)
+	if err != nil {
+		return Namespace{}, err
+	}
+	if res.JSON200 != nil {
+		return res.JSON200.Data, nil
+	}
+	return Namespace{}, getResErr(res)
+}
+
 func (c *Client) DeleteNamespace(ctx context.Context, namespaceID string, reqEditors ...RequestEditorFn) error {
 	res, err := c.oac.DeleteNamespaceWithResponse(ctx, namespaceID, reqEditors...)
 	if err != nil {
@@ -87,6 +98,17 @@ func (c *Client) ListOperators(ctx context.Context, namespaceID string, params *
 		return res.JSON200.Data, nil
 	}
 	return nil, getResErr(res)
+}
+
+func (c *Client) UpdateOperator(ctx context.Context, namespaceID, operatorID string, req UpdateOperatorRequest, reqEditors ...RequestEditorFn) (Operator, error) {
+	res, err := c.oac.UpdateOperatorWithResponse(ctx, namespaceID, operatorID, UpdateOperatorJSONRequestBody{Data: &req}, reqEditors...)
+	if err != nil {
+		return Operator{}, err
+	}
+	if res.JSON200 != nil {
+		return *res.JSON200, nil
+	}
+	return Operator{}, getResErr(res)
 }
 
 func (c *Client) DeleteOperator(ctx context.Context, namespaceID, operatorID string, reqEditors ...RequestEditorFn) error {
@@ -166,6 +188,17 @@ func (c *Client) ListAccounts(ctx context.Context, namespaceID, operatorID strin
 	return nil, getResErr(res)
 }
 
+func (c *Client) UpdateAccount(ctx context.Context, namespaceID, accountID string, req UpdateAccountRequest, reqEditors ...RequestEditorFn) (Account, error) {
+	res, err := c.oac.UpdateAccountWithResponse(ctx, namespaceID, accountID, UpdateAccountJSONRequestBody{Data: &req}, reqEditors...)
+	if err != nil {
+		return Account{}, err
+	}
+	if res.JSON200 != nil {
+		return *res.JSON200, nil
+	}
+	return Account{}, getResErr(res)
+}
+
 func (c *Client) DeleteAccount(ctx context.Context, namespaceID, accountID string, reqEditors ...RequestEditorFn) error {
 	res, err := c.oac.DeleteAccountWithResponse(ctx, namespaceID, accountID, reqEditors...)
 	if err != nil {
@@ -210,6 +243,17 @@ func (c *Client) ListUsers(ctx context.Context, namespaceID, accountID string, p
 	return nil, getResErr(res)
 }
 
+func (c *Client) UpdateUser(ctx context.Context, namespaceID, userID string, req UpdateUserRequest, reqEditors ...RequestEditorFn) (User, error) {
+	res, err := c.oac.UpdateUserWithResponse(ctx, namespaceID, userID, req, reqEditors...)
+	if err != nil {
+		return User{}, err
+	}
+	if res.JSON200 != nil {
+		return res.JSON200.Data, nil
+	}
+	return User{}, getResErr(res)
+}
+
 func (c *Client) GetUserCreds(ctx context.Context, namespaceID, userID string, reqEditors ...RequestEditorFn) ([]byte, error) {
 	res, err := c.oac.GetUserCredsWithResponse(ctx, namespaceID, userID, reqEditors...)
 	if err != nil {
@@ -217,6 +261,17 @@ func (c *Client) GetUserCreds(ctx context.Context, namespaceID, userID string, r
 	}
 	if res.StatusCode() == http.StatusOK {
 		return res.Body, nil
+	}
+	return nil, getResErr(res)
+}
+
+func (c *Client) ListUserJWTIssuances(ctx context.Context, namespaceID, userID string, reqEditors ...RequestEditorFn) ([]UserJWTIssuance, error) {
+	res, err := c.oac.ListUserJWTIssuancesWithResponse(ctx, namespaceID, userID, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	if res.JSON200 != nil && res.JSON200.Data != nil {
+		return *res.JSON200.Data, nil
 	}
 	return nil, getResErr(res)
 }
@@ -230,6 +285,17 @@ func (c *Client) DeleteUser(ctx context.Context, namespaceID, userID string, req
 		return nil
 	}
 	return getResErr(res)
+}
+
+func (c *Client) GetStream(ctx context.Context, namespaceID, accountID string, streamName string, reqEditors ...RequestEditorFn) (Stream, error) {
+	res, err := c.oac.GetStreamWithResponse(ctx, namespaceID, accountID, streamName, reqEditors...)
+	if err != nil {
+		return Stream{}, err
+	}
+	if res.JSON200 != nil {
+		return res.JSON200.Data, nil
+	}
+	return Stream{}, getResErr(res)
 }
 
 func (c *Client) ListStreams(ctx context.Context, namespaceID, accountID string, reqEditors ...RequestEditorFn) ([]Stream, error) {

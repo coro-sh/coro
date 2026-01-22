@@ -9,6 +9,8 @@ unit-test:
 integration-test:
 	go test -tags=integration ./... -race -count=1
 
+.PHONY: gen
+gen: sqlc-gen oapi-client-gen buf-gen
 
 # SQLC
 

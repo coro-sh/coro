@@ -28,6 +28,7 @@ type Storer interface {
 
 type NamespaceStorer interface {
 	CreateNamespace(ctx context.Context, namespace *Namespace) error
+	UpdateNamespace(ctx context.Context, namespace *Namespace) error
 	ReadNamespace(ctx context.Context, id NamespaceID) (*Namespace, error)
 	ReadNamespaceByName(ctx context.Context, name, owner string) (*Namespace, error)
 	BatchReadNamespaces(ctx context.Context, ids []NamespaceID) ([]*Namespace, error)
@@ -109,6 +110,11 @@ func NewStore(repo Repository, opts ...StoreOption) *Store {
 // CreateNamespace creates a Namespace.
 func (s *Store) CreateNamespace(ctx context.Context, namespace *Namespace) error {
 	return s.repo.CreateNamespace(ctx, namespace)
+}
+
+// UpdateNamespace updates an existing Namespace in the store.
+func (s *Store) UpdateNamespace(ctx context.Context, namespace *Namespace) error {
+	return s.repo.UpdateNamespace(ctx, namespace)
 }
 
 // ReadNamespace reads a Namespace by ID.

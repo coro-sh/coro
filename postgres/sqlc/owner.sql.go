@@ -13,7 +13,8 @@ const countOwnerAccounts = `-- name: CountOwnerAccounts :one
 SELECT COUNT(*)::BIGINT
 FROM account a
          JOIN namespace n ON n.id = a.namespace_id
-WHERE n.owner = $1 AND a.name != 'SYS'
+WHERE n.owner = $1
+  AND a.name != 'SYS'
 `
 
 func (q *Queries) CountOwnerAccounts(ctx context.Context, owner string) (int64, error) {
@@ -54,7 +55,8 @@ const countOwnerUsers = `-- name: CountOwnerUsers :one
 SELECT COUNT(*)::BIGINT
 FROM "user" u
          JOIN namespace n ON n.id = u.namespace_id
-WHERE n.owner = $1 AND u.name != 'sys'
+WHERE n.owner = $1
+  AND u.name != 'sys'
 `
 
 func (q *Queries) CountOwnerUsers(ctx context.Context, owner string) (int64, error) {

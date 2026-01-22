@@ -43,6 +43,7 @@ type Querier interface {
 	ReadUser(ctx context.Context, id string) (*User, error)
 	ReadUserByName(ctx context.Context, arg ReadUserByNameParams) (*User, error)
 	UpdateAccount(ctx context.Context, arg UpdateAccountParams) error
+	UpdateNamespace(ctx context.Context, arg UpdateNamespaceParams) error
 	UpdateOperator(ctx context.Context, arg UpdateOperatorParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) error
 	UpsertOperatorToken(ctx context.Context, arg UpsertOperatorTokenParams) error

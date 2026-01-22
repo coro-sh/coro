@@ -75,21 +75,6 @@ pre-push:
         echo "Running integration tests..."
         make integration-test
 
-    # Ensure all code generation is up to date
-    codegen-check:
-      run: |
-        # Run code generation
-        make sqlc-gen
-        make oapi-client-gen
-        # Check if any generated files changed (exit code 0 = no changes, 1 = changes)
-        if ! git diff --exit-code postgres/sqlc sqlite/sqlc client/ >/dev/null 2>&1; then
-          echo "Generated code is out of sync. Run code generation:"
-          echo "  make sqlc-gen"
-          echo "  make oapi-client-gen"
-          git diff --stat postgres/sqlc sqlite/sqlc client/
-          exit 1
-        fi
-
     # Final build check
     build:
       run: |

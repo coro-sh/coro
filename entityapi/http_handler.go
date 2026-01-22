@@ -80,6 +80,7 @@ func (h *HTTPHandler[S]) Register(g *echo.Group) {
 	namespaces.GET("", h.ListNamespaces)
 
 	namespace := namespaces.Group(fmt.Sprintf("/:%s", PathParamNamespaceID))
+	namespace.PUT("", h.UpdateNamespace)
 	namespace.DELETE("", h.DeleteNamespace)
 	namespace.POST("/operators", h.CreateOperator)
 
@@ -157,6 +158,34 @@ func (h *HTTPHandler[S]) ListNamespaces(c echo.Context) error {
 	}
 
 	return server.SetResponseList(c, http.StatusOK, nsResps, cursor)
+}
+
+// UpdateNamespace handles PUT requests to update a Namespace.
+func (h *HTTPHandler[S]) UpdateNamespace(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	req, err := server.BindRequest[UpdateNamespaceRequest](c)
+	if err != nil {
+		return err
+	}
+
+	nsID := id.MustParse[entity.NamespaceID](req.ID)
+	c.Set(logkey.NamespaceID, nsID)
+
+	ns, err := h.store.ReadNamespace(ctx, nsID)
+	if err != nil {
+		return err
+	}
+
+	ns.Name = req.Name
+
+	if err = h.store.UpdateNamespace(ctx, ns); err != nil {
+		return err
+	}
+
+	return server.SetResponse(c, http.StatusOK, NamespaceResponse{
+		Namespace: *ns,
+	})
 }
 
 // DeleteNamespace handles DELETE requests to delete a Namespace.

@@ -47,6 +47,14 @@ func (r *EntityRepository) CreateNamespace(ctx context.Context, namespace *entit
 	return tagEntityErr[entity.Namespace](err)
 }
 
+func (r *EntityRepository) UpdateNamespace(ctx context.Context, namespace *entity.Namespace) error {
+	err := r.db.UpdateNamespace(ctx, sqlc.UpdateNamespaceParams{
+		ID:   namespace.ID.String(),
+		Name: namespace.Name,
+	})
+	return tagEntityErr[entity.Namespace](err)
+}
+
 func (r *EntityRepository) ReadNamespace(ctx context.Context, id entity.NamespaceID) (*entity.Namespace, error) {
 	ns, err := r.db.ReadNamespace(ctx, id.String())
 	if err != nil {
