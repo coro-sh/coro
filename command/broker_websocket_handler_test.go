@@ -11,12 +11,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/joshjon/kit/server"
+	"github.com/joshjon/kit/testutil"
+
 	"github.com/coro-sh/coro/entity"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/tkn"
-	"github.com/joshjon/kit/server"
-	"github.com/joshjon/kit/testutil"
 )
 
 func TestWebsocketForwardsCommandsAndReplies(t *testing.T) {
@@ -109,7 +110,9 @@ func TestWebsocketForwardsCommandsAndReplies(t *testing.T) {
 
 	close(stopSub)
 	wg.Wait()
-	require.Equal(t, int64(0), brokerHandler.NumConnections())
+	require.Eventually(t, func() bool {
+		return brokerHandler.NumConnections() == int64(0)
+	}, time.Second, 50*time.Millisecond)
 
 }
 

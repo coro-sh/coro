@@ -17,10 +17,11 @@ import (
 	"golang.org/x/sync/singleflight"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/joshjon/kit/errtag"
+
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
-	"github.com/joshjon/kit/errtag"
 )
 
 const (
@@ -454,12 +455,29 @@ func command(ctx context.Context, nc *nats.Conn, operatorID entity.OperatorID, m
 		return nil, fmt.Errorf("publish message: %w", err)
 	}
 
-	replyNatsMsg, err := replySub.NextMsgWithContext(ctx)
+	buffer := time.Second
+	replyCtx, cancel := context.WithTimeout(ctx, messageHandlerTimeout+buffer)
+	defer cancel()
+
+	replyNatsMsg, err := replySub.NextMsgWithContext(replyCtx)
 	if err != nil {
 		if errors.Is(err, nats.ErrNoResponders) {
 			return nil, errtag.Tag[errtag.Conflict](err, errtag.WithMsg("Operator NATS not connected"))
 		}
-		return nil, fmt.Errorf("wait reply message : %w", err)
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, errtag.Tag[errtag.GatewayTimeout](err, errtag.WithMsg("Did not receive a response from Operator NATS"))
+		}
+		return nil, fmt.Errorf("wait reply message: %w", err)
+	}
+
+	reply := &commandv1.ReplyMessage{}
+	if err = proto.Unmarshal(replyNatsMsg.Data, reply); err != nil {
+		err = fmt.Errorf("unmarshal reply message: %w", err)
+		return nil, errtag.Tag[errtag.BadGateway](err, errtag.WithMsg("Received malformed reply from downstream proxy agent"))
+	}
+	if reply.Error != nil {
+		err = fmt.Errorf("error returned in reply message: %s", *reply.Error)
+		return nil, errtag.Tag[errtag.BadGateway](err, errtag.WithMsg("Downstream proxy agent failed to handle request"))
 	}
 
 	return replyNatsMsg.Data, nil

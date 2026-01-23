@@ -79,12 +79,12 @@ func run(ctx context.Context, args []string, logger log.Logger) error {
 			Usage:   "ca cert to verify broker (tls/mtls)",
 			EnvVars: []string{"BROKER_CA_CERT"},
 		},
-		&cli.StringFlag{
-			Name:    "broker-skip-insecure",
+		&cli.BoolFlag{
+			Name:    "broker-skip-verify",
 			Aliases: []string{"bs"},
-			Value:   "",
+			Value:   false,
 			Usage:   "skip broker tls verification (TLS/mTLS)",
-			EnvVars: []string{"BROKER_SKIP_INSECURE"},
+			EnvVars: []string{"BROKER_SKIP_VERIFY"},
 		},
 		&cli.StringFlag{
 			Name:    "nats-cert",
@@ -107,12 +107,12 @@ func run(ctx context.Context, args []string, logger log.Logger) error {
 			Usage:   "ca cert to verify operator nats (tls/mtls)",
 			EnvVars: []string{"NATS_CA_CERT"},
 		},
-		&cli.StringFlag{
-			Name:    "nats-skip-insecure",
+		&cli.BoolFlag{
+			Name:    "nats-skip-verify",
 			Aliases: []string{"ns"},
-			Value:   "",
+			Value:   false,
 			Usage:   "skip operator nats tls verification (TLS/mTLS)",
-			EnvVars: []string{"NATS_SKIP_INSECURE"},
+			EnvVars: []string{"NATS_SKIP_VERIFY"},
 		},
 		&cli.StringSliceFlag{
 			Name:    "broker-header",
@@ -147,6 +147,11 @@ func cmdRun(ctx context.Context, logger log.Logger, cfg config) error {
 			KeyFile:            cfg.brokerKeyFile,
 			CACertFile:         cfg.brokerCACertFile,
 			InsecureSkipVerify: cfg.brokerSkipVerify,
+		}
+	} else if cfg.brokerSkipVerify {
+		// Support skip verify even without client certs (for server-only TLS)
+		brokerTLSConfig = &command.TLSConfig{
+			InsecureSkipVerify: true,
 		}
 	}
 

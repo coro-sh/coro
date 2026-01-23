@@ -191,14 +191,9 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler SubscriberHandler) {
 			var errMetaKeyVals []any
 
 			err = func() error {
-				opType, err := getOperationType(pubMsg)
-				if err != nil {
-					return err
-				}
-
 				errMetaKeyVals = append(errMetaKeyVals,
 					logkey.BrokerMessageID, pubMsg.Id,
-					logkey.BrokerMessageOperation, opType,
+					logkey.BrokerMessageOperation, getOperationType(pubMsg),
 				)
 
 				err = handler(pubMsg, func(ctx context.Context, replyMsg *commandv1.ReplyMessage) error {

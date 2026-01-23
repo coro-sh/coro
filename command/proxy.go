@@ -69,7 +69,7 @@ func WithProxyBrokerCustomHeaders(headers http.Header) ProxyOption {
 // Proxy establishes a connection between a Broker WebSocket server and a NATS
 // server, facilitating message forwarding between the two.
 type Proxy struct {
-	cmdSub       *Subscriber
+	cmdSub       *ReconnectableSubscriber
 	natsURL      string
 	nc           *nats.Conn
 	consumerPool *ConsumerPool
@@ -87,7 +87,7 @@ func NewProxy(ctx context.Context, natsURL string, brokerWebSocketURL string, to
 		opt(&options)
 	}
 
-	// Broker subscriber
+	// Broker subscriber with automatic reconnection
 	brokerOpts := []SubscriberOption{
 		WithCommandSubscriberLogger(options.logger),
 	}
@@ -97,13 +97,46 @@ func NewProxy(ctx context.Context, natsURL string, brokerWebSocketURL string, to
 	if options.brokerCustomHeaders != nil {
 		brokerOpts = append(brokerOpts, WithCommandSubscriberCustomHeaders(options.brokerCustomHeaders))
 	}
-	cmdSub, err := NewCommandSubscriber(ctx, brokerWebSocketURL, token, brokerOpts...)
+	cmdSub, err := NewReconnectableSubscriber(ctx, brokerWebSocketURL, token, brokerOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("dial broker subscriber: %w", err)
 	}
 	sysUserCreds := cmdSub.SysUserCreds()
 
-	nc, err := natsutil.Connect(natsURL, sysUserCreds.JWT, sysUserCreds.Seed, natsutil.WithTLS(options.natsTLSConfig))
+	// NATS connection with event handlers for logging
+	natsOpts := []natsutil.ConnectOption{
+		natsutil.WithTLS(options.natsTLSConfig),
+		natsutil.WithConnectHandler(func(nc *nats.Conn) {
+			options.logger.Info("nats connection established", "url", natsURL)
+		}),
+		natsutil.WithDisconnectHandler(func(nc *nats.Conn, err error) {
+			if err != nil {
+				options.logger.Warn("nats connection lost", "error", err, "url", natsURL)
+			} else {
+				options.logger.Info("nats connection closed", "url", natsURL)
+			}
+		}),
+		natsutil.WithReconnectHandler(func(nc *nats.Conn) {
+			options.logger.Info("nats connection re-established", "url", natsURL)
+		}),
+		natsutil.WithClosedHandler(func(nc *nats.Conn) {
+			lastErr := nc.LastError()
+			if lastErr != nil {
+				options.logger.Error("nats connection permanently closed", "error", lastErr, "url", natsURL)
+			} else {
+				options.logger.Info("nats connection permanently closed", "url", natsURL)
+			}
+		}),
+		natsutil.WithErrorHandler(func(nc *nats.Conn, sub *nats.Subscription, err error) {
+			if sub != nil {
+				options.logger.Error("nats async error", "error", err, "subject", sub.Subject)
+			} else {
+				options.logger.Error("nats async error", "error", err)
+			}
+		}),
+	}
+
+	nc, err := natsutil.Connect(natsURL, sysUserCreds.JWT, sysUserCreds.Seed, natsOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("connect to nats server: %w", err)
 	}
@@ -121,7 +154,14 @@ func NewProxy(ctx context.Context, natsURL string, brokerWebSocketURL string, to
 // connected NATS server.
 func (p *Proxy) Start(ctx context.Context) {
 	p.cmdSub.Subscribe(ctx, func(msg *commandv1.PublishMessage, replier SubscriptionReplier) error {
-		return p.handleMessage(ctx, msg, replier)
+		opType := getOperationType(msg)
+		logger := p.logger.With("operation", opType, "message_id", msg.Id)
+		if err := p.handleMessage(ctx, msg, replier); err != nil {
+			logger.Error("failed to handle broker message", "error", err)
+		} else {
+			logger.Info("handled broker message")
+		}
+		return nil
 	})
 }
 
