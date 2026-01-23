@@ -3,13 +3,15 @@ module github.com/coro-sh/coro
 go 1.25
 
 require (
+	github.com/cenkalti/backoff/v4 v4.3.0
+	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/coder/websocket v1.8.14
 	github.com/cohesivestack/valgo v0.7.1
 	github.com/coro-sh/coro-ui-server v0.2.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgerrcode v0.0.0-20250907135507-afb5586c32a6
 	github.com/jackc/pgx/v5 v5.8.0
-	github.com/joshjon/kit v0.0.0-20260117080119-5a4f27c23f91
+	github.com/joshjon/kit v0.0.0-20260123131127-d4085762b60d
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/nats-io/jwt/v2 v2.7.4
 	github.com/nats-io/nats-server/v2 v2.11.3
@@ -36,7 +38,6 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/briandowns/spinner v1.23.2 // indirect
 	github.com/caarlos0/env/v11 v11.3.1 // indirect
-	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc // indirect
 	github.com/charmbracelet/lipgloss v1.1.0 // indirect
 	github.com/charmbracelet/x/ansi v0.8.0 // indirect

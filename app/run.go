@@ -33,6 +33,10 @@ import (
 	"github.com/coro-sh/coro/tkn"
 )
 
+const (
+	requestTimeout = 20 * time.Second
+)
+
 func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool, opts ...server.Option) error {
 	pgDialOps := getPostgresDialOpts(cfg.Postgres)
 	pg, err := pgdb.Dial(ctx, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.HostPort, cfg.Postgres.Database, pgDialOps...)
@@ -44,7 +48,10 @@ func RunAll(ctx context.Context, logger log.Logger, cfg AllConfig, withUI bool, 
 }
 
 func RunUI(ctx context.Context, logger log.Logger, cfg UIConfig, opts ...server.Option) error {
-	srvOpts := []server.Option{server.WithLogger(logger)}
+	srvOpts := []server.Option{
+		server.WithLogger(logger),
+		server.WithRequestTimeout(requestTimeout),
+	}
 	if cfg.TLS != nil {
 		srvOpts = append(srvOpts, server.WithTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile, cfg.TLS.CACertFile))
 	}
@@ -91,6 +98,7 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 
 	srvOpts := []server.Option{
 		server.WithLogger(logger),
+		server.WithRequestTimeout(requestTimeout),
 		server.WithMiddleware(
 			entityapi.NamespaceContextMiddleware(),
 			entityapi.InternalNamespaceMiddleware(intNS.ID),
@@ -264,6 +272,7 @@ func runAll(
 	// Server
 	srvOpts := []server.Option{
 		server.WithLogger(logger),
+		server.WithRequestTimeout(requestTimeout),
 		server.WithCORS(cfg.CorsOrigins...),
 		server.WithMiddleware(
 			entityapi.NamespaceContextMiddleware(),

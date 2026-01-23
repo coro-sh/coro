@@ -38,6 +38,7 @@ func NewHTTPHandlerTestFixture(t *testing.T) *HTTPHandlerTestFixture {
 	logger := log.NewLogger(log.WithDevelopment())
 	srv, err := server.NewServer(testutil.GetFreePort(t),
 		server.WithLogger(logger),
+		server.WithRequestTimeout(testTimeout),
 		server.WithMiddleware(entityapi.NamespaceContextMiddleware()),
 	)
 	require.NoError(t, err)
