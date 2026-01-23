@@ -181,8 +181,8 @@ func (r *EntityRepository) DeleteOperator(ctx context.Context, id entity.Operato
 	return tagEntityErr[entity.Operator](err)
 }
 
-func (r *EntityRepository) CountNamespaceOperators(ctx context.Context, namespaceID entity.NamespaceID) (int64, error) {
-	ops, err := r.db.CountNamespaceOperators(ctx, namespaceID.String())
+func (r *EntityRepository) CountOwnerOperators(ctx context.Context, owner string) (int64, error) {
+	ops, err := r.db.CountOwnerOperators(ctx, owner)
 	return ops, tagErr(err)
 }
 

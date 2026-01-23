@@ -3,10 +3,11 @@ SELECT COUNT(*) AS count
 FROM namespace AS n
 WHERE n.owner = ?;
 
--- name: CountNamespaceOperators :one
+-- name: CountOwnerOperators :one
 SELECT COUNT(*) AS count
 FROM operator AS o
-WHERE o.namespace_id = ?;
+         JOIN namespace AS n ON n.id = o.namespace_id
+WHERE n.owner = ?;
 
 -- name: CountOperatorAccounts :one
 SELECT COUNT(*) AS count

@@ -36,7 +36,7 @@ type OperatorStorer interface {
 	ReadOperatorByPublicKey(ctx context.Context, pubKey string) (*Operator, error)
 	ListOperators(ctx context.Context, namespaceID NamespaceID, filter paginate.PageFilter[OperatorID]) ([]*Operator, error)
 	DeleteOperator(ctx context.Context, id OperatorID) error
-	CountNamespaceOperators(ctx context.Context, namespaceID NamespaceID) (int64, error)
+	CountOwnerOperators(ctx context.Context, owner string) (int64, error)
 }
 
 type AccountStorer interface {
@@ -223,9 +223,9 @@ func (s *Store) DeleteOperator(ctx context.Context, id OperatorID) (err error) {
 	return s.repo.DeleteOperator(ctx, id)
 }
 
-// CountNamespaceOperators returns the number of operators in a namespace.
-func (s *Store) CountNamespaceOperators(ctx context.Context, namespaceID NamespaceID) (int64, error) {
-	return s.repo.CountNamespaceOperators(ctx, namespaceID)
+// CountOwnerOperators returns the number of operators belonging to an owner.
+func (s *Store) CountOwnerOperators(ctx context.Context, owner string) (int64, error) {
+	return s.repo.CountOwnerOperators(ctx, owner)
 }
 
 // CreateAccount creates an Account and its associated Nkeys to the store.

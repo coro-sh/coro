@@ -9,19 +9,6 @@ import (
 	"context"
 )
 
-const countNamespaceOperators = `-- name: CountNamespaceOperators :one
-SELECT COUNT(*) AS count
-FROM operator AS o
-WHERE o.namespace_id = ?
-`
-
-func (q *Queries) CountNamespaceOperators(ctx context.Context, namespaceID string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countNamespaceOperators, namespaceID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const countOperatorAccounts = `-- name: CountOperatorAccounts :one
 SELECT COUNT(*) AS count
 FROM account AS a
@@ -56,6 +43,20 @@ WHERE n.owner = ?
 
 func (q *Queries) CountOwnerNamespaces(ctx context.Context, owner string) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countOwnerNamespaces, owner)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countOwnerOperators = `-- name: CountOwnerOperators :one
+SELECT COUNT(*) AS count
+FROM operator AS o
+         JOIN namespace AS n ON n.id = o.namespace_id
+WHERE n.owner = ?
+`
+
+func (q *Queries) CountOwnerOperators(ctx context.Context, owner string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countOwnerOperators, owner)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

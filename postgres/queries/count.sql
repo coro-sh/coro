@@ -3,10 +3,11 @@ SELECT COUNT(*)::BIGINT
 FROM namespace AS n
 WHERE n.owner = $1;
 
--- name: CountNamespaceOperators :one
+-- name: CountOwnerOperators :one
 SELECT COUNT(*)::BIGINT
 FROM operator o
-WHERE o.namespace_id = $1;
+         JOIN namespace n ON n.id = o.namespace_id
+WHERE n.owner = $1;
 
 -- name: CountOperatorAccounts :one
 SELECT COUNT(*)::BIGINT

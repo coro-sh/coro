@@ -41,7 +41,7 @@ type OperatorRepository interface {
 	ReadOperatorByPublicKey(ctx context.Context, pubKey string) (OperatorData, error)
 	ListOperators(ctx context.Context, namespaceID NamespaceID, filter paginate.PageFilter[OperatorID]) ([]OperatorData, error)
 	DeleteOperator(ctx context.Context, id OperatorID) error // must cascade delete accounts, users, and nkeys
-	CountNamespaceOperators(ctx context.Context, namespaceID NamespaceID) (int64, error)
+	CountOwnerOperators(ctx context.Context, owner string) (int64, error)
 }
 
 type AccountRepository interface {
