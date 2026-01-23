@@ -41,7 +41,7 @@ type OperatorRepository interface {
 	ReadOperatorByPublicKey(ctx context.Context, pubKey string) (OperatorData, error)
 	ListOperators(ctx context.Context, namespaceID NamespaceID, filter paginate.PageFilter[OperatorID]) ([]OperatorData, error)
 	DeleteOperator(ctx context.Context, id OperatorID) error // must cascade delete accounts, users, and nkeys
-	CountOwnerOperators(ctx context.Context, owner string) (int64, error)
+	CountNamespaceOperators(ctx context.Context, namespaceID NamespaceID) (int64, error)
 }
 
 type AccountRepository interface {
@@ -51,7 +51,7 @@ type AccountRepository interface {
 	ReadAccountByPublicKey(ctx context.Context, pubKey string) (AccountData, error)
 	ListAccounts(ctx context.Context, operatorID OperatorID, filter paginate.PageFilter[AccountID]) ([]AccountData, error)
 	DeleteAccount(ctx context.Context, id AccountID) error // must cascade delete users and nkeys
-	CountOwnerAccounts(ctx context.Context, owner string) (int64, error)
+	CountOperatorAccounts(ctx context.Context, operatorID OperatorID) (int64, error)
 }
 
 type UserRepository interface {
@@ -63,7 +63,7 @@ type UserRepository interface {
 	DeleteUser(ctx context.Context, id UserID) error // must cascade delete nkeys
 	CreateUserJWTIssuance(ctx context.Context, userID UserID, iss UserJWTIssuance) error
 	ListUserJWTIssuances(ctx context.Context, userID UserID, filter paginate.PageFilter[int64]) ([]UserJWTIssuance, error)
-	CountOwnerUsers(ctx context.Context, owner string) (int64, error)
+	CountOperatorUsers(ctx context.Context, operatorID OperatorID) (int64, error)
 }
 
 type NkeyRepository interface {

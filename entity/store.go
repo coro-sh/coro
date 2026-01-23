@@ -26,16 +26,7 @@ type Storer interface {
 	SetRepository(repo Repository)
 }
 
-type NamespaceStorer interface {
-	CreateNamespace(ctx context.Context, namespace *Namespace) error
-	UpdateNamespace(ctx context.Context, namespace *Namespace) error
-	ReadNamespace(ctx context.Context, id NamespaceID) (*Namespace, error)
-	ReadNamespaceByName(ctx context.Context, name, owner string) (*Namespace, error)
-	BatchReadNamespaces(ctx context.Context, ids []NamespaceID) ([]*Namespace, error)
-	ListNamespaces(ctx context.Context, owner string, filter paginate.PageFilter[NamespaceID]) ([]*Namespace, error)
-	CountOwnerNamespaces(ctx context.Context, owner string) (int64, error)
-	DeleteNamespace(ctx context.Context, id NamespaceID) error
-}
+type NamespaceStorer NamespaceRepository
 
 type OperatorStorer interface {
 	CreateOperator(ctx context.Context, operator *Operator) error
@@ -45,7 +36,7 @@ type OperatorStorer interface {
 	ReadOperatorByPublicKey(ctx context.Context, pubKey string) (*Operator, error)
 	ListOperators(ctx context.Context, namespaceID NamespaceID, filter paginate.PageFilter[OperatorID]) ([]*Operator, error)
 	DeleteOperator(ctx context.Context, id OperatorID) error
-	CountOwnerOperators(ctx context.Context, owner string) (int64, error)
+	CountNamespaceOperators(ctx context.Context, namespaceID NamespaceID) (int64, error)
 }
 
 type AccountStorer interface {
@@ -55,7 +46,7 @@ type AccountStorer interface {
 	ReadAccountByPublicKey(ctx context.Context, pubKey string) (*Account, error)
 	ListAccounts(ctx context.Context, operatorID OperatorID, filter paginate.PageFilter[AccountID]) ([]*Account, error)
 	DeleteAccount(ctx context.Context, id AccountID) error
-	CountOwnerAccounts(ctx context.Context, owner string) (int64, error)
+	CountOperatorAccounts(ctx context.Context, operatorID OperatorID) (int64, error)
 }
 
 type UserStorer interface {
@@ -65,7 +56,7 @@ type UserStorer interface {
 	ReadSystemUser(ctx context.Context, operatorID OperatorID, sysAccountID AccountID) (*User, error)
 	ListUsers(ctx context.Context, accountID AccountID, filter paginate.PageFilter[UserID]) ([]*User, error)
 	DeleteUser(ctx context.Context, id UserID) error
-	CountOwnerUsers(ctx context.Context, owner string) (int64, error)
+	CountOperatorUsers(ctx context.Context, operatorID OperatorID) (int64, error)
 	RecordUserJWTIssuance(ctx context.Context, user *User) error
 	ListUserJWTIssuances(ctx context.Context, userID UserID, filter paginate.PageFilter[int64]) ([]UserJWTIssuance, error)
 }
@@ -232,9 +223,9 @@ func (s *Store) DeleteOperator(ctx context.Context, id OperatorID) (err error) {
 	return s.repo.DeleteOperator(ctx, id)
 }
 
-// CountOwnerOperators returns the number of operators belonging to an owner.
-func (s *Store) CountOwnerOperators(ctx context.Context, owner string) (int64, error) {
-	return s.repo.CountOwnerOperators(ctx, owner)
+// CountNamespaceOperators returns the number of operators in a namespace.
+func (s *Store) CountNamespaceOperators(ctx context.Context, namespaceID NamespaceID) (int64, error) {
+	return s.repo.CountNamespaceOperators(ctx, namespaceID)
 }
 
 // CreateAccount creates an Account and its associated Nkeys to the store.
@@ -311,9 +302,9 @@ func (s *Store) DeleteAccount(ctx context.Context, id AccountID) (err error) {
 	return s.repo.DeleteAccount(ctx, id)
 }
 
-// CountOwnerAccounts returns the number of accounts belonging to an owner.
-func (s *Store) CountOwnerAccounts(ctx context.Context, owner string) (int64, error) {
-	return s.repo.CountOwnerAccounts(ctx, owner)
+// CountOperatorAccounts returns the number of accounts in an operator.
+func (s *Store) CountOperatorAccounts(ctx context.Context, operatorID OperatorID) (int64, error) {
+	return s.repo.CountOperatorAccounts(ctx, operatorID)
 }
 
 // CreateUser creates a User and its associated Nkey in the store.
@@ -387,9 +378,9 @@ func (s *Store) DeleteUser(ctx context.Context, id UserID) (err error) {
 	return s.repo.DeleteUser(ctx, id)
 }
 
-// CountOwnerUsers returns the number of accounts belonging to an owner.
-func (s *Store) CountOwnerUsers(ctx context.Context, owner string) (int64, error) {
-	return s.repo.CountOwnerUsers(ctx, owner)
+// CountOperatorUsers returns the number of users in an operator.
+func (s *Store) CountOperatorUsers(ctx context.Context, operatorID OperatorID) (int64, error) {
+	return s.repo.CountOperatorUsers(ctx, operatorID)
 }
 
 func (s *Store) RecordUserJWTIssuance(ctx context.Context, user *User) error {

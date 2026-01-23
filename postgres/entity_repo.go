@@ -181,8 +181,8 @@ func (r *EntityRepository) DeleteOperator(ctx context.Context, id entity.Operato
 	return tagEntityErr[entity.Operator](err)
 }
 
-func (r *EntityRepository) CountOwnerOperators(ctx context.Context, owner string) (int64, error) {
-	ops, err := r.db.CountOwnerOperators(ctx, owner)
+func (r *EntityRepository) CountNamespaceOperators(ctx context.Context, namespaceID entity.NamespaceID) (int64, error) {
+	ops, err := r.db.CountNamespaceOperators(ctx, namespaceID.String())
 	return ops, tagErr(err)
 }
 
@@ -247,8 +247,8 @@ func (r *EntityRepository) DeleteAccount(ctx context.Context, id entity.AccountI
 	return tagEntityErr[entity.Account](err)
 }
 
-func (r *EntityRepository) CountOwnerAccounts(ctx context.Context, owner string) (int64, error) {
-	accs, err := r.db.CountOwnerAccounts(ctx, owner)
+func (r *EntityRepository) CountOperatorAccounts(ctx context.Context, operatorID entity.OperatorID) (int64, error) {
+	accs, err := r.db.CountOperatorAccounts(ctx, operatorID.String())
 	return accs, tagErr(err)
 }
 
@@ -314,8 +314,8 @@ func (r *EntityRepository) ListUsers(ctx context.Context, accountID entity.Accou
 	return unmarshalList(users, unmarshalUser), nil
 }
 
-func (r *EntityRepository) CountOwnerUsers(ctx context.Context, owner string) (int64, error) {
-	users, err := r.db.CountOwnerUsers(ctx, owner)
+func (r *EntityRepository) CountOperatorUsers(ctx context.Context, operatorID entity.OperatorID) (int64, error) {
+	users, err := r.db.CountOperatorUsers(ctx, operatorID.String())
 	return users, tagErr(err)
 }
 

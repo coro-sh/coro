@@ -145,7 +145,7 @@ func (s *OperatorTokenReadWriterTestSuite) TestBeginTxFunc() {
 		s.Contains(err.Error(), "forced failure")
 
 		got, err := s.opTknRW.Read(ctx, OperatorTokenTypeProxy, opData.ID)
-		s.Error(err)
+		s.Require().Error(err)
 		s.True(errtag.HasTag[errtag.NotFound](err))
 		s.Empty(got)
 	})
@@ -178,7 +178,7 @@ func (s *OperatorTokenReadWriterTestSuite) TestBeginTxFunc() {
 		}()
 
 		got, err := s.opTknRW.Read(ctx, OperatorTokenTypeProxy, opData.ID)
-		s.Error(err)
+		s.Require().Error(err)
 		s.True(errtag.HasTag[errtag.NotFound](err))
 		s.Empty(got)
 	})
@@ -205,15 +205,15 @@ func (s *OperatorTokenReadWriterTestSuite) TestBeginTxFunc() {
 		s.Contains(err.Error(), "forced failure")
 
 		_, err = s.entityRepo.ReadNamespace(ctx, ns.ID)
-		s.Error(err)
+		s.Require().Error(err)
 		s.True(errtag.HasTag[entity.ErrTagNotFound[entity.Namespace]](err))
 
 		_, err = s.entityRepo.ReadOperator(ctx, opData.ID)
-		s.Error(err)
+		s.Require().Error(err)
 		s.True(errtag.HasTag[entity.ErrTagNotFound[entity.Operator]](err))
 
 		got, err := s.opTknRW.Read(ctx, OperatorTokenTypeProxy, opData.ID)
-		s.Error(err)
+		s.Require().Error(err)
 		s.True(errtag.HasTag[errtag.NotFound](err))
 		s.Empty(got)
 	})

@@ -12,6 +12,7 @@ import (
 	"github.com/joshjon/kit/paginate"
 	"github.com/joshjon/kit/ref"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/joshjon/kit/testutil"
@@ -172,8 +173,8 @@ func (s *RepositoryTestSuite) TestUpdateOperator() {
 	s.Require().NoError(err)
 	s.Equal(want, got)
 
-	want.Name = "foo"
-	want.JWT = "bar"
+	want.Name = testutil.RandName()
+	want.JWT = testutil.RandString(10)
 	s.Require().NoError(s.repo.UpdateOperator(ctx, want))
 
 	got, err = s.repo.ReadOperator(ctx, want.ID)
@@ -282,8 +283,8 @@ func (s *RepositoryTestSuite) TestUpdateAccount() {
 	s.Require().NoError(err)
 	s.Equal(want, got)
 
-	want.Name = "foo"
-	want.JWT = "bar"
+	want.Name = testutil.RandName()
+	want.JWT = testutil.RandString(10)
 	*want.UserJWTDuration = time.Hour * time.Duration(290*365*24) // 290 years
 
 	s.Require().NoError(s.repo.UpdateAccount(ctx, want))
@@ -402,8 +403,8 @@ func (s *RepositoryTestSuite) TestUpdateUser() {
 	s.Require().NoError(err)
 	s.Equal(want, got)
 
-	want.Name = "foo"
-	want.JWT = "bar"
+	want.Name = testutil.RandName()
+	want.JWT = testutil.RandString(10)
 	*want.JWTDuration = time.Hour * time.Duration(290*365*24) // 290 years
 
 	s.Require().NoError(s.repo.UpdateUser(ctx, want))
@@ -493,13 +494,14 @@ func (s *RepositoryTestSuite) TestCountOwnerNamespaces() {
 	otherNS := genNamespace()
 	otherNS.Owner = testutil.RandName()
 	err := s.repo.CreateNamespace(ctx, otherNS)
+	s.Require().NoError(err)
 
 	got, err := s.repo.CountOwnerNamespaces(ctx, constants.DefaultNamespaceOwner)
 	s.Require().NoError(err)
 	s.Equal(int64(wantCount), got)
 }
 
-func (s *RepositoryTestSuite) TestCountOwnerOperators() {
+func (s *RepositoryTestSuite) TestCountNamespaceOperators() {
 	ctx, cancel := context.WithTimeout(s.T().Context(), s.Timeout)
 	defer cancel()
 
@@ -515,18 +517,17 @@ func (s *RepositoryTestSuite) TestCountOwnerOperators() {
 		s.Require().NoError(err)
 	}
 
-	// create operator in a different namespace/owner (should be excluded from count)
+	// create operator in a different namespace (should be excluded from count)
 	otherNS := genNamespace()
-	otherNS.Owner = testutil.RandName()
 	s.Require().NoError(s.repo.CreateNamespace(ctx, otherNS))
 	s.Require().NoError(s.repo.CreateOperator(ctx, genOperatorData(otherNS)))
 
-	got, err := s.repo.CountOwnerOperators(ctx, constants.DefaultNamespaceOwner)
+	got, err := s.repo.CountNamespaceOperators(ctx, ns.ID)
 	s.Require().NoError(err)
 	s.Equal(int64(wantCount), got)
 }
 
-func (s *RepositoryTestSuite) TestCountOwnerAccounts() {
+func (s *RepositoryTestSuite) TestCountOperatorAccounts() {
 	ctx, cancel := context.WithTimeout(s.T().Context(), s.Timeout)
 	defer cancel()
 
@@ -542,20 +543,17 @@ func (s *RepositoryTestSuite) TestCountOwnerAccounts() {
 		s.Require().NoError(s.repo.CreateAccount(ctx, acc))
 	}
 
-	// create account in a different namespace/owner (should be excluded from count)
-	otherNS := genNamespace()
-	otherNS.Owner = testutil.RandName()
-	s.Require().NoError(s.repo.CreateNamespace(ctx, otherNS))
-	otherOp := genOperatorData(otherNS)
+	// create account in a different operator (should be excluded from count)
+	otherOp := genOperatorData(ns)
 	s.Require().NoError(s.repo.CreateOperator(ctx, otherOp))
 	s.Require().NoError(s.repo.CreateAccount(ctx, genAccountData(otherOp)))
 
-	got, err := s.repo.CountOwnerAccounts(ctx, constants.DefaultNamespaceOwner)
+	got, err := s.repo.CountOperatorAccounts(ctx, op.ID)
 	s.Require().NoError(err)
 	s.Equal(int64(wantCount), got)
 }
 
-func (s *RepositoryTestSuite) TestCountOwnerUsers() {
+func (s *RepositoryTestSuite) TestCountOperatorUsers() {
 	ctx, cancel := context.WithTimeout(s.T().Context(), s.Timeout)
 	defer cancel()
 
@@ -573,17 +571,14 @@ func (s *RepositoryTestSuite) TestCountOwnerUsers() {
 		s.Require().NoError(s.repo.CreateUser(ctx, usr))
 	}
 
-	// create users in a different namespace/owner (should be excluded from count)
-	otherNS := genNamespace()
-	otherNS.Owner = testutil.RandName()
-	s.Require().NoError(s.repo.CreateNamespace(ctx, otherNS))
-	otherOp := genOperatorData(otherNS)
+	// create users in a different operator (should be excluded from count)
+	otherOp := genOperatorData(ns)
 	s.Require().NoError(s.repo.CreateOperator(ctx, otherOp))
 	otherAcc := genAccountData(otherOp)
 	s.Require().NoError(s.repo.CreateAccount(ctx, otherAcc))
 	s.Require().NoError(s.repo.CreateUser(ctx, genUserData(otherAcc)))
 
-	got, err := s.repo.CountOwnerUsers(ctx, constants.DefaultNamespaceOwner)
+	got, err := s.repo.CountOperatorUsers(ctx, op.ID)
 	s.Require().NoError(err)
 	s.Equal(int64(wantCount), got)
 }
@@ -662,7 +657,7 @@ func (s *RepositoryTestSuite) TestBeginTxFunc() {
 		})
 
 		got, err := s.repo.ReadNamespace(ctx, ns.ID)
-		s.Error(err)
+		s.Require().Error(err)
 		s.True(errtag.HasTag[ErrTagNotFound[Namespace]](err))
 		s.Nil(got)
 	})
@@ -972,8 +967,8 @@ func assertUserDeleted(t *testing.T, repo Repository, userID UserID) {
 	assert.True(t, errtag.HasTag[errtag.NotFound](err))
 	assertNkeysDeleted(t, repo, userID.String())
 	gotUserIss, err := repo.ListUserJWTIssuances(t.Context(), userID, paginate.PageFilter[int64]{Size: 1})
-	assert.NoError(t, err)
-	assert.Len(t, gotUserIss, 0)
+	require.NoError(t, err)
+	assert.Empty(t, gotUserIss)
 }
 
 func assertNkeysDeleted(t *testing.T, repo Repository, entityID string) {

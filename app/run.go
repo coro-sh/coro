@@ -203,6 +203,9 @@ func RunBroker(ctx context.Context, logger log.Logger, cfg BrokerConfig, opts ..
 
 func RunDevServer(ctx context.Context, logger log.Logger, serverPort int, withUI bool, corsOrigins ...string) error {
 	db, err := sqlitedb.Open(ctx, sqlitedb.WithInMemory())
+	if err != nil {
+		return err
+	}
 	defer db.Close()
 
 	if err = sqlitedb.Migrate(db, migrations.FS); err != nil {

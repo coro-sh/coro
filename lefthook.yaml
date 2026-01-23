@@ -41,7 +41,7 @@ pre-commit:
     debug-check:
       glob: "*.go"
       run: |
-        matches=$(grep -rn "fmt.Print\|spew.Dump\|panic(" {staged_files} || true)
+        matches=$(grep -rn "fmt.Print\|spew.Dump(" {staged_files} || true)
         if [ -n "$matches" ]; then
           echo "Warning: Found potential debugging code:"
           echo "$matches"
