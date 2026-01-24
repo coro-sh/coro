@@ -111,8 +111,8 @@ func (c *Client) UpdateOperator(ctx context.Context, namespaceID, operatorID str
 	return Operator{}, getResErr(res)
 }
 
-func (c *Client) DeleteOperator(ctx context.Context, namespaceID, operatorID string, reqEditors ...RequestEditorFn) error {
-	res, err := c.oac.DeleteOperatorWithResponse(ctx, namespaceID, operatorID, reqEditors...)
+func (c *Client) DeleteOperator(ctx context.Context, namespaceID, operatorID string, unmanageAccounts bool, reqEditors ...RequestEditorFn) error {
+	res, err := c.oac.DeleteOperatorWithResponse(ctx, namespaceID, operatorID, &DeleteOperatorParams{UnmanageAccounts: &unmanageAccounts}, reqEditors...)
 	if err != nil {
 		return err
 	}
@@ -199,8 +199,8 @@ func (c *Client) UpdateAccount(ctx context.Context, namespaceID, accountID strin
 	return Account{}, getResErr(res)
 }
 
-func (c *Client) DeleteAccount(ctx context.Context, namespaceID, accountID string, reqEditors ...RequestEditorFn) error {
-	res, err := c.oac.DeleteAccountWithResponse(ctx, namespaceID, accountID, reqEditors...)
+func (c *Client) DeleteAccount(ctx context.Context, namespaceID, accountID string, unmanage bool, reqEditors ...RequestEditorFn) error {
+	res, err := c.oac.DeleteAccountWithResponse(ctx, namespaceID, accountID, &DeleteAccountParams{Unmanage: &unmanage}, reqEditors...)
 	if err != nil {
 		return err
 	}

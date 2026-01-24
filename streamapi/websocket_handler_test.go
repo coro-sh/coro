@@ -112,7 +112,6 @@ func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {
 	require.NoError(t, err)
 
 	// wait for websocket closed on the server side
-	time.Sleep(5 * time.Millisecond)
 	require.Eventually(t, func() bool {
 		return int64(0) == handler.NumConnections()
 	}, 100*time.Millisecond, 5*time.Millisecond)

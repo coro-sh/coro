@@ -342,6 +342,13 @@ paths:
           required: true
           schema:
             type: string
+        - name: unmanage_accounts
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: If true, allow deletion even if operator has existing accounts
       responses:
         "204":
           description: No Content (successful deletion)
@@ -607,6 +614,13 @@ paths:
           required: true
           schema:
             type: string
+        - name: unmanage
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: If true, skip verification that the downstream operator NATS server processed the deletion
       responses:
         "204":
           description: No Content (successful deletion)

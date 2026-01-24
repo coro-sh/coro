@@ -3,7 +3,9 @@ package entityapi_test // avoids import cycle with sqlite package
 import (
 	"context"
 	"fmt"
+	"io"
 	"math/rand/v2"
+	"net/http"
 	"os"
 	"slices"
 	"strings"
@@ -183,15 +185,69 @@ func TestHTTPHandler_ListOperators(t *testing.T) {
 }
 
 func TestServer_DeleteOperator(t *testing.T) {
-	ctx := testutil.Context(t)
-	fixture := NewHTTPHandlerTestFixture(t)
-	defer fixture.Stop()
-	op := fixture.AddOperator(ctx)
+	tests := []struct {
+		name                string
+		hasExistingAccounts bool
+		unmanageAccounts    bool
+		wantBadReqCode      bool
+	}{
+		{
+			name:                "delete with no existing accounts",
+			hasExistingAccounts: false,
+			unmanageAccounts:    false,
+		},
+		{
+			name:                "delete fails when existing accounts",
+			hasExistingAccounts: true,
+			unmanageAccounts:    false,
+			wantBadReqCode:      true,
+		},
+		{
+			name:                "delete and unmanage existing accounts",
+			hasExistingAccounts: true,
+			unmanageAccounts:    true,
+		},
+	}
 
-	testutil.Delete(t, fixture.OperatorURL(op.NamespaceID, op.ID))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := testutil.Context(t)
+			fixture := NewHTTPHandlerTestFixture(t)
+			defer fixture.Stop()
+			op := fixture.AddOperator(ctx)
 
-	_, err := fixture.Store.ReadOperator(t.Context(), op.ID)
-	assert.True(t, errtag.HasTag[errtag.NotFound](err))
+			if tt.hasExistingAccounts {
+				acc, err := entity.NewAccount(testutil.RandName(), op)
+				require.NoError(t, err)
+				require.NoError(t, fixture.Store.CreateAccount(ctx, acc))
+			}
+
+			url := fixture.OperatorURL(op.NamespaceID, op.ID)
+			if tt.unmanageAccounts {
+				url += "?unmanage_accounts=true"
+			}
+
+			req, err := http.NewRequest(http.MethodDelete, url, nil)
+			require.NoError(t, err)
+
+			res, err := testutil.DefaultClient.Do(req)
+			require.NoError(t, err)
+			defer res.Body.Close()
+
+			if tt.wantBadReqCode {
+				assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+				return
+			}
+
+			if res.StatusCode < 200 || res.StatusCode >= 300 {
+				body, _ := io.ReadAll(res.Body)
+				require.Failf(t, "http error", "%s %s\nStatus: %s\nBody: %s", http.MethodDelete, url, res.Status, string(body))
+			}
+
+			_, err = fixture.Store.ReadOperator(t.Context(), op.ID)
+			assert.True(t, errtag.HasTag[errtag.NotFound](err))
+		})
+	}
 }
 
 func TestServer_CreateAccount(t *testing.T) {

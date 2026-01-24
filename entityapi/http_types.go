@@ -25,7 +25,7 @@ type CreateNamespaceRequest struct {
 }
 
 func (r CreateNamespaceRequest) Validate() error {
-	return valgo.Is(namespaceNameValidator(r.Name, "name")).Error()
+	return valgo.Is(namespaceNameValidator(r.Name, "name")).ToError()
 }
 
 type UpdateNamespaceRequest struct {
@@ -44,7 +44,7 @@ type DeleteNamespaceRequest struct {
 }
 
 func (r DeleteNamespaceRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[entity.NamespaceID](r.ID, "namespace_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.NamespaceID](r.ID, "namespace_id"))).ToError()
 }
 
 type NamespaceResponse struct {
@@ -77,7 +77,16 @@ type GetOperatorRequest struct {
 }
 
 func (r GetOperatorRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.ID, "operator_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.ID, "operator_id"))).ToError()
+}
+
+type DeleteOperatorRequest struct {
+	ID               string `param:"operator_id" json:"-"`
+	UnmanageAccounts bool   `query:"unmanage_accounts"`
+}
+
+func (r DeleteOperatorRequest) Validate() error {
+	return valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.ID, "operator_id"))).ToError()
 }
 
 type GetOperatorJWTRequest struct {
@@ -89,7 +98,7 @@ func (r GetOperatorJWTRequest) Validate() error {
 		valgo.String(r.PK, "operator_public_key").Not().Blank().Passing(func(_ string) bool {
 			return nkeys.IsValidPublicOperatorKey(r.PK)
 		}, "Must be an operator public key"),
-	)).Error()
+	)).ToError()
 }
 
 type ListOperatorsRequest struct {
@@ -97,7 +106,7 @@ type ListOperatorsRequest struct {
 }
 
 func (r ListOperatorsRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[entity.NamespaceID](r.NamespaceID, "namespace_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.NamespaceID](r.NamespaceID, "namespace_id"))).ToError()
 }
 
 type OperatorResponse struct {
@@ -145,7 +154,7 @@ type GetAccountRequest struct {
 }
 
 func (r GetAccountRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[entity.AccountID](r.ID, "account_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.AccountID](r.ID, "account_id"))).ToError()
 }
 
 type GetAccountJWTRequest struct {
@@ -157,7 +166,7 @@ func (r GetAccountJWTRequest) Validate() error {
 		valgo.String(r.PK, "account_public_key").Not().Blank().Passing(func(_ string) bool {
 			return nkeys.IsValidPublicAccountKey(r.PK)
 		}, "Must be an account public key"),
-	)).Error()
+	)).ToError()
 }
 
 type UpdateAccountRequest struct {
@@ -180,7 +189,16 @@ type ListAccountsRequest struct {
 }
 
 func (r ListAccountsRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.OperatorID, "operator_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.OperatorID, "operator_id"))).ToError()
+}
+
+type DeleteAccountRequest struct {
+	ID       string `param:"account_id" json:"-"`
+	Unmanage bool   `query:"unmanage"`
+}
+
+func (r DeleteAccountRequest) Validate() error {
+	return valgo.In("params", valgo.Is(IDValidator[entity.AccountID](r.ID, "account_id"))).ToError()
 }
 
 type AccountResponse struct {
@@ -234,7 +252,7 @@ type GetUserRequest struct {
 }
 
 func (r GetUserRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[entity.UserID](r.ID, "user_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.UserID](r.ID, "user_id"))).ToError()
 }
 
 type ListUsersRequest struct {
@@ -242,7 +260,7 @@ type ListUsersRequest struct {
 }
 
 func (r ListUsersRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[entity.AccountID](r.AccountID, "account_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.AccountID](r.AccountID, "account_id"))).ToError()
 }
 
 type UserResponse struct {
@@ -261,7 +279,7 @@ type GenerateProxyTokenRequest struct {
 }
 
 func (r GenerateProxyTokenRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.OperatorID, "operator_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.OperatorID, "operator_id"))).ToError()
 }
 
 type GenerateProxyTokenResponse struct {
@@ -273,7 +291,7 @@ type GetProxyStatusRequest struct {
 }
 
 func (r GetProxyStatusRequest) Validate() error {
-	return valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.OperatorID, "operator_id"))).Error()
+	return valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.OperatorID, "operator_id"))).ToError()
 }
 
 type GetProxyStatusResponse struct {

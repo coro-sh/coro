@@ -234,6 +234,12 @@ type ListNamespacesParams struct {
 	PageSize *PageSize `form:"page_size,omitempty" json:"page_size,omitempty"`
 }
 
+// DeleteAccountParams defines parameters for DeleteAccount.
+type DeleteAccountParams struct {
+	// Unmanage If true, skip verification that the downstream operator NATS server processed the deletion
+	Unmanage *bool `form:"unmanage,omitempty" json:"unmanage,omitempty"`
+}
+
 // UpdateAccountJSONBody defines parameters for UpdateAccount.
 type UpdateAccountJSONBody struct {
 	Data *UpdateAccountRequest `json:"data,omitempty"`
@@ -264,6 +270,12 @@ type ListOperatorsParams struct {
 
 	// PageSize Number of items per page
 	PageSize *PageSize `form:"page_size,omitempty" json:"page_size,omitempty"`
+}
+
+// DeleteOperatorParams defines parameters for DeleteOperator.
+type DeleteOperatorParams struct {
+	// UnmanageAccounts If true, allow deletion even if operator has existing accounts
+	UnmanageAccounts *bool `form:"unmanage_accounts,omitempty" json:"unmanage_accounts,omitempty"`
 }
 
 // UpdateOperatorJSONBody defines parameters for UpdateOperator.
@@ -394,7 +406,7 @@ type clientInterface interface {
 	UpdateNamespace(ctx context.Context, namespaceId string, body UpdateNamespaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteAccount request
-	DeleteAccount(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteAccount(ctx context.Context, namespaceId string, accountId string, params *DeleteAccountParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetAccount request
 	GetAccount(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -433,7 +445,7 @@ type clientInterface interface {
 	CreateOperator(ctx context.Context, namespaceId string, body CreateOperatorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteOperator request
-	DeleteOperator(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteOperator(ctx context.Context, namespaceId string, operatorId string, params *DeleteOperatorParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetOperator request
 	GetOperator(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -550,8 +562,8 @@ func (c *oapiClient) UpdateNamespace(ctx context.Context, namespaceId string, bo
 	return c.Client.Do(req)
 }
 
-func (c *oapiClient) DeleteAccount(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := newDeleteAccountRequest(c.Server, namespaceId, accountId)
+func (c *oapiClient) DeleteAccount(ctx context.Context, namespaceId string, accountId string, params *DeleteAccountParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := newDeleteAccountRequest(c.Server, namespaceId, accountId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -718,8 +730,8 @@ func (c *oapiClient) CreateOperator(ctx context.Context, namespaceId string, bod
 	return c.Client.Do(req)
 }
 
-func (c *oapiClient) DeleteOperator(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := newDeleteOperatorRequest(c.Server, namespaceId, operatorId)
+func (c *oapiClient) DeleteOperator(ctx context.Context, namespaceId string, operatorId string, params *DeleteOperatorParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := newDeleteOperatorRequest(c.Server, namespaceId, operatorId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -1097,7 +1109,7 @@ func newUpdateNamespaceRequestWithBody(server string, namespaceId string, conten
 }
 
 // newDeleteAccountRequest generates requests for DeleteAccount
-func newDeleteAccountRequest(server string, namespaceId string, accountId string) (*http.Request, error) {
+func newDeleteAccountRequest(server string, namespaceId string, accountId string, params *DeleteAccountParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1127,6 +1139,28 @@ func newDeleteAccountRequest(server string, namespaceId string, accountId string
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Unmanage != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "unmanage", runtime.ParamLocationQuery, *params.Unmanage); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
@@ -1715,7 +1749,7 @@ func newCreateOperatorRequestWithBody(server string, namespaceId string, content
 }
 
 // newDeleteOperatorRequest generates requests for DeleteOperator
-func newDeleteOperatorRequest(server string, namespaceId string, operatorId string) (*http.Request, error) {
+func newDeleteOperatorRequest(server string, namespaceId string, operatorId string, params *DeleteOperatorParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1745,6 +1779,28 @@ func newDeleteOperatorRequest(server string, namespaceId string, operatorId stri
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.UnmanageAccounts != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "unmanage_accounts", runtime.ParamLocationQuery, *params.UnmanageAccounts); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
@@ -2382,7 +2438,7 @@ type clientWithResponsesInterface interface {
 	UpdateNamespaceWithResponse(ctx context.Context, namespaceId string, body UpdateNamespaceJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateNamespaceResponse, error)
 
 	// DeleteAccountWithResponse request
-	DeleteAccountWithResponse(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*DeleteAccountResponse, error)
+	DeleteAccountWithResponse(ctx context.Context, namespaceId string, accountId string, params *DeleteAccountParams, reqEditors ...RequestEditorFn) (*DeleteAccountResponse, error)
 
 	// GetAccountWithResponse request
 	GetAccountWithResponse(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*GetAccountResponse, error)
@@ -2421,7 +2477,7 @@ type clientWithResponsesInterface interface {
 	CreateOperatorWithResponse(ctx context.Context, namespaceId string, body CreateOperatorJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateOperatorResponse, error)
 
 	// DeleteOperatorWithResponse request
-	DeleteOperatorWithResponse(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*DeleteOperatorResponse, error)
+	DeleteOperatorWithResponse(ctx context.Context, namespaceId string, operatorId string, params *DeleteOperatorParams, reqEditors ...RequestEditorFn) (*DeleteOperatorResponse, error)
 
 	// GetOperatorWithResponse request
 	GetOperatorWithResponse(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*GetOperatorResponse, error)
@@ -3496,8 +3552,8 @@ func (c *clientWithResponses) UpdateNamespaceWithResponse(ctx context.Context, n
 }
 
 // DeleteAccountWithResponse request returning *DeleteAccountResponse
-func (c *clientWithResponses) DeleteAccountWithResponse(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*DeleteAccountResponse, error) {
-	rsp, err := c.DeleteAccount(ctx, namespaceId, accountId, reqEditors...)
+func (c *clientWithResponses) DeleteAccountWithResponse(ctx context.Context, namespaceId string, accountId string, params *DeleteAccountParams, reqEditors ...RequestEditorFn) (*DeleteAccountResponse, error) {
+	rsp, err := c.DeleteAccount(ctx, namespaceId, accountId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -3619,8 +3675,8 @@ func (c *clientWithResponses) CreateOperatorWithResponse(ctx context.Context, na
 }
 
 // DeleteOperatorWithResponse request returning *DeleteOperatorResponse
-func (c *clientWithResponses) DeleteOperatorWithResponse(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*DeleteOperatorResponse, error) {
-	rsp, err := c.DeleteOperator(ctx, namespaceId, operatorId, reqEditors...)
+func (c *clientWithResponses) DeleteOperatorWithResponse(ctx context.Context, namespaceId string, operatorId string, params *DeleteOperatorParams, reqEditors ...RequestEditorFn) (*DeleteOperatorResponse, error) {
+	rsp, err := c.DeleteOperator(ctx, namespaceId, operatorId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}

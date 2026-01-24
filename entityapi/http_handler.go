@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/joshjon/kit/errtag"
 	"github.com/joshjon/kit/id"
 	"github.com/joshjon/kit/ref"
 	"github.com/joshjon/kit/server"
@@ -343,7 +344,7 @@ func (h *HTTPHandler[S]) GetOperator(c echo.Context) error {
 func (h *HTTPHandler[S]) DeleteOperator(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	req, err := server.BindRequest[GetOperatorRequest](c)
+	req, err := server.BindRequest[DeleteOperatorRequest](c)
 	if err != nil {
 		return err
 	}
@@ -358,6 +359,19 @@ func (h *HTTPHandler[S]) DeleteOperator(c echo.Context) error {
 
 	if err = VerifyEntityNamespace(c, op); err != nil {
 		return err
+	}
+
+	if !req.UnmanageAccounts {
+		accountCount, err := h.store.CountOperatorAccounts(ctx, opID)
+		if err != nil {
+			return err
+		}
+		if accountCount > 0 {
+			return errtag.NewTagged[errtag.InvalidArgument](
+				"cannot delete operator with one or more accounts",
+				errtag.WithMsg("Operator has one or more accounts that must be deleted first"),
+			)
+		}
 	}
 
 	if err = h.store.DeleteOperator(ctx, opID); err != nil {
@@ -637,7 +651,7 @@ func (h *HTTPHandler[S]) ListAccounts(c echo.Context) error {
 func (h *HTTPHandler[S]) DeleteAccount(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	req, err := server.BindRequest[GetAccountRequest](c)
+	req, err := server.BindRequest[DeleteAccountRequest](c)
 	if err != nil {
 		return err
 	}
@@ -658,6 +672,13 @@ func (h *HTTPHandler[S]) DeleteAccount(c echo.Context) error {
 	op, err := h.store.ReadOperator(ctx, acc.OperatorID)
 	if err != nil {
 		return err
+	}
+
+	if req.Unmanage {
+		if err = h.store.DeleteAccount(ctx, accID); err != nil {
+			return err
+		}
+		return c.NoContent(http.StatusNoContent)
 	}
 
 	err = h.store.BeginTxFunc(ctx, func(ctx context.Context, store S) error {
