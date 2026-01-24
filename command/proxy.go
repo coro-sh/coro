@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/joshjon/kit/preview"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"google.golang.org/protobuf/proto"
@@ -285,6 +286,7 @@ func (p *Proxy) handleMessage(ctx context.Context, msg *commandv1.PublishMessage
 		if op.UserCreds == nil {
 			return errors.New("missing user creds for start consumer operation")
 		}
+
 		consumerNC, err := natsutil.Connect(p.natsURL, op.UserCreds.Jwt, op.UserCreds.Seed)
 		if err != nil {
 			return fmt.Errorf("connect to nats server using consumer creds: %w", err)
@@ -313,17 +315,24 @@ func (p *Proxy) handleMessage(ctx context.Context, msg *commandv1.PublishMessage
 		if batch.Error() != nil {
 			return fmt.Errorf("batch contains error: %w", batch.Error())
 		}
+
 		batchMsg := &commandv1.StreamMessageBatch{}
 		for bmsg := range batch.Messages() {
+			bmsgData := bmsg.Data()
 			md, err := bmsg.Metadata()
 			if err != nil {
 				return fmt.Errorf("get message metadata: %w", err)
 			}
+
 			batchMsg.Messages = append(batchMsg.Messages, &commandv1.StreamMessage{
 				StreamSequence: md.Sequence.Stream,
+				Subject:        bmsg.Subject(),
+				SizeBytes:      int64(len(bmsgData)),
+				Preview:        preview.Preview(bmsgData, preview.DefaultMaxChars, preview.DefaultMaxInspect),
 				Timestamp:      md.Timestamp.Unix(),
 			})
 		}
+
 		replyData, err := proto.Marshal(batchMsg)
 		if err != nil {
 			return fmt.Errorf("marshal stream message batch: %w", err)
@@ -379,11 +388,18 @@ func (p *Proxy) handleMessage(ctx context.Context, msg *commandv1.PublishMessage
 					p.logger.Error("failed to get consumer message metadata", "error", err, "reply_message.id", replyMsg.Id)
 					return
 				}
+				data := jsMsg.Data()
 				replyMsg.Id += "_" + strconv.Itoa(int(md.Sequence.Consumer))
+
 				replyMsg.Data, err = proto.Marshal(&commandv1.StreamConsumerMessage{
-					StreamSequence:  md.Sequence.Stream,
+					Message: &commandv1.StreamMessage{
+						StreamSequence: md.Sequence.Stream,
+						Subject:        jsMsg.Subject(),
+						SizeBytes:      int64(len(data)),
+						Preview:        preview.Preview(data, preview.DefaultMaxChars, preview.DefaultMaxInspect),
+						Timestamp:      md.Timestamp.Unix(),
+					},
 					MessagesPending: md.NumPending,
-					Timestamp:       md.Timestamp.Unix(),
 				})
 				if err != nil {
 					p.logger.Error("failed to marshal consumer message", "error", err, "reply_message.id", replyMsg.Id)
@@ -394,7 +410,7 @@ func (p *Proxy) handleMessage(ctx context.Context, msg *commandv1.PublishMessage
 				errStr := cerr.Error()
 				replyMsg.Error = &errStr
 			}
-			if err := replier(hctx, replyMsg); err != nil {
+			if err = replier(hctx, replyMsg); err != nil {
 				p.logger.Error(
 					"failed to forward jetstream ephemeral consumer message to broker",
 					"error", err,

@@ -110,8 +110,14 @@ message ReplyMessage {
 message StreamMessage {
   // Stream sequence number of the message.
   uint64 stream_sequence = 1;
+  // Subject on which the message was published.
+  string subject = 2;
+  // Size of the message in bytes.
+  int64 size_bytes = 3;
+  // Preview of the message.
+  string preview = 4;
   // Time that the message was originally sent on the stream.
-  int64 timestamp = 2;
+  int64 timestamp = 5;
 }
 
 message StreamMessageBatch {
@@ -120,13 +126,11 @@ message StreamMessageBatch {
 }
 
 message StreamConsumerMessage {
-  // Stream sequence number of the message.
-  uint64 stream_sequence = 1;
+  // Received message.
+  StreamMessage message = 1;
   // Number of messages that match the consumer's filter, but have not been
   // delivered yet.
   uint64 messages_pending = 2;
-  // Time that the message was originally sent on the stream.
-  int64 timestamp = 3;
 }
 
 message StreamMessageContent {

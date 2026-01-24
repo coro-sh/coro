@@ -244,8 +244,8 @@ func TestStartConsumer(t *testing.T) {
 		require.NoError(t, err)
 
 		wantSeq := uint64(i) + 1
-		assert.Equal(t, wantSeq, got.StreamSequence)
-		assert.GreaterOrEqual(t, got.Timestamp, startTime.Unix())
+		assert.Equal(t, wantSeq, got.Message.StreamSequence)
+		assert.GreaterOrEqual(t, got.Message.Timestamp, startTime.Unix())
 		assert.Equal(t, uint64(numMsgs)-wantSeq, got.MessagesPending)
 	}
 

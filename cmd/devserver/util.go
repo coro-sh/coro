@@ -16,12 +16,13 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/urfave/cli/v2"
 
+	"github.com/joshjon/kit/log"
+	"github.com/joshjon/kit/testutil"
+
 	"github.com/coro-sh/coro/client"
 	"github.com/coro-sh/coro/command"
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/natsutil"
-	"github.com/joshjon/kit/log"
-	"github.com/joshjon/kit/testutil"
 )
 
 func exitOnInvalidFlags(c *cli.Context, v *valgo.Validation) {
@@ -229,22 +230,22 @@ func createStreamAndPublisher(ctx context.Context, js jetstream.JetStream, logge
 	if err != nil {
 		return fmt.Errorf("create jetstream dev server stream: %w", err)
 	}
-	// Immediately publish 10 messages to the stream
-	for i := 0; i < 10; i++ {
-		if _, perr := js.Publish(ctx, streamSubject, []byte(fmt.Sprintf("devserver message %d", i))); perr != nil {
+	// Immediately publish 30 messages to the stream
+	for i := 0; i < 30; i++ {
+		if _, perr := js.Publish(ctx, streamSubject, randomMessage()); perr != nil {
 			return fmt.Errorf("publish message to dev server stream subject '%s': %w", streamSubject, perr)
 		}
 		logger.Info(fmt.Sprintf("published message to dev server stream subject '%s' (total: %d)", streamSubject, i))
 	}
-	// Then publish messages every 30s
+	// Then publish messages every 10s
 	go func() {
 		i := 1
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(30 * time.Second):
-				if _, perr := js.Publish(ctx, streamSubject, []byte(fmt.Sprintf("devserver message %d", i))); perr != nil {
+			case <-time.After(10 * time.Second):
+				if _, perr := js.Publish(ctx, streamSubject, randomMessage()); perr != nil {
 					errCh <- fmt.Errorf("publish message to dev server stream subject '%s': %w", streamSubject, perr)
 					return
 				}

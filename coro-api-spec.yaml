@@ -1589,6 +1589,15 @@ components:
         stream_sequence:
           type: string
           description: Stream sequence number of the message
+        subject:
+          type: string
+          description: Subject on which the message was published
+        size_bytes:
+          type: integer
+          description: Size of the message in bytes
+        preview:
+          type: string
+          description: Preview of the message
         timestamp:
           type: integer
           description: Time that the message was originally sent on the stream

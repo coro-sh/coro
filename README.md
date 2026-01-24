@@ -65,7 +65,7 @@ This command will:
 - Launch the Coro backend and frontend in a single server
 - Create a fresh Namespace that includes an Operator, Account, and User
 - Start an embedded NATS server for the Operator, connected to Coro through the proxy-agent
-- Set up a JetStream test Stream that publishes a message every 30 seconds
+- Set up a JetStream test Stream that publishes a message every 10 seconds
 
 ## Disclaimer
 

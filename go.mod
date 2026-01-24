@@ -7,11 +7,11 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/coder/websocket v1.8.14
 	github.com/cohesivestack/valgo v0.7.1
-	github.com/coro-sh/coro-ui-server v0.2.0
+	github.com/coro-sh/coro-ui-server v0.3.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgerrcode v0.0.0-20250907135507-afb5586c32a6
 	github.com/jackc/pgx/v5 v5.8.0
-	github.com/joshjon/kit v0.0.0-20260123131127-d4085762b60d
+	github.com/joshjon/kit v0.0.0-20260124091142-0496d5d3a5a4
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/nats-io/jwt/v2 v2.7.4
 	github.com/nats-io/nats-server/v2 v2.11.3

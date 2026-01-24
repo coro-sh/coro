@@ -309,8 +309,14 @@ type StreamMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Stream sequence number of the message.
 	StreamSequence uint64 `protobuf:"varint,1,opt,name=stream_sequence,json=streamSequence,proto3" json:"stream_sequence,omitempty"`
+	// Subject on which the message was published.
+	Subject string `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`
+	// Size of the message in bytes.
+	SizeBytes int64 `protobuf:"varint,3,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	// Preview of the message.
+	Preview string `protobuf:"bytes,4,opt,name=preview,proto3" json:"preview,omitempty"`
 	// Time that the message was originally sent on the stream.
-	Timestamp     int64 `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Timestamp     int64 `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -350,6 +356,27 @@ func (x *StreamMessage) GetStreamSequence() uint64 {
 		return x.StreamSequence
 	}
 	return 0
+}
+
+func (x *StreamMessage) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *StreamMessage) GetSizeBytes() int64 {
+	if x != nil {
+		return x.SizeBytes
+	}
+	return 0
+}
+
+func (x *StreamMessage) GetPreview() string {
+	if x != nil {
+		return x.Preview
+	}
+	return ""
 }
 
 func (x *StreamMessage) GetTimestamp() int64 {
@@ -406,15 +433,13 @@ func (x *StreamMessageBatch) GetMessages() []*StreamMessage {
 
 type StreamConsumerMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Stream sequence number of the message.
-	StreamSequence uint64 `protobuf:"varint,1,opt,name=stream_sequence,json=streamSequence,proto3" json:"stream_sequence,omitempty"`
+	// Received message.
+	Message *StreamMessage `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	// Number of messages that match the consumer's filter, but have not been
 	// delivered yet.
 	MessagesPending uint64 `protobuf:"varint,2,opt,name=messages_pending,json=messagesPending,proto3" json:"messages_pending,omitempty"`
-	// Time that the message was originally sent on the stream.
-	Timestamp     int64 `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *StreamConsumerMessage) Reset() {
@@ -447,23 +472,16 @@ func (*StreamConsumerMessage) Descriptor() ([]byte, []int) {
 	return file_command_v1_message_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *StreamConsumerMessage) GetStreamSequence() uint64 {
+func (x *StreamConsumerMessage) GetMessage() *StreamMessage {
 	if x != nil {
-		return x.StreamSequence
+		return x.Message
 	}
-	return 0
+	return nil
 }
 
 func (x *StreamConsumerMessage) GetMessagesPending() uint64 {
 	if x != nil {
 		return x.MessagesPending
-	}
-	return 0
-}
-
-func (x *StreamConsumerMessage) GetTimestamp() int64 {
-	if x != nil {
-		return x.Timestamp
 	}
 	return 0
 }
@@ -1099,16 +1117,19 @@ const file_command_v1_message_proto_rawDesc = "" +
 	"\x05inbox\x18\x02 \x01(\tR\x05inbox\x12\x12\n" +
 	"\x04data\x18\x03 \x01(\fR\x04data\x12\x19\n" +
 	"\x05error\x18\x04 \x01(\tH\x00R\x05error\x88\x01\x01B\b\n" +
-	"\x06_error\"V\n" +
+	"\x06_error\"\xa9\x01\n" +
 	"\rStreamMessage\x12'\n" +
-	"\x0fstream_sequence\x18\x01 \x01(\x04R\x0estreamSequence\x12\x1c\n" +
-	"\ttimestamp\x18\x02 \x01(\x03R\ttimestamp\"K\n" +
+	"\x0fstream_sequence\x18\x01 \x01(\x04R\x0estreamSequence\x12\x18\n" +
+	"\asubject\x18\x02 \x01(\tR\asubject\x12\x1d\n" +
+	"\n" +
+	"size_bytes\x18\x03 \x01(\x03R\tsizeBytes\x12\x18\n" +
+	"\apreview\x18\x04 \x01(\tR\apreview\x12\x1c\n" +
+	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\"K\n" +
 	"\x12StreamMessageBatch\x125\n" +
-	"\bmessages\x18\x01 \x03(\v2\x19.command.v1.StreamMessageR\bmessages\"\x89\x01\n" +
-	"\x15StreamConsumerMessage\x12'\n" +
-	"\x0fstream_sequence\x18\x01 \x01(\x04R\x0estreamSequence\x12)\n" +
-	"\x10messages_pending\x18\x02 \x01(\x04R\x0fmessagesPending\x12\x1c\n" +
-	"\ttimestamp\x18\x03 \x01(\x03R\ttimestamp\"q\n" +
+	"\bmessages\x18\x01 \x03(\v2\x19.command.v1.StreamMessageR\bmessages\"w\n" +
+	"\x15StreamConsumerMessage\x123\n" +
+	"\amessage\x18\x01 \x01(\v2\x19.command.v1.StreamMessageR\amessage\x12)\n" +
+	"\x10messages_pending\x18\x02 \x01(\x04R\x0fmessagesPending\"q\n" +
 	"\x14StreamMessageContent\x12'\n" +
 	"\x0fstream_sequence\x18\x01 \x01(\x04R\x0estreamSequence\x12\x1c\n" +
 	"\ttimestamp\x18\x02 \x01(\x03R\ttimestamp\x12\x12\n" +
@@ -1160,16 +1181,17 @@ var file_command_v1_message_proto_depIdxs = []int32{
 	13, // 6: command.v1.PublishMessage.stop_stream_consumer:type_name -> command.v1.PublishMessage.CommandStopStreamConsumer
 	14, // 7: command.v1.PublishMessage.send_stream_consumer_heartbeat:type_name -> command.v1.PublishMessage.CommandSendStreamConsumerHeartbeat
 	2,  // 8: command.v1.StreamMessageBatch.messages:type_name -> command.v1.StreamMessage
-	6,  // 9: command.v1.PublishMessage.CommandListStreams.user_creds:type_name -> command.v1.Credentials
-	6,  // 10: command.v1.PublishMessage.CommandGetStream.user_creds:type_name -> command.v1.Credentials
-	6,  // 11: command.v1.PublishMessage.CommandFetchStreamMessages.user_creds:type_name -> command.v1.Credentials
-	6,  // 12: command.v1.PublishMessage.CommandGetStreamMessageContent.user_creds:type_name -> command.v1.Credentials
-	6,  // 13: command.v1.PublishMessage.CommandStartStreamConsumer.user_creds:type_name -> command.v1.Credentials
-	14, // [14:14] is the sub-list for method output_type
-	14, // [14:14] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	2,  // 9: command.v1.StreamConsumerMessage.message:type_name -> command.v1.StreamMessage
+	6,  // 10: command.v1.PublishMessage.CommandListStreams.user_creds:type_name -> command.v1.Credentials
+	6,  // 11: command.v1.PublishMessage.CommandGetStream.user_creds:type_name -> command.v1.Credentials
+	6,  // 12: command.v1.PublishMessage.CommandFetchStreamMessages.user_creds:type_name -> command.v1.Credentials
+	6,  // 13: command.v1.PublishMessage.CommandGetStreamMessageContent.user_creds:type_name -> command.v1.Credentials
+	6,  // 14: command.v1.PublishMessage.CommandStartStreamConsumer.user_creds:type_name -> command.v1.Credentials
+	15, // [15:15] is the sub-list for method output_type
+	15, // [15:15] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_command_v1_message_proto_init() }

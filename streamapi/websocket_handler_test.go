@@ -82,9 +82,11 @@ func TestStreamWebSocketHandler_HandleConsume(t *testing.T) {
 		for i := 0; i < numMsgs; i++ {
 			streamSeq := uint64(i + 1)
 			cmsg := &commandv1.StreamConsumerMessage{
-				StreamSequence:  streamSeq,
+				Message: &commandv1.StreamMessage{
+					StreamSequence: streamSeq,
+					Timestamp:      time.Now().Unix(),
+				},
 				MessagesPending: uint64(numMsgs) - streamSeq,
-				Timestamp:       time.Now().Unix(),
 			}
 			data, err := proto.Marshal(cmsg)
 			require.NoError(t, err)
