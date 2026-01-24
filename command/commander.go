@@ -26,6 +26,7 @@ import (
 
 const (
 	accClaimsUpdateSubjectFormat        = "$SYS.REQ.ACCOUNT.%s.CLAIMS.UPDATE"
+	accClaimsDeleteSubject              = "$SYS.REQ.CLAIMS.DELETE"
 	defaultFetchStreamMessagesBatchSize = 100
 )
 
@@ -130,7 +131,39 @@ func (c *Commander) NotifyAccountClaimsUpdate(ctx context.Context, account *enti
 		return err
 	}
 
-	return validateAccountReply(reply.Data, claims, "jwt updated")
+	return validateAccountReply(reply.Data)
+}
+
+// NotifyAccountClaimsDelete sends a notification with a signed JWT containing
+// the account public key(s) to delete.
+func (c *Commander) NotifyAccountClaimsDelete(ctx context.Context, operator *entity.Operator, account *entity.Account) error {
+	accClaims, err := account.Claims()
+	if err != nil {
+		return err
+	}
+
+	opKP := operator.SigningKey().KeyPair()
+	opPK, err := opKP.PublicKey()
+	if err != nil {
+		return fmt.Errorf("get operator public key: %w", err)
+	}
+
+	genericClaims := jwt.NewGenericClaims(opPK)
+	genericClaims.Data = map[string]interface{}{
+		"accounts": []string{accClaims.Subject},
+	}
+
+	delReqJWT, err := genericClaims.Encode(opKP)
+	if err != nil {
+		return fmt.Errorf("encode delete request JWT: %w", err)
+	}
+
+	reply, err := c.request(ctx, account.OperatorID, accClaimsDeleteSubject, []byte(delReqJWT))
+	if err != nil {
+		return err
+	}
+
+	return validateAccountReply(reply.Data)
 }
 
 // ListStreams lists all JetStream streams.
@@ -497,7 +530,7 @@ func loadCACert(caCertFile string) (*x509.CertPool, error) {
 	return caCertPool, nil
 }
 
-func validateAccountReply(reply []byte, claims *jwt.AccountClaims, wantMsg string) error {
+func validateAccountReply(reply []byte) error {
 	if len(reply) == 0 {
 		return errors.New("empty account reply")
 	}
@@ -512,10 +545,6 @@ func validateAccountReply(reply []byte, claims *jwt.AccountClaims, wantMsg strin
 	switch {
 	case data.Code < 200 && data.Code > 299:
 		return fmt.Errorf("non 200 status code: %d", data.Code)
-	case claims.Subject != data.Account:
-		return errors.New("claims subject mismatch")
-	case data.Message != wantMsg:
-		return fmt.Errorf("expected reply '%s', got '%s'", wantMsg, data.Message)
 	}
 
 	return nil

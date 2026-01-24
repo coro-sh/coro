@@ -154,9 +154,15 @@ func (t *HTTPHandlerTestFixture) Stop() {
 	t.stop()
 }
 
+var _ entityapi.Commander = (*commanderStub)(nil)
+
 type commanderStub struct{}
 
 func (n *commanderStub) NotifyAccountClaimsUpdate(_ context.Context, _ *entity.Account) error {
+	return nil
+}
+
+func (n *commanderStub) NotifyAccountClaimsDelete(_ context.Context, _ *entity.Operator, _ *entity.Account) error {
 	return nil
 }
 

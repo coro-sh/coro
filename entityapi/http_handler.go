@@ -30,6 +30,7 @@ const (
 // Commander sends commands to a NATS server.
 type Commander interface {
 	NotifyAccountClaimsUpdate(ctx context.Context, account *entity.Account) error
+	NotifyAccountClaimsDelete(ctx context.Context, operator *entity.Operator, account *entity.Account) error
 	// Ping checks if an Operator is connected and ready to receive commands.
 	Ping(ctx context.Context, operatorID entity.OperatorID) (entity.OperatorNATSStatus, error)
 }
@@ -631,6 +632,8 @@ func (h *HTTPHandler[S]) ListAccounts(c echo.Context) error {
 }
 
 // DeleteAccount handles DELETE requests to delete an Account.
+// The associated Operator's NATS server will be notified of the Account deletion
+// if a Commander has been configured.
 func (h *HTTPHandler[S]) DeleteAccount(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -642,16 +645,31 @@ func (h *HTTPHandler[S]) DeleteAccount(c echo.Context) error {
 	accID := id.MustParse[entity.AccountID](req.ID)
 	c.Set(logkey.AccountID, accID)
 
-	op, err := h.store.ReadAccount(ctx, accID)
+	acc, err := h.store.ReadAccount(ctx, accID)
+	if err != nil {
+		return err
+	}
+	c.Set(logkey.OperatorID, acc.OperatorID)
+
+	if err = VerifyEntityNamespace(c, acc); err != nil {
+		return err
+	}
+
+	op, err := h.store.ReadOperator(ctx, acc.OperatorID)
 	if err != nil {
 		return err
 	}
 
-	if err = VerifyEntityNamespace(c, op); err != nil {
-		return err
-	}
-
-	if err = h.store.DeleteAccount(ctx, accID); err != nil {
+	err = h.store.BeginTxFunc(ctx, func(ctx context.Context, store S) error {
+		if err = store.DeleteAccount(ctx, accID); err != nil {
+			return err
+		}
+		if h.commander != nil {
+			return h.commander.NotifyAccountClaimsDelete(ctx, op, acc)
+		}
+		return nil
+	})
+	if err != nil {
 		return err
 	}
 
