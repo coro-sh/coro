@@ -29,7 +29,7 @@ resolver {
     # This is to allow manual restoration in case of inadvertent deletion.
     # To restore a jwt, remove the added suffix .delete and restart or send a reload signal.
     # To free up storage you must manually delete files with the suffix .delete.
-    allow_delete: false
+    allow_delete: true
     # Interval at which a nats-server with a nats based account resolver will compare
     # it's state with one random nats based account resolver in the cluster and if needed, 
     # exchange jwt and converge on the same set of jwt.

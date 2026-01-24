@@ -16,14 +16,15 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/joshjon/kit/server"
+	"github.com/joshjon/kit/testutil"
+
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/embedns"
 	"github.com/coro-sh/coro/entity"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
 	"github.com/coro-sh/coro/sqlite"
 	"github.com/coro-sh/coro/tkn"
-	"github.com/joshjon/kit/server"
-	"github.com/joshjon/kit/testutil"
 )
 
 const testTimeout = 5 * time.Second
@@ -38,6 +39,28 @@ func TestNotifyAccountClaimsUpdate(t *testing.T) {
 
 	err = h.Commander.NotifyAccountClaimsUpdate(ctx, acc)
 	require.NoError(t, err)
+}
+
+func TestNotifyAccountClaimsDelete(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+
+	h := NewEndToEndHarness(ctx, t)
+
+	user, err := entity.NewUser(testutil.RandName(), h.ExistingAccount)
+	require.NoError(t, err)
+
+	// User should connect okay before deletion
+	nc, err := nats.Connect(h.DownstreamNATS.ClientURL(), nats.UserJWTAndSeed(user.JWT(), string(user.NKey().Seed)))
+	require.NoError(t, err)
+	nc.Close()
+
+	err = h.Commander.NotifyAccountClaimsDelete(ctx, h.Operator, h.ExistingAccount)
+	require.NoError(t, err)
+
+	nc, err = nats.Connect(h.DownstreamNATS.ClientURL(), nats.UserJWTAndSeed(user.JWT(), string(user.NKey().Seed)))
+	require.EqualError(t, err, "nats: Authorization Violation")
+	nc.Close()
 }
 
 func TestListStreams(t *testing.T) {
@@ -292,6 +315,7 @@ func TestConsumerHeartbeat(t *testing.T) {
 type EndToEndHarness struct {
 	// Downstream
 	Operator        *entity.Operator
+	SystemUser      *entity.User
 	ExistingAccount *entity.Account
 	DownstreamNATS  *natserver.Server
 	// Command Broker
@@ -365,6 +389,7 @@ func NewEndToEndHarness(ctx context.Context, t *testing.T) *EndToEndHarness {
 
 	return &EndToEndHarness{
 		Operator:        op,
+		SystemUser:      sysUser,
 		ExistingAccount: existingAcc,
 		DownstreamNATS:  downstreamNS,
 		BrokerNATS:      brokerNS,
