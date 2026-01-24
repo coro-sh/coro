@@ -17,6 +17,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/coro-sh/coro/command"
+	"github.com/coro-sh/coro/constants"
 )
 
 func main() {
@@ -40,8 +41,8 @@ func run(ctx context.Context, args []string, logger log.Logger) error {
 		&cli.StringFlag{
 			Name:    "broker-url",
 			Aliases: []string{"b"},
-			Value:   "",
-			Usage:   "[required] broker websocket url e.g. ws://<host>:<port>/api/v1/broker",
+			Value:   "wss://" + constants.AppCloudHost + "/api/v1/broker",
+			Usage:   "broker websocket url (defaults to " + constants.AppNameTitle + " Cloud)",
 			EnvVars: []string{"BROKER_WEBSOCKET_URL"},
 		},
 		&cli.StringFlag{

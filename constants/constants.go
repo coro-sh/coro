@@ -9,6 +9,8 @@ package constants
 const (
 	AppName                = "coro"
 	AppNameUpper           = "CORO"
+	AppNameTitle           = "Coro"
+	AppCloudHost           = "cloud.coro.sh"
 	SysAccountName         = "SYS"
 	SysUserName            = "sys"
 	BrokerOperatorName     = AppName + "_broker"
