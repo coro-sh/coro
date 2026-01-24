@@ -135,8 +135,17 @@ type Stream struct {
 
 // StreamMessage JetStream stream message
 type StreamMessage struct {
+	// Preview Preview of the message
+	Preview *string `json:"preview,omitempty"`
+
+	// SizeBytes Size of the message in bytes
+	SizeBytes *int `json:"size_bytes,omitempty"`
+
 	// StreamSequence Stream sequence number of the message
 	StreamSequence string `json:"stream_sequence"`
+
+	// Subject Subject on which the message was published
+	Subject *string `json:"subject,omitempty"`
 
 	// Timestamp Time that the message was originally sent on the stream
 	Timestamp int `json:"timestamp"`
