@@ -940,7 +940,7 @@ func newListNamespacesRequest(server string, params *ListNamespacesParams) (*htt
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces")
+	operationPath := fmt.Sprintf("/api/v1/namespaces")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1016,7 +1016,7 @@ func newCreateNamespaceRequestWithBody(server string, contentType string, body i
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces")
+	operationPath := fmt.Sprintf("/api/v1/namespaces")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1052,7 +1052,7 @@ func newDeleteNamespaceRequest(server string, namespaceId string) (*http.Request
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1097,7 +1097,7 @@ func newUpdateNamespaceRequestWithBody(server string, namespaceId string, conten
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1140,7 +1140,7 @@ func newDeleteAccountRequest(server string, namespaceId string, accountId string
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/accounts/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/accounts/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1203,7 +1203,7 @@ func newGetAccountRequest(server string, namespaceId string, accountId string) (
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/accounts/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/accounts/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1255,7 +1255,7 @@ func newUpdateAccountRequestWithBody(server string, namespaceId string, accountI
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/accounts/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/accounts/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1298,7 +1298,7 @@ func newListStreamsRequest(server string, namespaceId string, accountId string) 
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/accounts/%s/streams", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/accounts/%s/streams", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1346,7 +1346,7 @@ func newGetStreamRequest(server string, namespaceId string, accountId string, st
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/accounts/%s/streams/%s", pathParam0, pathParam1, pathParam2)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/accounts/%s/streams/%s", pathParam0, pathParam1, pathParam2)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1394,7 +1394,7 @@ func newFetchStreamMessagesRequest(server string, namespaceId string, accountId 
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/accounts/%s/streams/%s/messages", pathParam0, pathParam1, pathParam2)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/accounts/%s/streams/%s/messages", pathParam0, pathParam1, pathParam2)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1487,7 +1487,7 @@ func newGetStreamMessageContentRequest(server string, namespaceId string, accoun
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/accounts/%s/streams/%s/messages/%s", pathParam0, pathParam1, pathParam2, pathParam3)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/accounts/%s/streams/%s/messages/%s", pathParam0, pathParam1, pathParam2, pathParam3)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1528,7 +1528,7 @@ func newListUsersRequest(server string, namespaceId string, accountId string, pa
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/accounts/%s/users", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/accounts/%s/users", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1618,7 +1618,7 @@ func newCreateUserRequestWithBody(server string, namespaceId string, accountId s
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/accounts/%s/users", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/accounts/%s/users", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1654,7 +1654,7 @@ func newListOperatorsRequest(server string, namespaceId string, params *ListOper
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/operators", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/operators", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1737,7 +1737,7 @@ func newCreateOperatorRequestWithBody(server string, namespaceId string, content
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/operators", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/operators", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1780,7 +1780,7 @@ func newDeleteOperatorRequest(server string, namespaceId string, operatorId stri
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/operators/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/operators/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1843,7 +1843,7 @@ func newGetOperatorRequest(server string, namespaceId string, operatorId string)
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/operators/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/operators/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1895,7 +1895,7 @@ func newUpdateOperatorRequestWithBody(server string, namespaceId string, operato
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/operators/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/operators/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1938,7 +1938,7 @@ func newListAccountsRequest(server string, namespaceId string, operatorId string
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/operators/%s/accounts", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/operators/%s/accounts", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2028,7 +2028,7 @@ func newCreateAccountRequestWithBody(server string, namespaceId string, operator
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/operators/%s/accounts", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/operators/%s/accounts", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2071,7 +2071,7 @@ func newGetOperatorNATSConfigRequest(server string, namespaceId string, operator
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/operators/%s/nats-config", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/operators/%s/nats-config", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2112,7 +2112,7 @@ func newGetOperatorProxyConnectionStatusRequest(server string, namespaceId strin
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/operators/%s/proxy/status", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/operators/%s/proxy/status", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2153,7 +2153,7 @@ func newGenerateOperatorProxyTokenRequest(server string, namespaceId string, ope
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/operators/%s/proxy/token", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/operators/%s/proxy/token", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2194,7 +2194,7 @@ func newDeleteUserRequest(server string, namespaceId string, userId string) (*ht
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/users/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/users/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2235,7 +2235,7 @@ func newGetUserRequest(server string, namespaceId string, userId string) (*http.
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/users/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/users/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2287,7 +2287,7 @@ func newUpdateUserRequestWithBody(server string, namespaceId string, userId stri
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/users/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/users/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2330,7 +2330,7 @@ func newGetUserCredsRequest(server string, namespaceId string, userId string) (*
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/users/%s/creds", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/users/%s/creds", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2371,7 +2371,7 @@ func newListUserJWTIssuancesRequest(server string, namespaceId string, userId st
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/namespaces/%s/users/%s/issuances", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/users/%s/issuances", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}

@@ -3,13 +3,13 @@ info:
   title: Coro API
   version: "0.0.1"
 servers:
-  - url: http://localhost:5400/api/v1
+  - url: http://localhost:5400
     description: Local development server
 paths:
   ####################################
   # Namespace endpoints
   ####################################
-  /namespaces:
+  /api/v1/namespaces:
     post:
       summary: Create a Namespace
       operationId: createNamespace
@@ -77,7 +77,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResponseError'
 
-  /namespaces/{namespace_id}:
+  /api/v1/namespaces/{namespace_id}:
     put:
       summary: Update Namespace
       operationId: updateNamespace
@@ -149,7 +149,7 @@ paths:
   ####################################
   # Operator endpoints
   ####################################
-  /namespaces/{namespace_id}/operators:
+  /api/v1/namespaces/{namespace_id}/operators:
     post:
       summary: Create an Operator
       operationId: createOperator
@@ -228,7 +228,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResponseError'
 
-  /namespaces/{namespace_id}/operators/{operator_id}:
+  /api/v1/namespaces/{namespace_id}/operators/{operator_id}:
     get:
       summary: Get an Operator
       operationId: getOperator
@@ -365,7 +365,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResponseError'
 
-  /namespaces/{namespace_id}/operators/{operator_id}/nats-config:
+  /api/v1/namespaces/{namespace_id}/operators/{operator_id}/nats-config:
     get:
       summary: Get Operator NATS config
       operationId: getOperatorNATSConfig
@@ -405,7 +405,7 @@ paths:
   ####################################
   # Account endpoints
   ####################################
-  /namespaces/{namespace_id}/operators/{operator_id}/accounts:
+  /api/v1/namespaces/{namespace_id}/operators/{operator_id}/accounts:
     post:
       summary: Create an Account
       operationId: createAccount
@@ -506,7 +506,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResponseError'
 
-  /namespaces/{namespace_id}/accounts/{account_id}:
+  /api/v1/namespaces/{namespace_id}/accounts/{account_id}:
     get:
       summary: Get an Account
       operationId: getAccount
@@ -640,7 +640,7 @@ paths:
   ####################################
   # User endpoints
   ####################################
-  /namespaces/{namespace_id}/accounts/{account_id}/users:
+  /api/v1/namespaces/{namespace_id}/accounts/{account_id}/users:
     post:
       summary: Create a User
       operationId: createUser
@@ -741,7 +741,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResponseError'
 
-  /namespaces/{namespace_id}/users/{user_id}:
+  /api/v1/namespaces/{namespace_id}/users/{user_id}:
     get:
       summary: Get a User
       operationId: getUser
@@ -867,7 +867,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResponseError'
 
-  /namespaces/{namespace_id}/users/{user_id}/creds:
+  /api/v1/namespaces/{namespace_id}/users/{user_id}/creds:
     get:
       summary: Get User NATS credentials
       description: Returns a plaintext `.creds` file.
@@ -904,7 +904,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseError'
-  /namespaces/{namespace_id}/users/{user_id}/issuances:
+  /api/v1/namespaces/{namespace_id}/users/{user_id}/issuances:
     get:
       summary: List User JWT issuances
       operationId: listUserJWTIssuances
@@ -952,7 +952,7 @@ paths:
   ####################################
   # Operator Proxy endpoints
   ####################################
-  /namespaces/{namespace_id}/operators/{operator_id}/proxy/token:
+  /api/v1/namespaces/{namespace_id}/operators/{operator_id}/proxy/token:
     post:
       summary: Generate an Operator Proxy token
       operationId: generateOperatorProxyToken
@@ -997,7 +997,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseError'
-  /namespaces/{namespace_id}/operators/{operator_id}/proxy/status:
+  /api/v1/namespaces/{namespace_id}/operators/{operator_id}/proxy/status:
     get:
       summary: Get Operator Proxy connection status
       operationId: getOperatorProxyConnectionStatus
@@ -1042,7 +1042,7 @@ paths:
   ####################################
   # JetStream endpoints
   ####################################
-  /namespaces/{namespace_id}/accounts/{account_id}/streams:
+  /api/v1/namespaces/{namespace_id}/accounts/{account_id}/streams:
     get:
       summary: List JetStream streams
       operationId: listStreams
@@ -1085,7 +1085,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseError'
-  /namespaces/{namespace_id}/accounts/{account_id}/streams/{stream_name}:
+  /api/v1/namespaces/{namespace_id}/accounts/{account_id}/streams/{stream_name}:
     get:
       summary: Get JetStream stream
       operationId: getStream
@@ -1131,7 +1131,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseError'
-  /namespaces/{namespace_id}/accounts/{account_id}/streams/{stream_name}/messages:
+  /api/v1/namespaces/{namespace_id}/accounts/{account_id}/streams/{stream_name}/messages:
     get:
       summary: Fetch JetStream stream messages
       operationId: fetchStreamMessages
@@ -1196,7 +1196,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseError'
-  /namespaces/{namespace_id}/accounts/{account_id}/streams/{stream_name}/messages/{stream_sequence}:
+  /api/v1/namespaces/{namespace_id}/accounts/{account_id}/streams/{stream_name}/messages/{stream_sequence}:
     get:
       summary: Get JetStream stream message content
       operationId: getStreamMessageContent
