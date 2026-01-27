@@ -10,6 +10,7 @@ import (
 
 type Querier interface {
 	BatchReadNamespaces(ctx context.Context, ids []string) ([]*Namespace, error)
+	CountNamespaceOperators(ctx context.Context, namespaceID string) (int64, error)
 	CountOperatorAccounts(ctx context.Context, operatorID string) (int64, error)
 	CountOperatorUsers(ctx context.Context, operatorID string) (int64, error)
 	CountOwnerNamespaces(ctx context.Context, owner string) (int64, error)

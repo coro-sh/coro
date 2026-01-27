@@ -9,6 +9,19 @@ import (
 	"context"
 )
 
+const countNamespaceOperators = `-- name: CountNamespaceOperators :one
+SELECT COUNT(*) AS count
+FROM operator AS o
+WHERE o.namespace_id = ?
+`
+
+func (q *Queries) CountNamespaceOperators(ctx context.Context, namespaceID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countNamespaceOperators, namespaceID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countOperatorAccounts = `-- name: CountOperatorAccounts :one
 SELECT COUNT(*) AS count
 FROM account AS a

@@ -112,6 +112,11 @@ func (r *EntityRepository) CountOwnerNamespaces(ctx context.Context, owner strin
 	return namespaces, tagErr(err)
 }
 
+func (r *EntityRepository) CountNamespaceOperators(ctx context.Context, namespaceID entity.NamespaceID) (int64, error) {
+	operators, err := r.db.CountNamespaceOperators(ctx, namespaceID.String())
+	return operators, tagErr(err)
+}
+
 func (r *EntityRepository) CreateOperator(ctx context.Context, operator entity.OperatorData) error {
 	err := r.db.CreateOperator(ctx, sqlc.CreateOperatorParams{
 		ID:          operator.ID.String(),

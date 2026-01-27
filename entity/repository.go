@@ -31,6 +31,7 @@ type NamespaceRepository interface {
 	ListNamespaces(ctx context.Context, owner string, filter paginate.PageFilter[NamespaceID]) ([]*Namespace, error)
 	DeleteNamespace(ctx context.Context, id NamespaceID) error // must cascade delete operators, accounts, users, and nkeys
 	CountOwnerNamespaces(ctx context.Context, owner string) (int64, error)
+	CountNamespaceOperators(ctx context.Context, namespaceID NamespaceID) (int64, error)
 }
 
 type OperatorRepository interface {

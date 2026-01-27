@@ -202,6 +202,17 @@ func (h *HTTPHandler[S]) DeleteNamespace(c echo.Context) error {
 	nsID := id.MustParse[entity.NamespaceID](req.ID)
 	c.Set(logkey.NamespaceID, nsID)
 
+	operatorCount, err := h.store.CountNamespaceOperators(ctx, nsID)
+	if err != nil {
+		return err
+	}
+	if operatorCount > 0 {
+		return errtag.NewTagged[errtag.InvalidArgument](
+			"cannot delete namespace with one or more operators",
+			errtag.WithMsg("Namespace has one or more operators that must be deleted first"),
+		)
+	}
+
 	if err = h.store.DeleteNamespace(ctx, nsID); err != nil {
 		return err
 	}

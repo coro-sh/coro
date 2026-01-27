@@ -54,6 +54,31 @@ func TestServer_DeleteNamespace(t *testing.T) {
 	assert.True(t, errtag.HasTag[errtag.NotFound](err))
 }
 
+func TestServer_DeleteNamespaceFailsWhenOperatorsExist(t *testing.T) {
+	ctx := testutil.Context(t)
+	fixture := NewHTTPHandlerTestFixture(t)
+	defer fixture.Stop()
+
+	// Create namespace with an operator
+	op := fixture.AddOperator(ctx)
+	ns, err := fixture.Store.ReadNamespace(ctx, op.NamespaceID)
+	require.NoError(t, err)
+
+	// Try to delete namespace - should fail
+	req, err := http.NewRequest(http.MethodDelete, fixture.NamespaceURL(ns.ID), nil)
+	require.NoError(t, err)
+
+	res, err := testutil.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+
+	// Verify namespace still exists
+	_, err = fixture.Store.ReadNamespace(ctx, ns.ID)
+	assert.NoError(t, err)
+}
+
 func TestHTTPHandler_ListNamespaces(t *testing.T) {
 	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)

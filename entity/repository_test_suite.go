@@ -528,6 +528,30 @@ func (s *RepositoryTestSuite) TestCountOwnerOperators() {
 	s.Equal(int64(wantCount), got)
 }
 
+func (s *RepositoryTestSuite) TestCountNamespaceOperators() {
+	ctx, cancel := context.WithTimeout(s.T().Context(), s.Timeout)
+	defer cancel()
+
+	wantCount := 15
+
+	ns := genNamespace()
+	s.Require().NoError(s.repo.CreateNamespace(ctx, ns))
+
+	for i := 0; i < wantCount; i++ {
+		op := genOperatorData(ns)
+		s.Require().NoError(s.repo.CreateOperator(ctx, op))
+	}
+
+	// create operator in a different namespace (should be excluded from count)
+	otherNs := genNamespace()
+	s.Require().NoError(s.repo.CreateNamespace(ctx, otherNs))
+	s.Require().NoError(s.repo.CreateOperator(ctx, genOperatorData(otherNs)))
+
+	got, err := s.repo.CountNamespaceOperators(ctx, ns.ID)
+	s.Require().NoError(err)
+	s.Equal(int64(wantCount), got)
+}
+
 func (s *RepositoryTestSuite) TestCountOperatorAccounts() {
 	ctx, cancel := context.WithTimeout(s.T().Context(), s.Timeout)
 	defer cancel()

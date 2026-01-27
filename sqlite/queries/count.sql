@@ -9,6 +9,11 @@ FROM operator AS o
          JOIN namespace AS n ON n.id = o.namespace_id
 WHERE n.owner = ?;
 
+-- name: CountNamespaceOperators :one
+SELECT COUNT(*) AS count
+FROM operator AS o
+WHERE o.namespace_id = ?;
+
 -- name: CountOperatorAccounts :one
 SELECT COUNT(*) AS count
 FROM account AS a

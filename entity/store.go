@@ -133,6 +133,11 @@ func (s *Store) CountOwnerNamespaces(ctx context.Context, owner string) (int64, 
 	return s.repo.CountOwnerNamespaces(ctx, owner)
 }
 
+// CountNamespaceOperators returns the number of operators in a namespace.
+func (s *Store) CountNamespaceOperators(ctx context.Context, namespaceID NamespaceID) (int64, error) {
+	return s.repo.CountNamespaceOperators(ctx, namespaceID)
+}
+
 // DeleteNamespace deletes a of Namespace.
 func (s *Store) DeleteNamespace(ctx context.Context, id NamespaceID) error {
 	return s.repo.DeleteNamespace(ctx, id)

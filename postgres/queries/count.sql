@@ -9,6 +9,11 @@ FROM operator o
          JOIN namespace n ON n.id = o.namespace_id
 WHERE n.owner = $1;
 
+-- name: CountNamespaceOperators :one
+SELECT COUNT(*)::BIGINT
+FROM operator o
+WHERE o.namespace_id = $1;
+
 -- name: CountOperatorAccounts :one
 SELECT COUNT(*)::BIGINT
 FROM account a
