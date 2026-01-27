@@ -115,7 +115,7 @@ func cmdRun(ctx context.Context, logger log.Logger, cfg config) error {
 		}
 	}()
 
-	addr := fmt.Sprintf("127.0.0.1:%d/api/v1", cfg.port)
+	addr := fmt.Sprintf("127.0.0.1:%d", cfg.port)
 	httpURL := fmt.Sprintf("http://%s", addr)
 	wsURL := fmt.Sprintf("ws://%s", addr)
 	logger.Info("waiting for client connection to be healthy")
@@ -152,7 +152,7 @@ func cmdRun(ctx context.Context, logger log.Logger, cfg config) error {
 	}
 	logger.Info(fmt.Sprintf("started nats server on %s", ns.ClientURL()))
 
-	brokerURL := wsURL + "/broker"
+	brokerURL := wsURL + "/api/v1/broker"
 	proxy, err := startProxy(ctx, c, logger, ns.ClientURL(), brokerURL, namespace.Id, operator.Id, proxyTkn)
 	if err != nil {
 		return err
