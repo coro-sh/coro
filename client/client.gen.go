@@ -18,6 +18,9 @@ import (
 
 // Account defines model for Account.
 type Account struct {
+	// CreateTime Unix timestamp of when the account was created (from JWT IssuedAt)
+	CreateTime int64 `json:"create_time"`
+
 	// Id Account ID
 	Id string `json:"id"`
 

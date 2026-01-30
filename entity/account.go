@@ -40,6 +40,7 @@ type AccountData struct {
 	AccountIdentity
 	Name            string         `json:"name"`
 	PublicKey       string         `json:"public_key"`
+	CreateTime      int64          `json:"create_time"` // unix timestamp
 	UserJWTDuration *time.Duration `json:"-"`
 }
 
@@ -149,6 +150,7 @@ func (a *Account) Data() (AccountData, error) {
 		AccountIdentity: a.AccountIdentity,
 		Name:            claims.Name,
 		PublicKey:       claims.Subject,
+		CreateTime:      claims.IssuedAt,
 		UserJWTDuration: a.userJWTDuration,
 	}, nil
 }

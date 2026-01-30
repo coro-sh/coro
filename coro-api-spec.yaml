@@ -1418,6 +1418,7 @@ components:
         - jwt
         - name
         - public_key
+        - create_time
         - limits
       properties:
         id:
@@ -1437,6 +1438,10 @@ components:
         public_key:
           type: string
           description: NATS public key for this account
+        create_time:
+          type: integer
+          format: int64
+          description: Unix timestamp of when the account was created
         limits:
           $ref: '#/components/schemas/AccountLimits'
 
