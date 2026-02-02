@@ -1,8 +1,6 @@
 package command
 
 import (
-	"time"
-
 	"go.jetify.com/typeid"
 )
 
@@ -43,51 +41,4 @@ type natsAccountMessageData struct {
 
 type accountUpdateReplyMessage struct {
 	Data natsAccountMessageData `json:"data"`
-}
-
-type NATSPingReplyMessage struct {
-	Server struct {
-		Name      string    `json:"name"`
-		Host      string    `json:"host"`
-		ID        string    `json:"id"`
-		Cluster   string    `json:"cluster"`
-		Ver       string    `json:"ver"`
-		Jetstream bool      `json:"jetstream"`
-		Flags     int       `json:"flags"`
-		Seq       int       `json:"seq"`
-		Time      time.Time `json:"time"`
-	} `json:"server"`
-	Statsz struct {
-		Start            time.Time `json:"start"`
-		Mem              int       `json:"mem"`
-		Cores            int       `json:"cores"`
-		CPU              float32   `json:"cpu"`
-		Connections      int       `json:"connections"`
-		TotalConnections int       `json:"total_connections"`
-		ActiveAccounts   int       `json:"active_accounts"`
-		Subscriptions    int       `json:"subscriptions"`
-		Sent             struct {
-			Msgs  int `json:"msgs"`
-			Bytes int `json:"bytes"`
-		} `json:"sent"`
-		Received struct {
-			Msgs  int `json:"msgs"`
-			Bytes int `json:"bytes"`
-		} `json:"received"`
-		SlowConsumers int `json:"slow_consumers"`
-		Routes        []struct {
-			Rid  int    `json:"rid"`
-			Name string `json:"name"`
-			Sent struct {
-				Msgs  int `json:"msgs"`
-				Bytes int `json:"bytes"`
-			} `json:"sent"`
-			Received struct {
-				Msgs  int `json:"msgs"`
-				Bytes int `json:"bytes"`
-			} `json:"received"`
-			Pending int `json:"pending"`
-		} `json:"routes"`
-		ActiveServers int `json:"active_servers"`
-	} `json:"statsz"`
 }

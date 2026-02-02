@@ -13,6 +13,7 @@ import (
 
 	"github.com/joshjon/kit/fname"
 	"github.com/nats-io/jwt/v2"
+	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"golang.org/x/sync/singleflight"
@@ -391,6 +392,24 @@ func (c *Commander) ConsumeStream(
 	return consumer, nil
 }
 
+func (c *Commander) Stats(ctx context.Context, operatorID entity.OperatorID) (*server.ServerStatsMsg, error) {
+	reply, err := c.request(ctx, operatorID, sysServerPingSubject, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if reply.Error != nil {
+		return nil, fmt.Errorf("error returned in reply message: %s", *reply.Error)
+	}
+
+	stats, err := unmarshalJSON[*server.ServerStatsMsg](reply.Data)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal server stats message reply data: %w", err)
+	}
+
+	return stats, nil
+}
+
 // Ping checks if an Operator is currently connected to any Broker instance.
 //
 // This performs a distributed connection check across all Broker nodes by:
@@ -421,12 +440,12 @@ func (c *Commander) Ping(ctx context.Context, operatorID entity.OperatorID) (ent
 		if err != nil {
 			return entity.OperatorNATSStatus{}, err
 		}
-		brokerPingReply, err := unmarshalJSON[NATSPingReplyMessage](brokerPingReplyMsg.Data)
+		brokerPingReply, err := unmarshalJSON[server.ServerStatsMsg](brokerPingReplyMsg.Data)
 		if err != nil {
 			return entity.OperatorNATSStatus{}, err
 		}
 
-		numNodes := brokerPingReply.Statsz.ActiveServers
+		numNodes := brokerPingReply.Stats.ActiveServers
 
 		pingReplyInbox := c.nc.NewInbox()
 		sub, err := c.nc.SubscribeSync(pingReplyInbox)
