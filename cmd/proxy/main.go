@@ -24,7 +24,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
-	logger := log.NewLogger()
+	logger := log.NewLogger(log.WithDevelopment())
 
 	if err := run(ctx, os.Args, logger); err != nil {
 		logger.Error("failed to start proxy agent", "error", err)

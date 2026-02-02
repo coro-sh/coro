@@ -8,7 +8,7 @@ func getOperationType(msg *commandv1.PublishMessage) string {
 	switch {
 	case msg.GetRequest() != nil:
 		return "OPERATION_REQUEST"
-	case msg.GetListStream() != nil:
+	case msg.GetListStreams() != nil:
 		return "OPERATION_LIST_STREAMS"
 	case msg.GetGetStream() != nil:
 		return "OPERATION_GET_STREAM"

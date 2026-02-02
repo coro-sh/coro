@@ -45,7 +45,7 @@ type accountUpdateReplyMessage struct {
 	Data natsAccountMessageData `json:"data"`
 }
 
-type pingReplyMessage struct {
+type NATSPingReplyMessage struct {
 	Server struct {
 		Name      string    `json:"name"`
 		Host      string    `json:"host"`

@@ -28,6 +28,8 @@ const (
 	messageHandlerTimeout  = 5 * time.Second
 )
 
+var errReplyFailed = errors.New("reply failed")
+
 type proxyOptions struct {
 	logger              log.Logger
 	brokerTLSConfig     *TLSConfig
@@ -157,7 +159,7 @@ func (p *Proxy) Start(ctx context.Context) {
 	p.cmdSub.Subscribe(ctx, func(msg *commandv1.PublishMessage, replier SubscriptionReplier) error {
 		opType := getOperationType(msg)
 		logger := p.logger.With("operation", opType, "message_id", msg.Id)
-		if err := p.handleMessage(ctx, msg, replier); err != nil {
+		if err := p.handle(ctx, msg, replier); err != nil {
 			logger.Error("failed to handle broker message", "error", err)
 		} else {
 			logger.Info("handled broker message")
@@ -173,25 +175,44 @@ func (p *Proxy) Stop() error {
 	return err
 }
 
-func (p *Proxy) handleMessage(ctx context.Context, msg *commandv1.PublishMessage, replier SubscriptionReplier) (err error) {
+type userCredsGetter interface {
+	GetUserCreds() *commandv1.Credentials
+}
+
+func (p *Proxy) connectUser(ucg userCredsGetter) (*nats.Conn, jetstream.JetStream, error) {
+	creds := ucg.GetUserCreds()
+	if creds == nil {
+		return nil, nil, errors.New("user creds cannot be nil")
+	}
+	nc, err := natsutil.Connect(p.natsURL, creds.Jwt, creds.Seed)
+	if err != nil {
+		return nil, nil, fmt.Errorf("connect to nats server using operation creds: %w", err)
+	}
+	js, err := jetstream.New(nc)
+	if err != nil {
+		return nil, nil, fmt.Errorf("create jetstream client: %w", err)
+	}
+	return nc, js, nil
+}
+
+func (p *Proxy) reply(ctx context.Context, msg *commandv1.PublishMessage, replier SubscriptionReplier, data []byte) error {
+	if rerr := replier(ctx, &commandv1.ReplyMessage{
+		Id:    msg.Id,
+		Inbox: msg.CommandReplyInbox,
+		Data:  data,
+	}); rerr != nil {
+		return fmt.Errorf("%w: %v", errReplyFailed, rerr)
+	}
+	return nil
+}
+
+func (p *Proxy) handle(ctx context.Context, msg *commandv1.PublishMessage, replier SubscriptionReplier) (err error) {
 	ctx, cancel := context.WithTimeout(ctx, messageHandlerTimeout)
 	defer cancel()
 
-	replyFailedErr := errors.New("reply failed")
-	reply := func(data []byte) error {
-		if rerr := replier(ctx, &commandv1.ReplyMessage{
-			Id:    msg.Id,
-			Inbox: msg.CommandReplyInbox,
-			Data:  data,
-		}); rerr != nil {
-			return fmt.Errorf("%w: %v", replyFailedErr, rerr)
-		}
-		return nil
-	}
-
 	// Only reply with handler error if it wasn't caused by another reply
 	defer func() {
-		if err != nil && !errors.Is(err, replyFailedErr) {
+		if err != nil && !errors.Is(err, errReplyFailed) {
 			errStr := err.Error()
 			if rerr := replier(ctx, &commandv1.ReplyMessage{
 				Id:    msg.Id,
@@ -203,39 +224,60 @@ func (p *Proxy) handleMessage(ctx context.Context, msg *commandv1.PublishMessage
 		}
 	}()
 
-	type userCredsGetter interface{ GetUserCreds() *commandv1.Credentials }
-	connectUser := func(ucg userCredsGetter) (*nats.Conn, jetstream.JetStream, error) {
-		creds := ucg.GetUserCreds()
-		if creds == nil {
-			return nil, nil, errors.New("user creds cannot be nil")
-		}
-		nc, err := natsutil.Connect(p.natsURL, creds.Jwt, creds.Seed)
-		if err != nil {
-			return nil, nil, fmt.Errorf("connect to nats server using operation creds: %w", err)
-		}
-		js, err := jetstream.New(nc)
-		if err != nil {
-			return nil, nil, fmt.Errorf("create jetstream client: %w", err)
-		}
-		return nc, js, nil
+	handlers := []func(context.Context, *commandv1.PublishMessage, SubscriptionReplier) (bool, error){
+		p.handleRequest,
+		p.handleListStreams,
+		p.handleGetStream,
+		p.handleFetchStreamMessages,
+		p.handleStreamMessageContent,
+		p.handleStartStreamConsumer,
+		p.handleSendStreamConsumerHeartbeat,
+		p.handleStopStreamConsumer,
 	}
 
-	if op := msg.GetRequest(); op != nil {
+	for _, handler := range handlers {
+		ok, err := handler(ctx, msg, replier)
+		if err != nil {
+			return err
+		}
+		if ok {
+			return nil
+		}
+	}
+
+	return errors.New("no operation found in message")
+}
+
+func (p *Proxy) handleRequest(ctx context.Context, msg *commandv1.PublishMessage, replier SubscriptionReplier) (bool, error) {
+	operation := msg.GetRequest()
+	if operation == nil {
+		return false, nil
+	}
+
+	err := func() error {
 		if msg.CommandReplyInbox == "" {
-			if err := p.nc.Publish(op.Subject, op.Data); err != nil {
+			if err := p.nc.Publish(operation.Subject, operation.Data); err != nil {
 				return fmt.Errorf("publish mesage to nats server: %w", err)
 			}
 			return nil
 		}
-		natsReply, err := p.nc.Request(op.Subject, op.Data, natsRequestTimeout)
+		natsReply, err := p.nc.Request(operation.Subject, operation.Data, natsRequestTimeout)
 		if err != nil {
 			return fmt.Errorf("request nats server: %w", err)
 		}
-		return reply(natsReply.Data)
+		return p.reply(ctx, msg, replier, natsReply.Data)
+	}()
+	return true, err
+}
+
+func (p *Proxy) handleListStreams(ctx context.Context, msg *commandv1.PublishMessage, replier SubscriptionReplier) (bool, error) {
+	operation := msg.GetListStreams()
+	if operation == nil {
+		return false, nil
 	}
 
-	if op := msg.GetListStream(); op != nil {
-		nc, js, err := connectUser(op)
+	err := func() error {
+		nc, js, err := p.connectUser(operation)
 		if err != nil {
 			return err
 		}
@@ -255,17 +297,25 @@ func (p *Proxy) handleMessage(ctx context.Context, msg *commandv1.PublishMessage
 			return fmt.Errorf("marshal list streams reply data: %w", err)
 		}
 
-		return reply(replyData)
+		return p.reply(ctx, msg, replier, replyData)
+	}()
+	return true, err
+}
+
+func (p *Proxy) handleGetStream(ctx context.Context, msg *commandv1.PublishMessage, replier SubscriptionReplier) (bool, error) {
+	operation := msg.GetGetStream()
+	if operation == nil {
+		return false, nil
 	}
 
-	if op := msg.GetGetStream(); op != nil {
-		nc, js, err := connectUser(op)
+	err := func() error {
+		nc, js, err := p.connectUser(operation)
 		if err != nil {
 			return err
 		}
 		defer nc.Close()
 
-		stream, err := js.Stream(ctx, op.StreamName)
+		stream, err := js.Stream(ctx, operation.StreamName)
 		if err != nil {
 			return fmt.Errorf("get stream: %w", err)
 		}
@@ -279,15 +329,23 @@ func (p *Proxy) handleMessage(ctx context.Context, msg *commandv1.PublishMessage
 			return fmt.Errorf("marshal get stream reply data: %w", err)
 		}
 
-		return reply(replyData)
+		return p.reply(ctx, msg, replier, replyData)
+	}()
+	return true, err
+}
+
+func (p *Proxy) handleFetchStreamMessages(ctx context.Context, msg *commandv1.PublishMessage, replier SubscriptionReplier) (bool, error) {
+	operation := msg.GetFetchStreamMessages()
+	if operation == nil {
+		return false, nil
 	}
 
-	if op := msg.GetFetchStreamMessages(); op != nil {
-		if op.UserCreds == nil {
+	err := func() error {
+		if operation.UserCreds == nil {
 			return errors.New("missing user creds for start consumer operation")
 		}
 
-		consumerNC, err := natsutil.Connect(p.natsURL, op.UserCreds.Jwt, op.UserCreds.Seed)
+		consumerNC, err := natsutil.Connect(p.natsURL, operation.UserCreds.Jwt, operation.UserCreds.Seed)
 		if err != nil {
 			return fmt.Errorf("connect to nats server using consumer creds: %w", err)
 		}
@@ -298,9 +356,9 @@ func (p *Proxy) handleMessage(ctx context.Context, msg *commandv1.PublishMessage
 			return fmt.Errorf("create consumer jetstream client: %w", err)
 		}
 
-		jsc, err := js.CreateOrUpdateConsumer(ctx, op.StreamName, jetstream.ConsumerConfig{
+		jsc, err := js.CreateOrUpdateConsumer(ctx, operation.StreamName, jetstream.ConsumerConfig{
 			DeliverPolicy: jetstream.DeliverByStartSequencePolicy,
-			OptStartSeq:   op.StartSequence,
+			OptStartSeq:   operation.StartSequence,
 			AckPolicy:     jetstream.AckNonePolicy,
 			MaxDeliver:    1, // safeguard: shouldn't matter since we are using ack none policy
 		})
@@ -308,7 +366,7 @@ func (p *Proxy) handleMessage(ctx context.Context, msg *commandv1.PublishMessage
 			return fmt.Errorf("create jetstream consumer: %w", err)
 		}
 
-		batch, err := jsc.FetchNoWait(int(op.BatchSize))
+		batch, err := jsc.FetchNoWait(int(operation.BatchSize))
 		if err != nil {
 			return fmt.Errorf("fetch stream batch: %w", err)
 		}
@@ -337,21 +395,29 @@ func (p *Proxy) handleMessage(ctx context.Context, msg *commandv1.PublishMessage
 		if err != nil {
 			return fmt.Errorf("marshal stream message batch: %w", err)
 		}
-		return reply(replyData)
+		return p.reply(ctx, msg, replier, replyData)
+	}()
+	return true, err
+}
+
+func (p *Proxy) handleStreamMessageContent(ctx context.Context, msg *commandv1.PublishMessage, replier SubscriptionReplier) (bool, error) {
+	operation := msg.GetGetStreamMessageContent()
+	if operation == nil {
+		return false, nil
 	}
 
-	if op := msg.GetGetStreamMessageContent(); op != nil {
-		nc, js, err := connectUser(op)
+	err := func() error {
+		nc, js, err := p.connectUser(operation)
 		if err != nil {
 			return err
 		}
 		defer nc.Close()
 
-		stream, err := js.Stream(ctx, op.StreamName)
+		stream, err := js.Stream(ctx, operation.StreamName)
 		if err != nil {
 			return fmt.Errorf("get stream: %w", err)
 		}
-		rawStreamMsg, err := stream.GetMsg(ctx, op.Sequence)
+		rawStreamMsg, err := stream.GetMsg(ctx, operation.Sequence)
 		if err != nil {
 			return fmt.Errorf("get stream message: %w", err)
 		}
@@ -363,17 +429,25 @@ func (p *Proxy) handleMessage(ctx context.Context, msg *commandv1.PublishMessage
 		if err != nil {
 			return fmt.Errorf("marshal stream message content: %w", err)
 		}
-		return reply(replyData)
+		return p.reply(ctx, msg, replier, replyData)
+	}
+	return true, err()
+}
+
+func (p *Proxy) handleStartStreamConsumer(ctx context.Context, msg *commandv1.PublishMessage, replier SubscriptionReplier) (bool, error) {
+	operation := msg.GetStartStreamConsumer()
+	if operation == nil {
+		return false, nil
 	}
 
-	if op := msg.GetStartStreamConsumer(); op != nil {
-		if op.UserCreds == nil {
+	err := func() error {
+		if operation.UserCreds == nil {
 			return errors.New("missing user creds for start consumer operation")
 		}
 
-		userCreds := op.UserCreds
-		consumerID := op.ConsumerId
-		err = p.consumerPool.StartConsumer(ctx, op.StreamName, op.StartSequence, consumerID, userCreds.Jwt, userCreds.Seed, func(jsMsg jetstream.Msg, cerr error) {
+		userCreds := operation.UserCreds
+		consumerID := operation.ConsumerId
+		err := p.consumerPool.StartConsumer(ctx, operation.StreamName, operation.StartSequence, consumerID, userCreds.Jwt, userCreds.Seed, func(jsMsg jetstream.Msg, cerr error) {
 			// reset context timeout for the consumer message handler
 			hctx, hcancel := context.WithTimeout(context.WithoutCancel(ctx), messageHandlerTimeout)
 			defer hcancel()
@@ -410,7 +484,7 @@ func (p *Proxy) handleMessage(ctx context.Context, msg *commandv1.PublishMessage
 				errStr := cerr.Error()
 				replyMsg.Error = &errStr
 			}
-			if err = replier(hctx, replyMsg); err != nil {
+			if err := replier(hctx, replyMsg); err != nil {
 				p.logger.Error(
 					"failed to forward jetstream ephemeral consumer message to broker",
 					"error", err,
@@ -422,22 +496,29 @@ func (p *Proxy) handleMessage(ctx context.Context, msg *commandv1.PublishMessage
 			return err
 		}
 
-		return reply(nil)
-	}
+		return p.reply(ctx, msg, replier, nil)
+	}()
+	return true, err
+}
 
-	if op := msg.GetSendStreamConsumerHeartbeat(); op != nil {
-		if err := p.consumerPool.SendConsumerHeartbeat(op.ConsumerId); err != nil {
-			return err
-		}
-		return reply(nil)
+func (p *Proxy) handleSendStreamConsumerHeartbeat(ctx context.Context, msg *commandv1.PublishMessage, replier SubscriptionReplier) (bool, error) {
+	operation := msg.GetSendStreamConsumerHeartbeat()
+	if operation == nil {
+		return false, nil
 	}
-
-	if op := msg.GetStopStreamConsumer(); op != nil {
-		if err := p.consumerPool.StopConsumer(op.ConsumerId); err != nil && !errtag.HasTag[errtag.NotFound](err) {
-			return err
-		}
-		return reply(nil)
+	if err := p.consumerPool.SendConsumerHeartbeat(operation.ConsumerId); err != nil {
+		return true, err
 	}
+	return true, p.reply(ctx, msg, replier, nil)
+}
 
-	return errors.New("no operation found in message")
+func (p *Proxy) handleStopStreamConsumer(ctx context.Context, msg *commandv1.PublishMessage, replier SubscriptionReplier) (bool, error) {
+	operation := msg.GetStopStreamConsumer()
+	if operation == nil {
+		return false, nil
+	}
+	if err := p.consumerPool.StopConsumer(operation.ConsumerId); err != nil && !errtag.HasTag[errtag.NotFound](err) {
+		return true, err
+	}
+	return true, p.reply(ctx, msg, replier, nil)
 }

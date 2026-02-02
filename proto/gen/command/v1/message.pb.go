@@ -33,7 +33,7 @@ type PublishMessage struct {
 	// Types that are valid to be assigned to Command:
 	//
 	//	*PublishMessage_Request
-	//	*PublishMessage_ListStream
+	//	*PublishMessage_ListStreams
 	//	*PublishMessage_GetStream
 	//	*PublishMessage_FetchStreamMessages
 	//	*PublishMessage_GetStreamMessageContent
@@ -105,10 +105,10 @@ func (x *PublishMessage) GetRequest() *PublishMessage_CommandRequest {
 	return nil
 }
 
-func (x *PublishMessage) GetListStream() *PublishMessage_CommandListStreams {
+func (x *PublishMessage) GetListStreams() *PublishMessage_CommandListStreams {
 	if x != nil {
-		if x, ok := x.Command.(*PublishMessage_ListStream); ok {
-			return x.ListStream
+		if x, ok := x.Command.(*PublishMessage_ListStreams); ok {
+			return x.ListStreams
 		}
 	}
 	return nil
@@ -178,9 +178,9 @@ type PublishMessage_Request struct {
 	Request *PublishMessage_CommandRequest `protobuf:"bytes,3,opt,name=request,proto3,oneof"`
 }
 
-type PublishMessage_ListStream struct {
+type PublishMessage_ListStreams struct {
 	// List JetStream streams that exists on the downstream NATS server.
-	ListStream *PublishMessage_CommandListStreams `protobuf:"bytes,4,opt,name=list_stream,json=listStream,proto3,oneof"`
+	ListStreams *PublishMessage_CommandListStreams `protobuf:"bytes,4,opt,name=list_streams,json=listStreams,proto3,oneof"`
 }
 
 type PublishMessage_GetStream struct {
@@ -219,7 +219,7 @@ type PublishMessage_SendStreamConsumerHeartbeat struct {
 
 func (*PublishMessage_Request) isPublishMessage_Command() {}
 
-func (*PublishMessage_ListStream) isPublishMessage_Command() {}
+func (*PublishMessage_ListStreams) isPublishMessage_Command() {}
 
 func (*PublishMessage_GetStream) isPublishMessage_Command() {}
 
@@ -1057,13 +1057,12 @@ var File_command_v1_message_proto protoreflect.FileDescriptor
 const file_command_v1_message_proto_rawDesc = "" +
 	"\n" +
 	"\x18command/v1/message.proto\x12\n" +
-	"command.v1\"\x9d\x0e\n" +
+	"command.v1\"\x9f\x0e\n" +
 	"\x0ePublishMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12.\n" +
 	"\x13command_reply_inbox\x18\x02 \x01(\tR\x11commandReplyInbox\x12E\n" +
-	"\arequest\x18\x03 \x01(\v2).command.v1.PublishMessage.CommandRequestH\x00R\arequest\x12P\n" +
-	"\vlist_stream\x18\x04 \x01(\v2-.command.v1.PublishMessage.CommandListStreamsH\x00R\n" +
-	"listStream\x12L\n" +
+	"\arequest\x18\x03 \x01(\v2).command.v1.PublishMessage.CommandRequestH\x00R\arequest\x12R\n" +
+	"\flist_streams\x18\x04 \x01(\v2-.command.v1.PublishMessage.CommandListStreamsH\x00R\vlistStreams\x12L\n" +
 	"\n" +
 	"get_stream\x18\x05 \x01(\v2+.command.v1.PublishMessage.CommandGetStreamH\x00R\tgetStream\x12k\n" +
 	"\x15fetch_stream_messages\x18\x06 \x01(\v25.command.v1.PublishMessage.CommandFetchStreamMessagesH\x00R\x13fetchStreamMessages\x12x\n" +
@@ -1173,7 +1172,7 @@ var file_command_v1_message_proto_goTypes = []any{
 }
 var file_command_v1_message_proto_depIdxs = []int32{
 	7,  // 0: command.v1.PublishMessage.request:type_name -> command.v1.PublishMessage.CommandRequest
-	8,  // 1: command.v1.PublishMessage.list_stream:type_name -> command.v1.PublishMessage.CommandListStreams
+	8,  // 1: command.v1.PublishMessage.list_streams:type_name -> command.v1.PublishMessage.CommandListStreams
 	9,  // 2: command.v1.PublishMessage.get_stream:type_name -> command.v1.PublishMessage.CommandGetStream
 	10, // 3: command.v1.PublishMessage.fetch_stream_messages:type_name -> command.v1.PublishMessage.CommandFetchStreamMessages
 	11, // 4: command.v1.PublishMessage.get_stream_message_content:type_name -> command.v1.PublishMessage.CommandGetStreamMessageContent
@@ -1201,7 +1200,7 @@ func file_command_v1_message_proto_init() {
 	}
 	file_command_v1_message_proto_msgTypes[0].OneofWrappers = []any{
 		(*PublishMessage_Request)(nil),
-		(*PublishMessage_ListStream)(nil),
+		(*PublishMessage_ListStreams)(nil),
 		(*PublishMessage_GetStream)(nil),
 		(*PublishMessage_FetchStreamMessages)(nil),
 		(*PublishMessage_GetStreamMessageContent)(nil),
