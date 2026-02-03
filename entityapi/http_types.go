@@ -298,6 +298,14 @@ type GetProxyStatusResponse struct {
 	Connected bool `json:"connected"`
 }
 
+type GetOperatorStatsRequest struct {
+	ID string `param:"operator_id" json:"-"`
+}
+
+func (r GetOperatorStatsRequest) Validate() error {
+	return valgo.In("params", valgo.Is(IDValidator[entity.OperatorID](r.ID, "operator_id"))).ToError()
+}
+
 func IDValidator[ID entity.ID, PT id.SubtypePtr[ID]](identifier string, nameAndTitle ...string) valgo.Validator {
 	entityName := entity.GetTypeNameFromID[ID]()
 

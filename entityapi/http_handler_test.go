@@ -166,6 +166,34 @@ func TestServer_GetOperator(t *testing.T) {
 	assert.Equal(t, opData, got.OperatorData)
 }
 
+func TestServer_GetOperatorStats(t *testing.T) {
+	ctx := testutil.Context(t)
+	fixture := NewHTTPHandlerTestFixture(t)
+	defer fixture.Stop()
+	op := fixture.AddOperator(ctx)
+
+	res := testutil.Get[server.Response[natsrv.ServerStatsMsg]](t, fixture.OperatorStatsURL(op.NamespaceID, op.ID))
+	got := res.Data
+
+	// Server info
+	assert.NotEmpty(t, got.Server.Name)
+	assert.NotEmpty(t, got.Server.Host)
+	assert.NotEmpty(t, got.Server.ID)
+	assert.NotEmpty(t, got.Server.Version)
+
+	// Stats
+	assert.Greater(t, got.Stats.Cores, 0)
+	assert.GreaterOrEqual(t, got.Stats.CPU, 0.0)
+	assert.GreaterOrEqual(t, got.Stats.Connections, 0)
+	assert.GreaterOrEqual(t, got.Stats.TotalConnections, uint64(0))
+	assert.GreaterOrEqual(t, got.Stats.ActiveAccounts, 0)
+	assert.GreaterOrEqual(t, got.Stats.Sent.Msgs, int64(0))
+	assert.GreaterOrEqual(t, got.Stats.Sent.Bytes, int64(0))
+	assert.GreaterOrEqual(t, got.Stats.Received.Msgs, int64(0))
+	assert.GreaterOrEqual(t, got.Stats.Received.Bytes, int64(0))
+	assert.GreaterOrEqual(t, got.Stats.SlowConsumers, int64(0))
+}
+
 func TestHTTPHandler_ListOperators(t *testing.T) {
 	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)

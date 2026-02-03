@@ -312,6 +312,25 @@ func TestConsumerHeartbeat(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestStats(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+
+	h := NewEndToEndHarness(ctx, t)
+
+	got, err := h.Commander.Stats(ctx, h.Operator.ID)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+
+	// Basic data integrity checks
+	assert.NotEmpty(t, got.Server.ID)
+	assert.NotEmpty(t, got.Server.Name)
+	assert.NotEmpty(t, got.Server.Version)
+	assert.NotNil(t, got.Stats)
+	assert.GreaterOrEqual(t, got.Stats.Connections, 1)
+	assert.Greater(t, got.Stats.Start.Unix(), int64(0))
+}
+
 type EndToEndHarness struct {
 	// Downstream
 	Operator        *entity.Operator

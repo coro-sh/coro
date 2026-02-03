@@ -11,7 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/joshjon/kit/fname"
 	"github.com/nats-io/jwt/v2"
+	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"golang.org/x/sync/singleflight"
@@ -168,7 +170,9 @@ func (c *Commander) NotifyAccountClaimsDelete(ctx context.Context, operator *ent
 
 // ListStreams lists all JetStream streams.
 func (c *Commander) ListStreams(ctx context.Context, account *entity.Account) ([]*jetstream.StreamInfo, error) {
-	result, err, _ := c.sf.Do(account.ID.String(), func() (any, error) {
+	sfKey := singleFlightKey(account.ID.String())
+
+	result, err, _ := c.sf.Do(sfKey, func() (any, error) {
 		user, err := entity.NewUser(fmt.Sprintf("[%s] 'list streams' proxy user", constants.AppNameUpper), account)
 		if err != nil {
 			return nil, fmt.Errorf("create user for command: %w", err)
@@ -178,8 +182,8 @@ func (c *Commander) ListStreams(ctx context.Context, account *entity.Account) ([
 		msg := &commandv1.PublishMessage{
 			Id:                NewMessageID().String(),
 			CommandReplyInbox: nats.NewInbox(),
-			Command: &commandv1.PublishMessage_ListStream{
-				ListStream: &commandv1.PublishMessage_CommandListStreams{
+			Command: &commandv1.PublishMessage_ListStreams{
+				ListStreams: &commandv1.PublishMessage_CommandListStreams{
 					UserCreds: &commandv1.Credentials{
 						Jwt:  user.JWT(),
 						Seed: string(user.NKey().Seed),
@@ -210,7 +214,8 @@ func (c *Commander) ListStreams(ctx context.Context, account *entity.Account) ([
 
 // GetStream gets a JetStream streams.
 func (c *Commander) GetStream(ctx context.Context, account *entity.Account, streamName string) (*jetstream.StreamInfo, error) {
-	sfKey := account.ID.String() + "." + streamName
+	sfKey := singleFlightKey(account.ID.String() + "." + streamName)
+
 	result, err, _ := c.sf.Do(sfKey, func() (any, error) {
 		user, err := entity.NewUser(fmt.Sprintf("[%s] 'get stream' proxy user", constants.AppNameUpper), account)
 		if err != nil {
@@ -387,20 +392,60 @@ func (c *Commander) ConsumeStream(
 	return consumer, nil
 }
 
-// Ping checks if the Operator is subscribed to the Broker by sending a ping
-// and waiting for a pong reply. Returns true if successful or false if not.
+func (c *Commander) Stats(ctx context.Context, operatorID entity.OperatorID) (*server.ServerStatsMsg, error) {
+	reply, err := c.request(ctx, operatorID, sysServerPingSubject, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if reply.Error != nil {
+		return nil, fmt.Errorf("error returned in reply message: %s", *reply.Error)
+	}
+
+	stats, err := unmarshalJSON[*server.ServerStatsMsg](reply.Data)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal server stats message reply data: %w", err)
+	}
+
+	return stats, nil
+}
+
+// Ping checks if an Operator is currently connected to any Broker instance.
+//
+// This performs a distributed connection check across all Broker nodes by:
+//  1. Requesting the number of active Broker nodes from the embedded NATS cluster
+//  2. Publishing a ping request to the operator-specific subject
+//  3. Collecting responses from each Broker node
+//  4. Returning the first successful connection status found
+//
+// The ping happens entirely within the Broker's embedded NATS infrastructure and
+// does NOT send messages to the downstream operator NATS servers. Instead, each
+// Broker checks its local WebSocket connection registry and responds with the
+// operator's connection status.
+//
+// This approach is significantly faster than sending a request through the full
+// chain (Commander → Broker → WebSocket → Proxy → Operator NATS → Proxy →
+// WebSocket → Broker → Commander) since it only requires a single hop to the
+// Broker's embedded NATS and a local map lookup, eliminating network latency to
+// downstream NATS servers.
+//
+// Returns OperatorNATSStatus with Connected=true if any Broker has an active
+// WebSocket connection for the operator, or Connected=false if no connections
+// exist across all Brokers.
 func (c *Commander) Ping(ctx context.Context, operatorID entity.OperatorID) (entity.OperatorNATSStatus, error) {
-	result, err, _ := c.sf.Do(operatorID.String(), func() (any, error) {
+	sfKey := singleFlightKey(operatorID.String())
+
+	result, err, _ := c.sf.Do(sfKey, func() (any, error) {
 		brokerPingReplyMsg, err := c.nc.RequestWithContext(ctx, sysServerPingSubject, nil)
 		if err != nil {
 			return entity.OperatorNATSStatus{}, err
 		}
-		brokerPingReply, err := unmarshalJSON[pingReplyMessage](brokerPingReplyMsg.Data)
+		brokerPingReply, err := unmarshalJSON[server.ServerStatsMsg](brokerPingReplyMsg.Data)
 		if err != nil {
 			return entity.OperatorNATSStatus{}, err
 		}
 
-		numNodes := brokerPingReply.Statsz.ActiveServers
+		numNodes := brokerPingReply.Stats.ActiveServers
 
 		pingReplyInbox := c.nc.NewInbox()
 		sub, err := c.nc.SubscribeSync(pingReplyInbox)
@@ -556,4 +601,8 @@ func unmarshalJSON[T any](data []byte) (T, error) {
 		return t, err
 	}
 	return t, nil
+}
+
+func singleFlightKey(identifier string) string {
+	return fname.CallerFuncShortName(1) + "_" + identifier
 }

@@ -473,6 +473,19 @@ func (b *BrokerWebSocketHandler) acceptHandshake(ctx context.Context, c echo.Con
 	return conn, sysUser, nil
 }
 
+// startPingOperatorWorker starts a background goroutine that responds to operator
+// ping requests from Commander instances.
+//
+// This worker subscribes to the ping subject pattern (_CORO.BROKER.OPERATOR.>)
+// and processes incoming ping requests by:
+//  1. Extracting the operator ID from the message subject
+//  2. Checking the local WebSocket connections map for an active connection
+//  3. Replying with an OperatorNATSStatus indicating connection state and time
+//
+// This enables distributed connection checks without requiring messages to be sent
+// to downstream operator NATS servers. Each Broker node independently responds
+// based on its own connection state, allowing Commander to aggregate responses
+// and determine overall operator connectivity across the cluster.
 func (b *BrokerWebSocketHandler) startPingOperatorWorker() error {
 	msgs := make(chan *nats.Msg, 100)
 	subj := pingOperatorSubjectBase + ".OPERATOR.>"

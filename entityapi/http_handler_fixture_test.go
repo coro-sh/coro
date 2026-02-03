@@ -10,6 +10,7 @@ import (
 	"github.com/joshjon/kit/log"
 	"github.com/joshjon/kit/server"
 	"github.com/joshjon/kit/testutil"
+	natserver "github.com/nats-io/nats-server/v2/server"
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/constants"
@@ -76,6 +77,10 @@ func (t *HTTPHandlerTestFixture) OperatorURL(namespaceID entity.NamespaceID, ope
 
 func (t *HTTPHandlerTestFixture) OperatorNATSConfigURL(namespaceID entity.NamespaceID, operatorID entity.OperatorID) string {
 	return fmt.Sprintf("%s/nats-config", t.OperatorURL(namespaceID, operatorID))
+}
+
+func (t *HTTPHandlerTestFixture) OperatorStatsURL(namespaceID entity.NamespaceID, operatorID entity.OperatorID) string {
+	return fmt.Sprintf("%s/stats", t.OperatorURL(namespaceID, operatorID))
 }
 
 func (t *HTTPHandlerTestFixture) OperatorAccountsURL(namespaceID entity.NamespaceID, operatorID entity.OperatorID) string {
@@ -157,6 +162,39 @@ func (t *HTTPHandlerTestFixture) Stop() {
 var _ entityapi.Commander = (*commanderStub)(nil)
 
 type commanderStub struct{}
+
+func (n *commanderStub) Stats(_ context.Context, _ entity.OperatorID) (*natserver.ServerStatsMsg, error) {
+	return &natserver.ServerStatsMsg{
+		Server: natserver.ServerInfo{
+			Name:      "test-nats-server",
+			Host:      "0.0.0.0",
+			ID:        "NATS1234567890ABCDEF",
+			Version:   "2.10.0",
+			JetStream: true,
+			Seq:       1,
+			Time:      time.Now(),
+		},
+		Stats: natserver.ServerStats{
+			Start:            time.Now().Add(-24 * time.Hour),
+			Mem:              100 * 1024 * 1024, // 100 MB
+			Cores:            4,
+			CPU:              15.5,
+			Connections:      5,
+			TotalConnections: 10,
+			ActiveAccounts:   2,
+			NumSubs:          50,
+			Sent: natserver.DataStats{
+				Msgs:  1000,
+				Bytes: 1024 * 1024, // 1 MB
+			},
+			Received: natserver.DataStats{
+				Msgs:  900,
+				Bytes: 900 * 1024,
+			},
+			SlowConsumers: 0,
+		},
+	}, nil
+}
 
 func (n *commanderStub) NotifyAccountClaimsUpdate(_ context.Context, _ *entity.Account) error {
 	return nil

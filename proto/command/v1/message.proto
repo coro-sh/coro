@@ -15,7 +15,7 @@ message PublishMessage {
     // is received.
     CommandRequest request = 3;
     // List JetStream streams that exists on the downstream NATS server.
-    CommandListStreams list_stream = 4;
+    CommandListStreams list_streams = 4;
     // Get a JetStream stream that exists on the downstream NATS server.
     CommandGetStream get_stream = 5;
     // Fetch a batch of messages that are currently available in the stream.

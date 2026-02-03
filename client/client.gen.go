@@ -12,13 +12,14 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/oapi-codegen/runtime"
 )
 
 // Account defines model for Account.
 type Account struct {
-	// CreateTime Unix timestamp of when the account was created (from JWT IssuedAt)
+	// CreateTime Unix timestamp of when the account was created
 	CreateTime int64 `json:"create_time"`
 
 	// Id Account ID
@@ -75,6 +76,27 @@ type CreateUserRequest struct {
 	Name   string      `json:"name"`
 }
 
+// DataStats defines model for DataStats.
+type DataStats struct {
+	// Bytes Number of bytes
+	Bytes int64 `json:"bytes"`
+
+	// Msgs Number of messages
+	Msgs int64 `json:"msgs"`
+}
+
+// GatewayStat defines model for GatewayStat.
+type GatewayStat struct {
+	// Gwid Gateway ID
+	Gwid int64 `json:"gwid"`
+
+	// InboundConnections Number of inbound connections
+	InboundConnections int       `json:"inbound_connections"`
+	Name               string    `json:"name"`
+	Received           DataStats `json:"received"`
+	Sent               DataStats `json:"sent"`
+}
+
 // Namespace defines model for Namespace.
 type Namespace struct {
 	// Id Namespace ID
@@ -116,6 +138,91 @@ type ResponseError struct {
 		Details []string `json:"details"`
 		Message string   `json:"message"`
 	} `json:"error"`
+}
+
+// RouteStat defines model for RouteStat.
+type RouteStat struct {
+	Name *string `json:"name,omitempty"`
+
+	// Pending Pending messages
+	Pending  int       `json:"pending"`
+	Received DataStats `json:"received"`
+
+	// Rid Route ID
+	Rid  int64     `json:"rid"`
+	Sent DataStats `json:"sent"`
+}
+
+// ServerInfo defines model for ServerInfo.
+type ServerInfo struct {
+	Cluster *string `json:"cluster,omitempty"`
+	Domain  *string `json:"domain,omitempty"`
+
+	// Flags Server capability flags
+	Flags int    `json:"flags"`
+	Host  string `json:"host"`
+	Id    string `json:"id"`
+
+	// Jetstream Whether JetStream is enabled
+	Jetstream bool   `json:"jetstream"`
+	Name      string `json:"name"`
+
+	// Seq Sequence number
+	Seq  int64     `json:"seq"`
+	Tags *[]string `json:"tags,omitempty"`
+	Time time.Time `json:"time"`
+
+	// Ver Server version
+	Ver string `json:"ver"`
+}
+
+// ServerStats defines model for ServerStats.
+type ServerStats struct {
+	// ActiveAccounts Number of active accounts
+	ActiveAccounts int `json:"active_accounts"`
+
+	// ActiveServers Number of active servers in cluster
+	ActiveServers *int `json:"active_servers,omitempty"`
+
+	// Connections Current number of connections
+	Connections int `json:"connections"`
+
+	// Cores Number of CPU cores
+	Cores int `json:"cores"`
+
+	// Cpu CPU usage percentage
+	Cpu      float64        `json:"cpu"`
+	Gateways *[]GatewayStat `json:"gateways,omitempty"`
+
+	// Gomaxprocs GOMAXPROCS setting
+	Gomaxprocs *int `json:"gomaxprocs,omitempty"`
+
+	// Gomemlimit Go memory limit
+	Gomemlimit *int64 `json:"gomemlimit,omitempty"`
+
+	// Mem Memory usage in bytes
+	Mem      int64        `json:"mem"`
+	Received DataStats    `json:"received"`
+	Routes   *[]RouteStat `json:"routes,omitempty"`
+	Sent     DataStats    `json:"sent"`
+
+	// SlowConsumers Number of slow consumers detected
+	SlowConsumers int64 `json:"slow_consumers"`
+
+	// Start Server start time
+	Start time.Time `json:"start"`
+
+	// Subscriptions Number of subscriptions
+	Subscriptions int32 `json:"subscriptions"`
+
+	// TotalConnections Total connections since start
+	TotalConnections int64 `json:"total_connections"`
+}
+
+// ServerStatsMsg defines model for ServerStatsMsg.
+type ServerStatsMsg struct {
+	Server ServerInfo  `json:"server"`
+	Statsz ServerStats `json:"statsz"`
 }
 
 // Stream JetStream stream
@@ -483,6 +590,9 @@ type clientInterface interface {
 
 	// GenerateOperatorProxyToken request
 	GenerateOperatorProxyToken(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetOperatorStats request
+	GetOperatorStats(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteUser request
 	DeleteUser(ctx context.Context, namespaceId string, userId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -852,6 +962,18 @@ func (c *oapiClient) GetOperatorProxyConnectionStatus(ctx context.Context, names
 
 func (c *oapiClient) GenerateOperatorProxyToken(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := newGenerateOperatorProxyTokenRequest(c.Server, namespaceId, operatorId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *oapiClient) GetOperatorStats(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := newGetOperatorStatsRequest(c.Server, namespaceId, operatorId)
 	if err != nil {
 		return nil, err
 	}
@@ -2174,6 +2296,47 @@ func newGenerateOperatorProxyTokenRequest(server string, namespaceId string, ope
 	return req, nil
 }
 
+// newGetOperatorStatsRequest generates requests for GetOperatorStats
+func newGetOperatorStatsRequest(server string, namespaceId string, operatorId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "namespace_id", runtime.ParamLocationPath, namespaceId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "operator_id", runtime.ParamLocationPath, operatorId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/namespaces/%s/operators/%s/stats", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // newDeleteUserRequest generates requests for DeleteUser
 func newDeleteUserRequest(server string, namespaceId string, userId string) (*http.Request, error) {
 	var err error
@@ -2515,6 +2678,9 @@ type clientWithResponsesInterface interface {
 
 	// GenerateOperatorProxyTokenWithResponse request
 	GenerateOperatorProxyTokenWithResponse(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*GenerateOperatorProxyTokenResponse, error)
+
+	// GetOperatorStatsWithResponse request
+	GetOperatorStatsWithResponse(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*GetOperatorStatsResponse, error)
 
 	// DeleteUserWithResponse request
 	DeleteUserWithResponse(ctx context.Context, namespaceId string, userId string, reqEditors ...RequestEditorFn) (*DeleteUserResponse, error)
@@ -3338,6 +3504,42 @@ func (r GenerateOperatorProxyTokenResponse) StatusCode() int {
 	return 0
 }
 
+type GetOperatorStatsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Data ServerStatsMsg `json:"data"`
+	}
+	JSON400 *ResponseError
+	JSON404 *ResponseError
+	JSON500 *ResponseError
+}
+
+// GetBody returns the raw response body
+// Note: this is a custom method added to the template
+func (r *GetOperatorStatsResponse) GetBody() []byte {
+	if r == nil {
+		return nil
+	}
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetOperatorStatsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetOperatorStatsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type DeleteUserResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -3772,6 +3974,15 @@ func (c *clientWithResponses) GenerateOperatorProxyTokenWithResponse(ctx context
 		return nil, err
 	}
 	return parseGenerateOperatorProxyTokenResponse(rsp)
+}
+
+// GetOperatorStatsWithResponse request returning *GetOperatorStatsResponse
+func (c *clientWithResponses) GetOperatorStatsWithResponse(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*GetOperatorStatsResponse, error) {
+	rsp, err := c.GetOperatorStats(ctx, namespaceId, operatorId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return parseGetOperatorStatsResponse(rsp)
 }
 
 // DeleteUserWithResponse request returning *DeleteUserResponse
@@ -4780,6 +4991,55 @@ func parseGenerateOperatorProxyTokenResponse(rsp *http.Response) (*GenerateOpera
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// parseGetOperatorStatsResponse parses an HTTP response from a GetOperatorStatsWithResponse call
+func parseGetOperatorStatsResponse(rsp *http.Response) (*GetOperatorStatsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetOperatorStatsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Data ServerStatsMsg `json:"data"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
 
 	}
 

@@ -52,7 +52,7 @@ func (c config) validate() *valgo.Validation {
 func loadConfig(c *cli.Context) config {
 	cfg := config{
 		port:        c.Int("port"),
-		enableUI:    c.Bool("server-ui"),
+		enableUI:    c.Bool("ui"),
 		corsOrigins: c.StringSlice("cors-origin"),
 	}
 	exitOnInvalidFlags(c, cfg.validate())
@@ -73,8 +73,8 @@ func run(ctx context.Context, args []string, logger log.Logger) error {
 			EnvVars: []string{"PORT"},
 		},
 		&cli.BoolFlag{
-			Name:    "server-ui",
-			Aliases: []string{"ui"},
+			Name:    "ui",
+			Aliases: []string{"u"},
 			Value:   false,
 			Usage:   "enable coro server ui",
 			EnvVars: []string{"SERVER_UI"},

@@ -89,6 +89,17 @@ func (c *Client) GetOperator(ctx context.Context, namespaceID, operatorID string
 	return Operator{}, getResErr(res)
 }
 
+func (c *Client) GetOperatorStats(ctx context.Context, namespaceID, operatorID string, reqEditors ...RequestEditorFn) (ServerStatsMsg, error) {
+	res, err := c.oac.GetOperatorStatsWithResponse(ctx, namespaceID, operatorID, reqEditors...)
+	if err != nil {
+		return ServerStatsMsg{}, err
+	}
+	if res.JSON200 != nil {
+		return res.JSON200.Data, nil
+	}
+	return ServerStatsMsg{}, getResErr(res)
+}
+
 func (c *Client) ListOperators(ctx context.Context, namespaceID string, params *ListOperatorsParams, reqEditors ...RequestEditorFn) ([]Operator, error) {
 	res, err := c.oac.ListOperatorsWithResponse(ctx, namespaceID, params, reqEditors...)
 	if err != nil {

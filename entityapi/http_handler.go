@@ -14,6 +14,7 @@ import (
 	"github.com/joshjon/kit/server"
 	"github.com/labstack/echo/v4"
 	"github.com/nats-io/jwt/v2"
+	natsserver "github.com/nats-io/nats-server/v2/server"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/coro-sh/coro/constants"
@@ -34,6 +35,8 @@ type Commander interface {
 	NotifyAccountClaimsDelete(ctx context.Context, operator *entity.Operator, account *entity.Account) error
 	// Ping checks if an Operator is connected and ready to receive commands.
 	Ping(ctx context.Context, operatorID entity.OperatorID) (entity.OperatorNATSStatus, error)
+	// Stats retrieves server statistics from the downstream NATS server.
+	Stats(ctx context.Context, operatorID entity.OperatorID) (*natsserver.ServerStatsMsg, error)
 }
 
 // HTTPHandlerOption configures a HTTPHandler.
@@ -94,6 +97,7 @@ func (h *HTTPHandler[S]) Register(g *echo.Group) {
 	operator.PUT("", h.UpdateOperator)
 	operator.DELETE("", h.DeleteOperator)
 	operator.GET("/nats-config", h.GetNATSConfig)
+	operator.GET("/stats", h.GetOperatorStats)
 	operator.POST("/accounts", h.CreateAccount)
 	operator.GET("/accounts", h.ListAccounts)
 
@@ -349,6 +353,36 @@ func (h *HTTPHandler[S]) GetOperator(c echo.Context) error {
 		OperatorData: data,
 		Status:       opStatus,
 	})
+}
+
+// GetOperatorStats handles GET requests to get Operator statistics from the
+// downstream NATS server.
+func (h *HTTPHandler[S]) GetOperatorStats(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	req, err := server.BindRequest[GetOperatorStatsRequest](c)
+	if err != nil {
+		return err
+	}
+
+	opID := id.MustParse[entity.OperatorID](req.ID)
+	c.Set(logkey.OperatorID, opID)
+
+	op, err := h.store.ReadOperator(ctx, opID)
+	if err != nil {
+		return err
+	}
+
+	if err = VerifyEntityNamespace(c, op); err != nil {
+		return err
+	}
+
+	stats, err := h.commander.Stats(ctx, op.ID)
+	if err != nil {
+		return err
+	}
+
+	return server.SetResponse(c, http.StatusOK, stats)
 }
 
 // DeleteOperator handles DELETE requests to delete an Operator.
