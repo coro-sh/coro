@@ -7,6 +7,7 @@ import (
 
 	"github.com/cohesivestack/valgo"
 	"github.com/joshjon/kit/id"
+	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nkeys"
 
 	"github.com/coro-sh/coro/constants"
@@ -203,7 +204,8 @@ func (r DeleteAccountRequest) Validate() error {
 
 type AccountResponse struct {
 	entity.AccountData
-	Limits AccountLimits `json:"limits"`
+	Limits AccountLimits       `json:"limits"`
+	Stats  *server.AccountStat `json:"stats,omitempty"`
 }
 
 type UserLimits struct {

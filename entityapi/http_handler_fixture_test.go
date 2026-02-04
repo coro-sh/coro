@@ -163,7 +163,36 @@ var _ entityapi.Commander = (*commanderStub)(nil)
 
 type commanderStub struct{}
 
-func (n *commanderStub) Stats(_ context.Context, _ entity.OperatorID) (*natserver.ServerStatsMsg, error) {
+func (n *commanderStub) AccountStats(_ context.Context, account *entity.Account) (*natserver.AccountStat, error) {
+	claims, err := account.Claims()
+	if err != nil {
+		return nil, err
+	}
+	data, err := account.Data()
+	if err != nil {
+		return nil, err
+	}
+
+	return &natserver.AccountStat{
+		Account:    claims.Subject,
+		Name:       data.Name,
+		Conns:      2,
+		LeafNodes:  0,
+		TotalConns: 5,
+		NumSubs:    25,
+		Sent: natserver.DataStats{
+			Msgs:  500,
+			Bytes: 512 * 1024, // 512 KB
+		},
+		Received: natserver.DataStats{
+			Msgs:  450,
+			Bytes: 480 * 1024, // 480 KB
+		},
+		SlowConsumers: 0,
+	}, nil
+}
+
+func (n *commanderStub) ServerStats(_ context.Context, _ entity.OperatorID) (*natserver.ServerStatsMsg, error) {
 	return &natserver.ServerStatsMsg{
 		Server: natserver.ServerInfo{
 			Name:      "test-nats-server",

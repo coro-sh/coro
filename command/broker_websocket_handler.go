@@ -36,7 +36,6 @@ const (
 
 	// Subject formats
 	operatorSubjectFormat     = "_" + constants.AppNameUpper + ".BROKER.OPERATOR.%s"
-	sysServerPingSubject      = "$SYS.REQ.SERVER.PING"
 	pingOperatorSubjectBase   = "_" + constants.AppName + ".BROKER.PING"
 	pingOperatorSubjectFormat = pingOperatorSubjectBase + ".OPERATOR.%s"
 

@@ -35,8 +35,11 @@ type Commander interface {
 	NotifyAccountClaimsDelete(ctx context.Context, operator *entity.Operator, account *entity.Account) error
 	// Ping checks if an Operator is connected and ready to receive commands.
 	Ping(ctx context.Context, operatorID entity.OperatorID) (entity.OperatorNATSStatus, error)
-	// Stats retrieves server statistics from the downstream NATS server.
-	Stats(ctx context.Context, operatorID entity.OperatorID) (*natsserver.ServerStatsMsg, error)
+	// ServerStats retrieves server statistics from the downstream NATS server.
+	ServerStats(ctx context.Context, operatorID entity.OperatorID) (*natsserver.ServerStatsMsg, error)
+	// AccountStats retrieves account statistics from the downstream NATS server.
+	// Returns nil if the account has no active connections.
+	AccountStats(ctx context.Context, account *entity.Account) (*natsserver.AccountStat, error)
 }
 
 // HTTPHandlerOption configures a HTTPHandler.
@@ -377,7 +380,7 @@ func (h *HTTPHandler[S]) GetOperatorStats(c echo.Context) error {
 		return err
 	}
 
-	stats, err := h.commander.Stats(ctx, op.ID)
+	stats, err := h.commander.ServerStats(ctx, op.ID)
 	if err != nil {
 		return err
 	}
@@ -642,10 +645,23 @@ func (h *HTTPHandler[S]) GetAccount(c echo.Context) error {
 		return err
 	}
 
-	return server.SetResponse(c, http.StatusOK, AccountResponse{
+	resp := AccountResponse{
 		AccountData: accData,
 		Limits:      LoadAccountLimits(accData, claims),
-	})
+	}
+
+	// Fetch account stats if commander is configured
+	if h.commander != nil {
+		stats, err := h.commander.AccountStats(ctx, acc)
+		if err != nil {
+			// Log error but don't fail the request if stats fetch fails
+			c.Logger().Error("failed to fetch account stats", "account_id", acc.ID, "error", err)
+		} else {
+			resp.Stats = stats
+		}
+	}
+
+	return server.SetResponse(c, http.StatusOK, resp)
 }
 
 // ListAccounts handles GET requests to list Accounts.

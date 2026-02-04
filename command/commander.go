@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/joshjon/kit/fname"
+	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/jwt/v2"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
@@ -27,8 +28,11 @@ import (
 )
 
 const (
-	accClaimsUpdateSubjectFormat        = "$SYS.REQ.ACCOUNT.%s.CLAIMS.UPDATE"
-	accClaimsDeleteSubject              = "$SYS.REQ.CLAIMS.DELETE"
+	accClaimsUpdateSubjectFormat = "$SYS.REQ.ACCOUNT.%s.CLAIMS.UPDATE"
+	accClaimsDeleteSubject       = "$SYS.REQ.CLAIMS.DELETE"
+	accStatsPingSubject          = "$SYS.REQ.ACCOUNT.PING.STATZ"
+	serverStatsPingSubject       = "$SYS.REQ.SERVER.PING"
+
 	defaultFetchStreamMessagesBatchSize = 100
 )
 
@@ -392,8 +396,8 @@ func (c *Commander) ConsumeStream(
 	return consumer, nil
 }
 
-func (c *Commander) Stats(ctx context.Context, operatorID entity.OperatorID) (*server.ServerStatsMsg, error) {
-	reply, err := c.request(ctx, operatorID, sysServerPingSubject, nil)
+func (c *Commander) ServerStats(ctx context.Context, operatorID entity.OperatorID) (*server.ServerStatsMsg, error) {
+	reply, err := c.request(ctx, operatorID, serverStatsPingSubject, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -408,6 +412,72 @@ func (c *Commander) Stats(ctx context.Context, operatorID entity.OperatorID) (*s
 	}
 
 	return stats, nil
+}
+
+// AccountStats fetches stats for the account. Returns nil if the account has no
+// active connection.
+func (c *Commander) AccountStats(ctx context.Context, account *entity.Account) (*server.AccountStat, error) {
+	claims, err := account.Claims()
+	if err != nil {
+		return nil, err
+	}
+
+	optsJSON, err := json.Marshal(server.AccountStatzOptions{
+		Accounts:      []string{claims.Subject},
+		IncludeUnused: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	reply, err := c.request(ctx, account.OperatorID, accStatsPingSubject, optsJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	if reply.Error != nil {
+		return nil, fmt.Errorf("error returned in reply message: %s", *reply.Error)
+	}
+
+	srvAPIRes, err := unmarshalJSON[*server.ServerAPIResponse](reply.Data)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal server stats message reply data: %w", err)
+	}
+
+	if srvAPIRes.Error != nil {
+		return nil, fmt.Errorf("error returned in server api response: %s", srvAPIRes.Error.Error())
+	}
+
+	dataMap, ok := srvAPIRes.Data.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("expected map[string]any, got %T", srvAPIRes.Data)
+	}
+
+	var accStats server.AccountStatz
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook: mapstructure.StringToTimeHookFunc(time.RFC3339Nano),
+		TagName:    "json",
+		Result:     &accStats,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create mapstructure decoder: %w", err)
+	}
+
+	if err = decoder.Decode(dataMap); err != nil {
+		return nil, fmt.Errorf("unmarshal server api response account stats: %w", err)
+	}
+
+	if len(accStats.Accounts) == 0 {
+		return nil, nil
+	}
+	if len(accStats.Accounts) > 1 {
+		return nil, fmt.Errorf("expected exactly 1 account stat in server api response but found %d", len(accStats.Accounts))
+	}
+	if accStats.Accounts[0].Account != claims.Subject {
+		return nil, fmt.Errorf("found stats for a different account in server api response")
+	}
+
+	return accStats.Accounts[0], nil
 }
 
 // Ping checks if an Operator is currently connected to any Broker instance.
@@ -436,7 +506,7 @@ func (c *Commander) Ping(ctx context.Context, operatorID entity.OperatorID) (ent
 	sfKey := singleFlightKey(operatorID.String())
 
 	result, err, _ := c.sf.Do(sfKey, func() (any, error) {
-		brokerPingReplyMsg, err := c.nc.RequestWithContext(ctx, sysServerPingSubject, nil)
+		brokerPingReplyMsg, err := c.nc.RequestWithContext(ctx, serverStatsPingSubject, nil)
 		if err != nil {
 			return entity.OperatorNATSStatus{}, err
 		}

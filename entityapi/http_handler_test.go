@@ -385,6 +385,12 @@ func TestServer_GetAccount(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, entityapi.LoadAccountLimits(accData, accClaims), got.Limits)
+
+	// Assert stats are present
+	require.NotNil(t, got.Stats)
+	assert.NotEmpty(t, got.Stats.Account)
+	assert.NotEmpty(t, got.Stats.Name)
+	assert.NotZero(t, got.Stats.TotalConns)
 }
 
 func TestHTTPHandler_ListAccounts(t *testing.T) {

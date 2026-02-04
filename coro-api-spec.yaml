@@ -1677,6 +1677,11 @@ components:
           description: Unix timestamp of when the account was created
         limits:
           $ref: '#/components/schemas/AccountLimits'
+        stats:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/AccountStat'
+          description: Account statistics from the NATS server (optional, only available in Get Account endpoint when operator is connected)
 
     AccountLimits:
       type: object
@@ -1700,6 +1705,47 @@ components:
           type: integer
           nullable: true
           description: Expiry duration (in seconds) for User JWTs under this Account
+
+    AccountStat:
+      type: object
+      required:
+        - acc
+        - name
+        - conns
+        - leafnodes
+        - total_conns
+        - num_subscriptions
+        - sent
+        - received
+        - slow_consumers
+      properties:
+        acc:
+          type: string
+          description: Account public key
+        name:
+          type: string
+          description: Account name
+        conns:
+          type: integer
+          description: Current number of connections
+        leafnodes:
+          type: integer
+          description: Number of leaf node connections
+        total_conns:
+          type: integer
+          description: Total connections since start
+        num_subscriptions:
+          type: integer
+          format: int32
+          description: Number of subscriptions
+        sent:
+          $ref: '#/components/schemas/DataStats'
+        received:
+          $ref: '#/components/schemas/DataStats'
+        slow_consumers:
+          type: integer
+          format: int64
+          description: Number of slow consumers
 
     ####################################
     # Users

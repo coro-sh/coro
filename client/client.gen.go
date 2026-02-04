@@ -38,6 +38,9 @@ type Account struct {
 
 	// PublicKey NATS public key for this account
 	PublicKey string `json:"public_key"`
+
+	// Stats Account statistics from the NATS server (optional, only available in Get Account endpoint when operator is connected)
+	Stats *AccountStat `json:"stats"`
 }
 
 // AccountLimits defines model for AccountLimits.
@@ -50,6 +53,32 @@ type AccountLimits struct {
 
 	// UserJwtDurationSecs Expiry duration (in seconds) for User JWTs under this Account
 	UserJwtDurationSecs *int `json:"user_jwt_duration_secs"`
+}
+
+// AccountStat defines model for AccountStat.
+type AccountStat struct {
+	// Acc Account public key
+	Acc string `json:"acc"`
+
+	// Conns Current number of connections
+	Conns int `json:"conns"`
+
+	// Leafnodes Number of leaf node connections
+	Leafnodes int `json:"leafnodes"`
+
+	// Name Account name
+	Name string `json:"name"`
+
+	// NumSubscriptions Number of subscriptions
+	NumSubscriptions int32     `json:"num_subscriptions"`
+	Received         DataStats `json:"received"`
+	Sent             DataStats `json:"sent"`
+
+	// SlowConsumers Number of slow consumers
+	SlowConsumers int64 `json:"slow_consumers"`
+
+	// TotalConns Total connections since start
+	TotalConns int `json:"total_conns"`
 }
 
 // CreateAccountRequest defines model for CreateAccountRequest.

@@ -312,13 +312,13 @@ func TestConsumerHeartbeat(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestStats(t *testing.T) {
+func TestServerStats(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
 	h := NewEndToEndHarness(ctx, t)
 
-	got, err := h.Commander.Stats(ctx, h.Operator.ID)
+	got, err := h.Commander.ServerStats(ctx, h.Operator.ID)
 	require.NoError(t, err)
 	require.NotNil(t, got)
 
@@ -327,8 +327,47 @@ func TestStats(t *testing.T) {
 	assert.NotEmpty(t, got.Server.Name)
 	assert.NotEmpty(t, got.Server.Version)
 	assert.NotNil(t, got.Stats)
-	assert.GreaterOrEqual(t, got.Stats.Connections, 1)
-	assert.Greater(t, got.Stats.Start.Unix(), int64(0))
+	assert.Positive(t, got.Stats.Connections)
+	assert.Positive(t, got.Stats.Start.Unix())
+}
+
+func TestAccountStats(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+
+	h := NewEndToEndHarness(ctx, t)
+
+	// No active connection results in nil stats
+	got, err := h.Commander.AccountStats(ctx, h.ExistingAccount)
+	require.NoError(t, err)
+	require.Nil(t, got)
+
+	// Create a user and connection for the existing account so it appears in stats
+	user, err := entity.NewUser(testutil.RandName(), h.ExistingAccount)
+	require.NoError(t, err)
+	nc, err := nats.Connect(h.DownstreamNATS.ClientURL(), nats.UserJWTAndSeed(user.JWT(), string(user.NKey().Seed)))
+	require.NoError(t, err)
+	t.Cleanup(nc.Close)
+
+	accClaims, err := h.ExistingAccount.Claims()
+	require.NoError(t, err)
+
+	accData, err := h.ExistingAccount.Data()
+	require.NoError(t, err)
+
+	got, err = h.Commander.AccountStats(ctx, h.ExistingAccount)
+	require.NoError(t, err)
+	require.NotEmpty(t, got)
+
+	// Basic data integrity checks
+	require.Equal(t, accClaims.Subject, got.Account)
+	assert.Equal(t, accData.Name, got.Name)
+	assert.Positive(t, got.Conns)
+	assert.GreaterOrEqual(t, got.LeafNodes, 0)
+	assert.Positive(t, got.NumSubs)
+	assert.GreaterOrEqual(t, got.Received.Msgs, int64(0))
+	assert.GreaterOrEqual(t, got.SlowConsumers, int64(0))
+	assert.GreaterOrEqual(t, got.TotalConns, 0)
 }
 
 type EndToEndHarness struct {
@@ -491,7 +530,7 @@ func saveAccountToNATS(t *testing.T, ns *natserver.Server, sysUsr *entity.User, 
 	accData, err := acc.Data()
 	require.NoError(t, err)
 
-	subject := fmt.Sprintf("$SYS.REQ.ACCOUNT.%s.CLAIMS.UPDATE", accData.PublicKey)
+	subject := fmt.Sprintf(accClaimsUpdateSubjectFormat, accData.PublicKey)
 	res, err := sysNC.RequestWithContext(t.Context(), subject, []byte(accData.JWT))
 	require.NoError(t, err)
 	require.True(t, strings.Contains(string(res.Data), "jwt updated"))
