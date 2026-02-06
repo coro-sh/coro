@@ -2,8 +2,10 @@ package entity
 
 import (
 	"testing"
+	"time"
 
 	"github.com/joshjon/kit/id"
+	"github.com/joshjon/kit/ref"
 	"github.com/nats-io/jwt/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,16 +63,21 @@ func TestNewOperatorFromJWT(t *testing.T) {
 	})
 }
 
-func TestOperator_SetName(t *testing.T) {
+func TestOperator_Update(t *testing.T) {
 	op, err := NewOperator(testutil.RandName(), id.New[NamespaceID]())
 	require.NoError(t, err)
 
-	err = op.SetName("foo")
+	update := UpdateOperatorParams{
+		Name:            testutil.RandName(),
+		LastConnectTime: ref.Ptr(time.Now().Unix()),
+	}
+	err = op.Update(update)
 	require.NoError(t, err)
 
 	data, err := op.Data()
 	require.NoError(t, err)
-	assert.Equal(t, "foo", data.Name)
+	assert.Equal(t, update.Name, data.Name)
+	assert.Equal(t, update.LastConnectTime, data.LastConnectTime)
 }
 
 func TestOperator_SetSystemAccount(t *testing.T) {

@@ -137,14 +137,6 @@ func (r *EntityRepository) UpdateOperator(ctx context.Context, operator entity.O
 	return tagEntityErr[entity.Operator](err)
 }
 
-func (r *EntityRepository) UpdateOperatorLastConnectTime(ctx context.Context, id entity.OperatorID, lastConnectTime int64) error {
-	err := r.db.UpdateOperatorLastConnectTime(ctx, sqlc.UpdateOperatorLastConnectTimeParams{
-		ID:              id.String(),
-		LastConnectTime: &lastConnectTime,
-	})
-	return tagEntityErr[entity.Operator](err)
-}
-
 func (r *EntityRepository) ReadOperator(ctx context.Context, id entity.OperatorID) (entity.OperatorData, error) {
 	op, err := r.db.ReadOperator(ctx, id.String())
 	if err != nil {

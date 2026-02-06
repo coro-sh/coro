@@ -182,30 +182,6 @@ func (s *RepositoryTestSuite) TestUpdateOperator() {
 	s.Equal(want, got)
 }
 
-func (s *RepositoryTestSuite) TestUpdateOperatorLastConnectTime() {
-	ctx, cancel := context.WithTimeout(s.T().Context(), s.Timeout)
-	defer cancel()
-
-	ns := genNamespace()
-	s.Require().NoError(s.repo.CreateNamespace(ctx, ns))
-
-	op := genOperatorData(ns)
-	s.Require().NoError(s.repo.CreateOperator(ctx, op))
-
-	got, err := s.repo.ReadOperator(ctx, op.ID)
-	s.Require().NoError(err)
-	s.Nil(got.LastConnectTime)
-
-	connectTime := time.Now().Unix()
-	err = s.repo.UpdateOperatorLastConnectTime(ctx, op.ID, connectTime)
-	s.Require().NoError(err)
-
-	got, err = s.repo.ReadOperator(ctx, op.ID)
-	s.Require().NoError(err)
-	s.Require().NotNil(got.LastConnectTime)
-	s.Equal(connectTime, *got.LastConnectTime)
-}
-
 func (s *RepositoryTestSuite) TestListOperators() {
 	ctx, cancel := context.WithTimeout(s.T().Context(), s.Timeout)
 	defer cancel()

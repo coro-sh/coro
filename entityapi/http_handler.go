@@ -297,16 +297,19 @@ func (h *HTTPHandler[S]) UpdateOperator(c echo.Context) error {
 		return err
 	}
 
-	if err = op.SetName(req.Name); err != nil {
+	opData, err := op.Data()
+	if err != nil {
+		return err
+	}
+
+	if err = op.Update(entity.UpdateOperatorParams{
+		Name:            req.Name,
+		LastConnectTime: opData.LastConnectTime,
+	}); err != nil {
 		return err
 	}
 
 	if err = h.store.UpdateOperator(ctx, op); err != nil {
-		return err
-	}
-
-	data, err := op.Data()
-	if err != nil {
 		return err
 	}
 
@@ -315,8 +318,13 @@ func (h *HTTPHandler[S]) UpdateOperator(c echo.Context) error {
 		return err
 	}
 
+	opData, err = op.Data()
+	if err != nil {
+		return err
+	}
+
 	return server.SetResponse(c, http.StatusOK, OperatorResponse{
-		OperatorData: data,
+		OperatorData: opData,
 		Status:       opStatus,
 	})
 }

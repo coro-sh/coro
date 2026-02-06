@@ -153,8 +153,8 @@ func (q *Queries) ReadOperatorByPublicKey(ctx context.Context, publicKey string)
 
 const updateOperator = `-- name: UpdateOperator :exec
 UPDATE operator
-SET name = ?2,
-    jwt  = ?3,
+SET name              = ?2,
+    jwt               = ?3,
     last_connect_time = ?4
 WHERE id = ?1
 `
@@ -173,21 +173,5 @@ func (q *Queries) UpdateOperator(ctx context.Context, arg UpdateOperatorParams) 
 		arg.Jwt,
 		arg.LastConnectTime,
 	)
-	return err
-}
-
-const updateOperatorLastConnectTime = `-- name: UpdateOperatorLastConnectTime :exec
-UPDATE operator
-SET last_connect_time = ?2
-WHERE id = ?1
-`
-
-type UpdateOperatorLastConnectTimeParams struct {
-	ID              string
-	LastConnectTime *int64
-}
-
-func (q *Queries) UpdateOperatorLastConnectTime(ctx context.Context, arg UpdateOperatorLastConnectTimeParams) error {
-	_, err := q.db.ExecContext(ctx, updateOperatorLastConnectTime, arg.ID, arg.LastConnectTime)
 	return err
 }

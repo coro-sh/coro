@@ -98,7 +98,9 @@ func TestWebsocketForwardsCommandsAndReplies(t *testing.T) {
 
 	recvCtx(t, ctx, subbed)
 
-	require.Equal(t, int64(1), brokerHandler.NumConnections())
+	require.Eventually(t, func() bool {
+		return int64(1) == brokerHandler.NumConnections()
+	}, 10*time.Millisecond, 10)
 
 	status, err := commander.Ping(ctx, op.ID)
 	require.NoError(t, err)

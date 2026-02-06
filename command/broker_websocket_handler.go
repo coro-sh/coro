@@ -16,6 +16,7 @@ import (
 	"github.com/joshjon/kit/errtag"
 	"github.com/joshjon/kit/id"
 	"github.com/joshjon/kit/log"
+	"github.com/joshjon/kit/ref"
 	"github.com/labstack/echo/v4"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
@@ -55,7 +56,7 @@ type EntityStore interface {
 	ReadOperator(ctx context.Context, id entity.OperatorID) (*entity.Operator, error)
 	ReadAccountByPublicKey(ctx context.Context, pubKey string) (*entity.Account, error)
 	ReadSystemUser(ctx context.Context, operatorID entity.OperatorID, accountID entity.AccountID) (*entity.User, error)
-	UpdateOperatorLastConnectTime(ctx context.Context, id entity.OperatorID, lastConnectTime int64) error
+	UpdateOperator(ctx context.Context, operator *entity.Operator) error
 }
 
 // BrokerWebsocketOption configures a BrokerWebSocketHandler instance.
@@ -173,6 +174,7 @@ func (b *BrokerWebSocketHandler) Handle(c echo.Context) (err error) {
 	if err != nil {
 		return fmt.Errorf("accept handshake: %w", err)
 	}
+	defer func() { b.connections.Delete(sysUser.OperatorID) }()
 
 	const maxWorkerConc = 25
 	notifNatsCh := make(chan *nats.Msg, maxWorkerConc)
@@ -200,14 +202,6 @@ func (b *BrokerWebSocketHandler) Handle(c echo.Context) (err error) {
 	getLogger().Info("websocket handshake accepted")
 	opID := sysUser.OperatorID
 	logger = logger.With(logkey.OperatorID, opID, logkey.SystemUserID, sysUser.ID)
-
-	connectTime := time.Now()
-	b.connections.Store(opID, connectTime)
-	defer func() { b.connections.Delete(opID) }()
-
-	if err = b.entities.UpdateOperatorLastConnectTime(rctx, opID, connectTime.Unix()); err != nil {
-		getLogger().Error("failed to update operator last connect time", "error", err)
-	}
 
 	// Subscribe to operator notifications in background
 	getLogger().Info("subscribing to internal operator notifications")
@@ -474,6 +468,25 @@ func (b *BrokerWebSocketHandler) acceptHandshake(ctx context.Context, c echo.Con
 	}); err != nil {
 		return nil, nil, err
 	}
+
+	connectTime := time.Now()
+
+	opData, err := op.Data()
+	if err != nil {
+		return nil, nil, err
+	}
+	if err = op.Update(entity.UpdateOperatorParams{
+		Name:            opData.Name,
+		LastConnectTime: ref.Ptr(connectTime.Unix()),
+	}); err != nil {
+		return nil, nil, err
+	}
+
+	if err = b.entities.UpdateOperator(ctx, op); err != nil {
+		return nil, nil, fmt.Errorf("update operator last connect time: %w", err)
+	}
+
+	b.connections.Store(opID, connectTime)
 
 	return conn, sysUser, nil
 }

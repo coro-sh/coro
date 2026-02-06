@@ -25,7 +25,8 @@ func (q *Queries) CountNamespaceOperators(ctx context.Context, namespaceID strin
 const countOperatorAccounts = `-- name: CountOperatorAccounts :one
 SELECT COUNT(*) AS count
 FROM account AS a
-WHERE a.operator_id = ? AND a.name != 'SYS'
+WHERE a.operator_id = ?
+  AND a.name != 'SYS'
 `
 
 func (q *Queries) CountOperatorAccounts(ctx context.Context, operatorID string) (int64, error) {
@@ -38,7 +39,8 @@ func (q *Queries) CountOperatorAccounts(ctx context.Context, operatorID string) 
 const countOperatorUsers = `-- name: CountOperatorUsers :one
 SELECT COUNT(*) AS count
 FROM "user" AS u
-WHERE u.operator_id = ? AND u.name != 'sys'
+WHERE u.operator_id = ?
+  AND u.name != 'sys'
 `
 
 func (q *Queries) CountOperatorUsers(ctx context.Context, operatorID string) (int64, error) {

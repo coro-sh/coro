@@ -9,11 +9,6 @@ SET name              = ?2,
     last_connect_time = ?4
 WHERE id = ?1;
 
--- name: UpdateOperatorLastConnectTime :exec
-UPDATE operator
-SET last_connect_time = ?2
-WHERE id = ?1;
-
 -- name: ReadOperator :one
 SELECT *
 FROM operator
