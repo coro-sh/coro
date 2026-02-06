@@ -469,12 +469,13 @@ func (b *BrokerWebSocketHandler) acceptHandshake(ctx context.Context, c echo.Con
 		return nil, nil, err
 	}
 
-	connectTime := time.Now()
-
 	opData, err := op.Data()
 	if err != nil {
 		return nil, nil, err
 	}
+
+	connectTime := time.Now()
+	
 	if err = op.Update(entity.UpdateOperatorParams{
 		Name:            opData.Name,
 		LastConnectTime: ref.Ptr(connectTime.Unix()),

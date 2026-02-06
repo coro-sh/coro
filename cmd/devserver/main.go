@@ -68,7 +68,7 @@ func run(ctx context.Context, args []string, logger log.Logger) error {
 		&cli.IntFlag{
 			Name:    "port",
 			Aliases: []string{"p"},
-			Value:   6400,
+			Value:   5400,
 			Usage:   "port to run the server on",
 			EnvVars: []string{"PORT"},
 		},
@@ -81,7 +81,7 @@ func run(ctx context.Context, args []string, logger log.Logger) error {
 		},
 		&cli.StringSliceFlag{
 			Name:    "cors-origin",
-			Aliases: []string{"co"},
+			Aliases: []string{"c"},
 			Value:   nil,
 			Usage:   "add cors origin",
 			EnvVars: []string{"CORS_ORIGINS"},

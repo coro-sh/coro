@@ -8,10 +8,9 @@ import (
 
 	"github.com/joshjon/kit/encrypt"
 	"github.com/joshjon/kit/sqlitedb"
+	"github.com/joshjon/kit/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/joshjon/kit/testutil"
 
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/sqlite/migrations"
