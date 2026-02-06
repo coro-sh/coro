@@ -267,7 +267,10 @@ func (b *BrokerWebSocketHandler) Handle(c echo.Context) (err error) {
 					}
 
 					writeCount.Add(1)
-					getLogger().With(metaKV...).Info("published command message to websocket")
+					// Only log if the command is not FetchStreamMessages to avoid unnecessary noise
+					if msgpb.GetFetchStreamMessages() != nil {
+						getLogger().With(metaKV...).Info("published command message to websocket")
+					}
 				}(msg)
 			case werr := <-subWorkerErrsCh:
 				if werr != nil {
@@ -475,7 +478,7 @@ func (b *BrokerWebSocketHandler) acceptHandshake(ctx context.Context, c echo.Con
 	}
 
 	connectTime := time.Now()
-	
+
 	if err = op.Update(entity.UpdateOperatorParams{
 		Name:            opData.Name,
 		LastConnectTime: ref.Ptr(connectTime.Unix()),
