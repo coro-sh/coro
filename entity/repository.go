@@ -37,6 +37,7 @@ type NamespaceRepository interface {
 type OperatorRepository interface {
 	CreateOperator(ctx context.Context, operator OperatorData) error
 	UpdateOperator(ctx context.Context, operator OperatorData) error
+	UpdateOperatorLastConnectTime(ctx context.Context, id OperatorID, lastConnectTime int64) error
 	ReadOperator(ctx context.Context, id OperatorID) (OperatorData, error)
 	ReadOperatorByName(ctx context.Context, name string) (OperatorData, error)
 	ReadOperatorByPublicKey(ctx context.Context, pubKey string) (OperatorData, error)

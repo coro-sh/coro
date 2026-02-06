@@ -11,9 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/joshjon/kit/testutil"
+
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/sqlite/migrations"
-	"github.com/joshjon/kit/testutil"
 )
 
 func NewTestEntityStore(t *testing.T) *entity.Store {

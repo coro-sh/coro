@@ -173,6 +173,11 @@ func (s *Store) UpdateOperator(ctx context.Context, operator *Operator) error {
 	return s.repo.UpdateOperator(ctx, data)
 }
 
+// UpdateOperatorLastConnectTime updates the last connected time for an Operator.
+func (s *Store) UpdateOperatorLastConnectTime(ctx context.Context, id OperatorID, lastConnectTime int64) error {
+	return s.repo.UpdateOperatorLastConnectTime(ctx, id, lastConnectTime)
+}
+
 // ReadOperator reads an Operator from the store by its ID.
 func (s *Store) ReadOperator(ctx context.Context, id OperatorID) (*Operator, error) {
 	data, err := s.repo.ReadOperator(ctx, id)

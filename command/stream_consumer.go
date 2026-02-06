@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/joshjon/kit/log"
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/coro-sh/coro/entity"
 	commandv1 "github.com/coro-sh/coro/proto/gen/command/v1"
-	"github.com/joshjon/kit/log"
 )
 
 type streamConsumer struct {

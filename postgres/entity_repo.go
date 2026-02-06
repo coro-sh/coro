@@ -119,11 +119,12 @@ func (r *EntityRepository) CountNamespaceOperators(ctx context.Context, namespac
 
 func (r *EntityRepository) CreateOperator(ctx context.Context, operator entity.OperatorData) error {
 	err := r.db.CreateOperator(ctx, sqlc.CreateOperatorParams{
-		ID:          operator.ID.String(),
-		NamespaceID: operator.NamespaceID.String(),
-		Name:        operator.Name,
-		PublicKey:   operator.PublicKey,
-		Jwt:         operator.JWT,
+		ID:              operator.ID.String(),
+		NamespaceID:     operator.NamespaceID.String(),
+		Name:            operator.Name,
+		PublicKey:       operator.PublicKey,
+		Jwt:             operator.JWT,
+		LastConnectTime: operator.LastConnectTime,
 	})
 	return tagEntityErr[entity.Operator](err)
 }
@@ -133,6 +134,14 @@ func (r *EntityRepository) UpdateOperator(ctx context.Context, operator entity.O
 		ID:   operator.ID.String(),
 		Name: operator.Name,
 		Jwt:  operator.JWT,
+	})
+	return tagEntityErr[entity.Operator](err)
+}
+
+func (r *EntityRepository) UpdateOperatorLastConnectTime(ctx context.Context, id entity.OperatorID, lastConnectTime int64) error {
+	err := r.db.UpdateOperatorLastConnectTime(ctx, sqlc.UpdateOperatorLastConnectTimeParams{
+		ID:              id.String(),
+		LastConnectTime: &lastConnectTime,
 	})
 	return tagEntityErr[entity.Operator](err)
 }

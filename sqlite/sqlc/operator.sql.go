@@ -10,16 +10,17 @@ import (
 )
 
 const createOperator = `-- name: CreateOperator :exec
-INSERT INTO operator (id, namespace_id, name, public_key, jwt)
-VALUES (?1, ?2, ?3, ?4, ?5)
+INSERT INTO operator (id, namespace_id, name, public_key, jwt, last_connect_time)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6)
 `
 
 type CreateOperatorParams struct {
-	ID          string
-	NamespaceID string
-	Name        string
-	PublicKey   string
-	Jwt         string
+	ID              string
+	NamespaceID     string
+	Name            string
+	PublicKey       string
+	Jwt             string
+	LastConnectTime *int64
 }
 
 func (q *Queries) CreateOperator(ctx context.Context, arg CreateOperatorParams) error {
@@ -29,6 +30,7 @@ func (q *Queries) CreateOperator(ctx context.Context, arg CreateOperatorParams) 
 		arg.Name,
 		arg.PublicKey,
 		arg.Jwt,
+		arg.LastConnectTime,
 	)
 	return err
 }
@@ -45,7 +47,7 @@ func (q *Queries) DeleteOperator(ctx context.Context, id string) error {
 }
 
 const listOperators = `-- name: ListOperators :many
-SELECT id, namespace_id, name, public_key, jwt
+SELECT id, namespace_id, name, public_key, jwt, last_connect_time
 FROM operator
 WHERE namespace_id = ?1
   AND (?2 IS NULL OR id <= ?2)
@@ -74,6 +76,7 @@ func (q *Queries) ListOperators(ctx context.Context, arg ListOperatorsParams) ([
 			&i.Name,
 			&i.PublicKey,
 			&i.Jwt,
+			&i.LastConnectTime,
 		); err != nil {
 			return nil, err
 		}
@@ -89,7 +92,7 @@ func (q *Queries) ListOperators(ctx context.Context, arg ListOperatorsParams) ([
 }
 
 const readOperator = `-- name: ReadOperator :one
-SELECT id, namespace_id, name, public_key, jwt
+SELECT id, namespace_id, name, public_key, jwt, last_connect_time
 FROM operator
 WHERE id = ?1
 `
@@ -103,12 +106,13 @@ func (q *Queries) ReadOperator(ctx context.Context, id string) (*Operator, error
 		&i.Name,
 		&i.PublicKey,
 		&i.Jwt,
+		&i.LastConnectTime,
 	)
 	return &i, err
 }
 
 const readOperatorByName = `-- name: ReadOperatorByName :one
-SELECT id, namespace_id, name, public_key, jwt
+SELECT id, namespace_id, name, public_key, jwt, last_connect_time
 FROM operator
 WHERE name = ?1
 `
@@ -122,12 +126,13 @@ func (q *Queries) ReadOperatorByName(ctx context.Context, name string) (*Operato
 		&i.Name,
 		&i.PublicKey,
 		&i.Jwt,
+		&i.LastConnectTime,
 	)
 	return &i, err
 }
 
 const readOperatorByPublicKey = `-- name: ReadOperatorByPublicKey :one
-SELECT id, namespace_id, name, public_key, jwt
+SELECT id, namespace_id, name, public_key, jwt, last_connect_time
 FROM operator
 WHERE public_key = ?1
 `
@@ -141,6 +146,7 @@ func (q *Queries) ReadOperatorByPublicKey(ctx context.Context, publicKey string)
 		&i.Name,
 		&i.PublicKey,
 		&i.Jwt,
+		&i.LastConnectTime,
 	)
 	return &i, err
 }
@@ -148,17 +154,40 @@ func (q *Queries) ReadOperatorByPublicKey(ctx context.Context, publicKey string)
 const updateOperator = `-- name: UpdateOperator :exec
 UPDATE operator
 SET name = ?2,
-    jwt  = ?3
+    jwt  = ?3,
+    last_connect_time = ?4
 WHERE id = ?1
 `
 
 type UpdateOperatorParams struct {
-	ID   string
-	Name string
-	Jwt  string
+	ID              string
+	Name            string
+	Jwt             string
+	LastConnectTime *int64
 }
 
 func (q *Queries) UpdateOperator(ctx context.Context, arg UpdateOperatorParams) error {
-	_, err := q.db.ExecContext(ctx, updateOperator, arg.ID, arg.Name, arg.Jwt)
+	_, err := q.db.ExecContext(ctx, updateOperator,
+		arg.ID,
+		arg.Name,
+		arg.Jwt,
+		arg.LastConnectTime,
+	)
+	return err
+}
+
+const updateOperatorLastConnectTime = `-- name: UpdateOperatorLastConnectTime :exec
+UPDATE operator
+SET last_connect_time = ?2
+WHERE id = ?1
+`
+
+type UpdateOperatorLastConnectTimeParams struct {
+	ID              string
+	LastConnectTime *int64
+}
+
+func (q *Queries) UpdateOperatorLastConnectTime(ctx context.Context, arg UpdateOperatorLastConnectTimeParams) error {
+	_, err := q.db.ExecContext(ctx, updateOperatorLastConnectTime, arg.ID, arg.LastConnectTime)
 	return err
 }

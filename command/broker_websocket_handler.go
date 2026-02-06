@@ -50,11 +50,12 @@ type TokenVerifier interface {
 	Verify(ctx context.Context, token string) (entity.OperatorID, error)
 }
 
-// EntityReader reads entities from storage.
-type EntityReader interface {
+// EntityStore reads and writes entities.
+type EntityStore interface {
 	ReadOperator(ctx context.Context, id entity.OperatorID) (*entity.Operator, error)
 	ReadAccountByPublicKey(ctx context.Context, pubKey string) (*entity.Account, error)
 	ReadSystemUser(ctx context.Context, operatorID entity.OperatorID, accountID entity.AccountID) (*entity.User, error)
+	UpdateOperatorLastConnectTime(ctx context.Context, id entity.OperatorID, lastConnectTime int64) error
 }
 
 // BrokerWebsocketOption configures a BrokerWebSocketHandler instance.
@@ -74,7 +75,7 @@ func WithBrokerWebsocketLogger(logger log.Logger) BrokerWebsocketOption {
 // has a clustered setup.
 type BrokerWebSocketHandler struct {
 	tknv        TokenVerifier
-	entities    EntityReader
+	entities    EntityStore
 	nsSysUser   *entity.User
 	ns          *server.Server
 	nc          *nats.Conn
@@ -88,7 +89,7 @@ func NewBrokerWebSocketHandler(
 	natsSysUser *entity.User,
 	embeddedNats *server.Server,
 	tokener TokenVerifier,
-	entities EntityReader,
+	entities EntityStore,
 	opts ...BrokerWebsocketOption,
 ) (*BrokerWebSocketHandler, error) {
 	h := &BrokerWebSocketHandler{
@@ -200,8 +201,13 @@ func (b *BrokerWebSocketHandler) Handle(c echo.Context) (err error) {
 	opID := sysUser.OperatorID
 	logger = logger.With(logkey.OperatorID, opID, logkey.SystemUserID, sysUser.ID)
 
-	b.connections.Store(opID, time.Now())
+	connectTime := time.Now()
+	b.connections.Store(opID, connectTime)
 	defer func() { b.connections.Delete(opID) }()
+
+	if err = b.entities.UpdateOperatorLastConnectTime(rctx, opID, connectTime.Unix()); err != nil {
+		getLogger().Error("failed to update operator last connect time", "error", err)
+	}
 
 	// Subscribe to operator notifications in background
 	getLogger().Info("subscribing to internal operator notifications")

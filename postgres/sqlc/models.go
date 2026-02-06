@@ -95,11 +95,12 @@ type Nkey struct {
 }
 
 type Operator struct {
-	ID          string `json:"id"`
-	NamespaceID string `json:"namespace_id"`
-	Name        string `json:"name"`
-	PublicKey   string `json:"public_key"`
-	Jwt         string `json:"jwt"`
+	ID              string `json:"id"`
+	NamespaceID     string `json:"namespace_id"`
+	Name            string `json:"name"`
+	PublicKey       string `json:"public_key"`
+	Jwt             string `json:"jwt"`
+	LastConnectTime *int64 `json:"last_connect_time"`
 }
 
 type OperatorToken struct {

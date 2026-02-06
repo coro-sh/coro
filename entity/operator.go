@@ -30,8 +30,9 @@ type OperatorIdentity struct {
 // information.
 type OperatorData struct {
 	OperatorIdentity
-	Name      string `json:"name"`
-	PublicKey string `json:"public_key"`
+	Name            string `json:"name"`
+	PublicKey       string `json:"public_key"`
+	LastConnectTime *int64 `json:"last_connect_time,omitempty"` // unix seconds
 }
 
 func (o *OperatorIdentity) GetNamespaceID() NamespaceID {
@@ -56,8 +57,9 @@ func (o OperatorData) Validate() error {
 // Operator is responsible for running NATS servers and issuing account JWTs.
 type Operator struct {
 	OperatorIdentity
-	nk *Nkey
-	sk *Nkey
+	LastConnectTime *int64 `json:"last_connect_time,omitempty"`
+	nk              *Nkey
+	sk              *Nkey
 }
 
 // NewOperator creates a new Operator.
@@ -112,6 +114,7 @@ func NewOperatorFromData(nk *Nkey, sk *Nkey, data OperatorData) (*Operator, erro
 	}
 	op := &Operator{
 		OperatorIdentity: data.OperatorIdentity,
+		LastConnectTime:  data.LastConnectTime,
 		nk:               nk,
 		sk:               sk,
 	}
@@ -146,6 +149,7 @@ func (o *Operator) Data() (OperatorData, error) {
 		OperatorIdentity: o.OperatorIdentity,
 		Name:             claims.Name,
 		PublicKey:        claims.Subject,
+		LastConnectTime:  o.LastConnectTime,
 	}, nil
 }
 

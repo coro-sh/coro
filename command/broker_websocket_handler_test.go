@@ -93,7 +93,7 @@ func TestWebsocketForwardsCommandsAndReplies(t *testing.T) {
 		recvCtx(t, ctx, stopSub)
 	}()
 
-	commander, err := NewCommander(brokerNats.ClientURL(), sysUsr)
+	commander, err := NewCommander(brokerNats.ClientURL(), sysUsr, store)
 	require.NoError(t, err)
 
 	recvCtx(t, ctx, subbed)

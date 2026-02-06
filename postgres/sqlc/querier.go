@@ -46,6 +46,7 @@ type Querier interface {
 	UpdateAccount(ctx context.Context, arg UpdateAccountParams) error
 	UpdateNamespace(ctx context.Context, arg UpdateNamespaceParams) error
 	UpdateOperator(ctx context.Context, arg UpdateOperatorParams) error
+	UpdateOperatorLastConnectTime(ctx context.Context, arg UpdateOperatorLastConnectTimeParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) error
 	UpsertOperatorToken(ctx context.Context, arg UpsertOperatorTokenParams) error
 }
