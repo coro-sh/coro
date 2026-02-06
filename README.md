@@ -66,9 +66,3 @@ This command will:
 - Create a fresh Namespace that includes an Operator, Account, and User
 - Start an embedded NATS server for the Operator, connected to Coro through the proxy-agent
 - Set up a JetStream test Stream that publishes a message every 10 seconds
-
-## Disclaimer
-
-Coro is under active development and may undergo significant changes. While it is available for exploration and testing,
-it is not recommended for production use at this time. Features may be incomplete, and breaking changes may occur as the
-platform is improved.
