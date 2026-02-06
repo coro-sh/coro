@@ -174,7 +174,7 @@ func SetupTestServer(
 	)
 	require.NoError(t, err)
 
-	commander, err := command.NewCommander("", bSysUser, command.WithCommanderEmbeddedNATS(brokerNats))
+	commander, err := command.NewCommander("", bSysUser, store, command.WithCommanderEmbeddedNATS(brokerNats))
 	require.NoError(t, err)
 
 	brokerHandler, err := command.NewBrokerWebSocketHandler(bSysUser, brokerNats, tknIssuer, store, command.WithBrokerWebsocketLogger(logger))

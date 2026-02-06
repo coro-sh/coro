@@ -16,6 +16,7 @@ import (
 	"github.com/joshjon/kit/errtag"
 	"github.com/joshjon/kit/id"
 	"github.com/joshjon/kit/log"
+	"github.com/joshjon/kit/ref"
 	"github.com/labstack/echo/v4"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
@@ -50,11 +51,12 @@ type TokenVerifier interface {
 	Verify(ctx context.Context, token string) (entity.OperatorID, error)
 }
 
-// EntityReader reads entities from storage.
-type EntityReader interface {
+// EntityStore reads and writes entities.
+type EntityStore interface {
 	ReadOperator(ctx context.Context, id entity.OperatorID) (*entity.Operator, error)
 	ReadAccountByPublicKey(ctx context.Context, pubKey string) (*entity.Account, error)
 	ReadSystemUser(ctx context.Context, operatorID entity.OperatorID, accountID entity.AccountID) (*entity.User, error)
+	UpdateOperator(ctx context.Context, operator *entity.Operator) error
 }
 
 // BrokerWebsocketOption configures a BrokerWebSocketHandler instance.
@@ -74,7 +76,7 @@ func WithBrokerWebsocketLogger(logger log.Logger) BrokerWebsocketOption {
 // has a clustered setup.
 type BrokerWebSocketHandler struct {
 	tknv        TokenVerifier
-	entities    EntityReader
+	entities    EntityStore
 	nsSysUser   *entity.User
 	ns          *server.Server
 	nc          *nats.Conn
@@ -88,7 +90,7 @@ func NewBrokerWebSocketHandler(
 	natsSysUser *entity.User,
 	embeddedNats *server.Server,
 	tokener TokenVerifier,
-	entities EntityReader,
+	entities EntityStore,
 	opts ...BrokerWebsocketOption,
 ) (*BrokerWebSocketHandler, error) {
 	h := &BrokerWebSocketHandler{
@@ -172,6 +174,7 @@ func (b *BrokerWebSocketHandler) Handle(c echo.Context) (err error) {
 	if err != nil {
 		return fmt.Errorf("accept handshake: %w", err)
 	}
+	defer func() { b.connections.Delete(sysUser.OperatorID) }()
 
 	const maxWorkerConc = 25
 	notifNatsCh := make(chan *nats.Msg, maxWorkerConc)
@@ -199,9 +202,6 @@ func (b *BrokerWebSocketHandler) Handle(c echo.Context) (err error) {
 	getLogger().Info("websocket handshake accepted")
 	opID := sysUser.OperatorID
 	logger = logger.With(logkey.OperatorID, opID, logkey.SystemUserID, sysUser.ID)
-
-	b.connections.Store(opID, time.Now())
-	defer func() { b.connections.Delete(opID) }()
 
 	// Subscribe to operator notifications in background
 	getLogger().Info("subscribing to internal operator notifications")
@@ -468,6 +468,26 @@ func (b *BrokerWebSocketHandler) acceptHandshake(ctx context.Context, c echo.Con
 	}); err != nil {
 		return nil, nil, err
 	}
+
+	opData, err := op.Data()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	connectTime := time.Now()
+	
+	if err = op.Update(entity.UpdateOperatorParams{
+		Name:            opData.Name,
+		LastConnectTime: ref.Ptr(connectTime.Unix()),
+	}); err != nil {
+		return nil, nil, err
+	}
+
+	if err = b.entities.UpdateOperator(ctx, op); err != nil {
+		return nil, nil, fmt.Errorf("update operator last connect time: %w", err)
+	}
+
+	b.connections.Store(opID, connectTime)
 
 	return conn, sysUser, nil
 }

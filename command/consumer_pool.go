@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	MaxConsumerIdleHeartbeat  = 30 * time.Second
+	MaxConsumerIdleHeartbeat = 30 * time.Second
 )
 
 var errConsumerNotFound = errtag.NewTagged[errtag.NotFound]("consumer not found")

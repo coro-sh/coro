@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joshjon/kit/ref"
+	"github.com/joshjon/kit/server"
 	"github.com/joshjon/kit/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/joshjon/kit/server"
 
 	"github.com/coro-sh/coro/constants"
 	"github.com/coro-sh/coro/entity"
@@ -88,9 +88,8 @@ func TestHTTPHandler_GetStatus(t *testing.T) {
 type pingerStub struct{}
 
 func (p *pingerStub) Ping(_ context.Context, _ entity.OperatorID) (entity.OperatorNATSStatus, error) {
-	connectTime := time.Now().Unix()
 	return entity.OperatorNATSStatus{
 		Connected:   true,
-		ConnectTime: &connectTime,
+		ConnectTime: ref.Ptr(time.Now().Unix()),
 	}, nil
 }

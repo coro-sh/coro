@@ -71,16 +71,22 @@ func WithCommanderTLS(tlsConfig TLSConfig) CommanderOption {
 	}
 }
 
+// OperatorReader provides access to operator data.
+type OperatorReader interface {
+	ReadOperator(ctx context.Context, id entity.OperatorID) (*entity.Operator, error)
+}
+
 // Commander connects to the Broker embedded NATS server and publishes messages
 // to Operator subjects.
 type Commander struct {
-	nc *nats.Conn
-	sf singleflight.Group
+	nc  *nats.Conn
+	sf  singleflight.Group
+	ops OperatorReader
 }
 
 // NewCommander creates a Commander by establishing a connection to the Broker's
 // embedded NATS server.
-func NewCommander(brokerNatsURL string, brokerSysUser *entity.User, opts ...CommanderOption) (*Commander, error) {
+func NewCommander(brokerNatsURL string, brokerSysUser *entity.User, opReader OperatorReader, opts ...CommanderOption) (*Commander, error) {
 	var once sync.Once
 	connectedCh := make(chan struct{})
 
@@ -121,7 +127,8 @@ func NewCommander(brokerNatsURL string, brokerSysUser *entity.User, opts ...Comm
 	}
 
 	return &Commander{
-		nc: nc,
+		nc:  nc,
+		ops: opReader,
 	}, nil
 }
 
@@ -552,7 +559,22 @@ func (c *Commander) Ping(ctx context.Context, operatorID entity.OperatorID) (ent
 	if err != nil {
 		return entity.OperatorNATSStatus{}, err
 	}
-	return result.(entity.OperatorNATSStatus), nil
+
+	opStatus := result.(entity.OperatorNATSStatus)
+
+	if opStatus.ConnectTime == nil {
+		op, err := c.ops.ReadOperator(ctx, operatorID)
+		if err != nil {
+			return entity.OperatorNATSStatus{}, fmt.Errorf("read operator: %w", err)
+		}
+		opData, err := op.Data()
+		if err != nil {
+			return entity.OperatorNATSStatus{}, fmt.Errorf("get operator data: %w", err)
+		}
+		opStatus.ConnectTime = opData.LastConnectTime
+	}
+
+	return opStatus, nil
 }
 
 // request publishes a message to the Operator's NATS subject and waits

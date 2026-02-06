@@ -131,7 +131,7 @@ func RunController(ctx context.Context, logger log.Logger, cfg ControllerConfig,
 				InsecureSkipVerify: cfg.TLS.InsecureSkipVerify,
 			}))
 		}
-		commander, err := command.NewCommander(strings.Join(cfg.Broker.NatsURLs, ","), bSysUsr, cmdOpts...)
+		commander, err := command.NewCommander(strings.Join(cfg.Broker.NatsURLs, ","), bSysUsr, store, cmdOpts...)
 		if err != nil {
 			return fmt.Errorf("dial broker publisher: %w", err)
 		}
@@ -293,7 +293,7 @@ func runAll(
 		return err
 	}
 
-	commander, err := command.NewCommander("", bSysUsr, command.WithCommanderEmbeddedNATS(brokerNats))
+	commander, err := command.NewCommander("", bSysUsr, store, command.WithCommanderEmbeddedNATS(brokerNats))
 	if err != nil {
 		return fmt.Errorf("dial broker publisher: %w", err)
 	}

@@ -210,7 +210,7 @@ type UpdateAccountParams struct {
 	UserJWTDuration *time.Duration
 }
 
-// Update updates the account and creates a new JWT.
+// Update updates the Account and creates a new JWT.
 func (a *Account) Update(operator *Operator, update UpdateAccountParams) error {
 	claims, err := a.Claims()
 	if err != nil {

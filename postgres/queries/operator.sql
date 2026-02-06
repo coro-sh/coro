@@ -1,11 +1,12 @@
 -- name: CreateOperator :exec
-INSERT INTO operator (id, namespace_id, name, public_key, jwt)
-VALUES ($1, $2, $3, $4, $5);
+INSERT INTO operator (id, namespace_id, name, public_key, jwt, last_connect_time)
+VALUES ($1, $2, $3, $4, $5, $6);
 
 -- name: UpdateOperator :exec
 UPDATE operator
-SET name = $2,
-    jwt  = $3
+SET name              = $2,
+    jwt               = $3,
+    last_connect_time = $4
 WHERE id = $1;
 
 -- name: ReadOperator :one

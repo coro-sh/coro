@@ -25,8 +25,9 @@ func unmarshalOperator(in *sqlc.Operator) entity.OperatorData {
 			NamespaceID: id.MustParse[entity.NamespaceID](in.NamespaceID),
 			JWT:         in.Jwt,
 		},
-		Name:      in.Name,
-		PublicKey: in.PublicKey,
+		Name:            in.Name,
+		PublicKey:       in.PublicKey,
+		LastConnectTime: in.LastConnectTime,
 	}
 }
 

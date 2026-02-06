@@ -27,11 +27,12 @@ type Nkey struct {
 }
 
 type Operator struct {
-	ID          string
-	NamespaceID string
-	Name        string
-	PublicKey   string
-	Jwt         string
+	ID              string
+	NamespaceID     string
+	Name            string
+	PublicKey       string
+	Jwt             string
+	LastConnectTime *int64
 }
 
 type OperatorToken struct {

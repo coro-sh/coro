@@ -119,11 +119,12 @@ func (r *EntityRepository) CountNamespaceOperators(ctx context.Context, namespac
 
 func (r *EntityRepository) CreateOperator(ctx context.Context, operator entity.OperatorData) error {
 	err := r.db.CreateOperator(ctx, sqlc.CreateOperatorParams{
-		ID:          operator.ID.String(),
-		NamespaceID: operator.NamespaceID.String(),
-		Name:        operator.Name,
-		PublicKey:   operator.PublicKey,
-		Jwt:         operator.JWT,
+		ID:              operator.ID.String(),
+		NamespaceID:     operator.NamespaceID.String(),
+		Name:            operator.Name,
+		PublicKey:       operator.PublicKey,
+		Jwt:             operator.JWT,
+		LastConnectTime: operator.LastConnectTime,
 	})
 	return tagEntityErr[entity.Operator](err)
 }

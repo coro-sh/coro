@@ -28,7 +28,7 @@ import (
 	"github.com/coro-sh/coro/entityapi"
 )
 
-func TestServer_CreateNamespace(t *testing.T) {
+func TestHTTPHandler_CreateNamespace(t *testing.T) {
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 
@@ -42,7 +42,7 @@ func TestServer_CreateNamespace(t *testing.T) {
 	assert.Equal(t, req.Name, got.Name)
 }
 
-func TestServer_DeleteNamespace(t *testing.T) {
+func TestHTTPHandler_DeleteNamespace(t *testing.T) {
 	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
@@ -54,7 +54,7 @@ func TestServer_DeleteNamespace(t *testing.T) {
 	assert.True(t, errtag.HasTag[errtag.NotFound](err))
 }
 
-func TestServer_DeleteNamespaceFailsWhenOperatorsExist(t *testing.T) {
+func TestHTTPHandler_DeleteNamespaceFailsWhenOperatorsExist(t *testing.T) {
 	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
@@ -112,7 +112,7 @@ func TestHTTPHandler_ListNamespaces(t *testing.T) {
 	assert.Nil(t, res.NextPageCursor)
 }
 
-func TestServer_CreateOperator(t *testing.T) {
+func TestHTTPHandler_CreateOperator(t *testing.T) {
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 	ns := fixture.AddNamespace(t.Context())
@@ -129,14 +129,14 @@ func TestServer_CreateOperator(t *testing.T) {
 	assert.NotEmpty(t, got.PublicKey)
 }
 
-func TestServer_UpdateOperator(t *testing.T) {
+func TestHTTPHandler_UpdateOperator(t *testing.T) {
 	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
 	op := fixture.AddOperator(ctx)
 
 	req := entityapi.UpdateOperatorRequest{
-		Name: testutil.RandName(),
+		Name: "updated_name",
 	}
 
 	res := testutil.Put[server.Response[entityapi.OperatorResponse]](t, fixture.OperatorURL(op.NamespaceID, op.ID), req)
@@ -153,7 +153,7 @@ func TestServer_UpdateOperator(t *testing.T) {
 	assert.Equal(t, req.Name, got.Name)
 }
 
-func TestServer_GetOperator(t *testing.T) {
+func TestHTTPHandler_GetOperator(t *testing.T) {
 	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
@@ -166,7 +166,7 @@ func TestServer_GetOperator(t *testing.T) {
 	assert.Equal(t, opData, got.OperatorData)
 }
 
-func TestServer_GetOperatorStats(t *testing.T) {
+func TestHTTPHandler_GetOperatorStats(t *testing.T) {
 	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
@@ -237,7 +237,7 @@ func TestHTTPHandler_ListOperators(t *testing.T) {
 	assert.Nil(t, res.NextPageCursor)
 }
 
-func TestServer_DeleteOperator(t *testing.T) {
+func TestHTTPHandler_DeleteOperator(t *testing.T) {
 	tests := []struct {
 		name                string
 		hasExistingAccounts bool
@@ -303,7 +303,7 @@ func TestServer_DeleteOperator(t *testing.T) {
 	}
 }
 
-func TestServer_CreateAccount(t *testing.T) {
+func TestHTTPHandler_CreateAccount(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
@@ -334,7 +334,7 @@ func TestServer_CreateAccount(t *testing.T) {
 	assert.Equal(t, *req.Limits, got.Limits)
 }
 
-func TestServer_UpdateAccount(t *testing.T) {
+func TestHTTPHandler_UpdateAccount(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
@@ -369,7 +369,7 @@ func TestServer_UpdateAccount(t *testing.T) {
 	assert.Equal(t, *req.Limits, got.Limits)
 }
 
-func TestServer_GetAccount(t *testing.T) {
+func TestHTTPHandler_GetAccount(t *testing.T) {
 	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
@@ -436,7 +436,7 @@ func TestHTTPHandler_ListAccounts(t *testing.T) {
 	assert.Nil(t, res.NextPageCursor)
 }
 
-func TestServer_DeleteAccount(t *testing.T) {
+func TestHTTPHandler_DeleteAccount(t *testing.T) {
 	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()
@@ -461,7 +461,7 @@ func setupNewTestSysOperator(ctx context.Context, t *testing.T, store *entity.St
 	return op, sysAcc
 }
 
-func TestServer_CreateUser(t *testing.T) {
+func TestHTTPHandler_CreateUser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
@@ -489,7 +489,7 @@ func TestServer_CreateUser(t *testing.T) {
 	assert.Equal(t, *req.Limits, got.Limits)
 }
 
-func TestServer_UpdateUser(t *testing.T) {
+func TestHTTPHandler_UpdateUser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
@@ -521,7 +521,7 @@ func TestServer_UpdateUser(t *testing.T) {
 	assert.Equal(t, *req.Limits, got.Limits)
 }
 
-func TestServer_GetUser(t *testing.T) {
+func TestHTTPHandler_GetUser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
@@ -542,7 +542,7 @@ func TestServer_GetUser(t *testing.T) {
 	assert.Equal(t, entityapi.LoadUserLimits(usrData, usrClaims), got.Limits)
 }
 
-func TestServer_GetUserCreds(t *testing.T) {
+func TestHTTPHandler_GetUserCreds(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
@@ -557,7 +557,7 @@ func TestServer_GetUserCreds(t *testing.T) {
 	assert.Equal(t, string(want), res)
 }
 
-func TestServer_GetServerConfig(t *testing.T) {
+func TestHTTPHandler_GetServerConfig(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
@@ -643,7 +643,7 @@ func TestHTTPHandler_ListUsers(t *testing.T) {
 	assert.Nil(t, res.NextPageCursor)
 }
 
-func TestServer_DeleteUser(t *testing.T) {
+func TestHTTPHandler_DeleteUser(t *testing.T) {
 	ctx := testutil.Context(t)
 	fixture := NewHTTPHandlerTestFixture(t)
 	defer fixture.Stop()

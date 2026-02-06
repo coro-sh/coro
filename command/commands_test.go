@@ -438,7 +438,7 @@ func NewEndToEndHarness(ctx context.Context, t *testing.T) *EndToEndHarness {
 
 	// Check proxy bridge active
 
-	commander, err := NewCommander(brokerNS.ClientURL(), brokerSysUsr)
+	commander, err := NewCommander(brokerNS.ClientURL(), brokerSysUsr, store)
 	require.NoError(t, err)
 
 	status, err := commander.Ping(ctx, op.ID)

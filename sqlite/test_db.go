@@ -8,12 +8,12 @@ import (
 
 	"github.com/joshjon/kit/encrypt"
 	"github.com/joshjon/kit/sqlitedb"
+	"github.com/joshjon/kit/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/coro-sh/coro/entity"
 	"github.com/coro-sh/coro/sqlite/migrations"
-	"github.com/joshjon/kit/testutil"
 )
 
 func NewTestEntityStore(t *testing.T) *entity.Store {
