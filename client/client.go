@@ -166,8 +166,8 @@ func (c *Client) GetOperatorProxyConnectionStatus(ctx context.Context, namespace
 	return OperatorNATSStatus{}, getResErr(res)
 }
 
-func (c *Client) CreateAccount(ctx context.Context, namespaceID, operatorID string, req CreateAccountRequest, reqEditors ...RequestEditorFn) (Account, error) {
-	res, err := c.oac.CreateAccountWithResponse(ctx, namespaceID, operatorID, req, reqEditors...)
+func (c *Client) CreateAccount(ctx context.Context, namespaceID, operatorID string, req CreateAccountRequest, skipNotify bool, reqEditors ...RequestEditorFn) (Account, error) {
+	res, err := c.oac.CreateAccountWithResponse(ctx, namespaceID, operatorID, &CreateAccountParams{SkipNotify: &skipNotify}, req, reqEditors...)
 	if err != nil {
 		return Account{}, err
 	}
@@ -199,8 +199,8 @@ func (c *Client) ListAccounts(ctx context.Context, namespaceID, operatorID strin
 	return nil, getResErr(res)
 }
 
-func (c *Client) UpdateAccount(ctx context.Context, namespaceID, accountID string, req UpdateAccountRequest, reqEditors ...RequestEditorFn) (Account, error) {
-	res, err := c.oac.UpdateAccountWithResponse(ctx, namespaceID, accountID, UpdateAccountJSONRequestBody{Data: &req}, reqEditors...)
+func (c *Client) UpdateAccount(ctx context.Context, namespaceID, accountID string, req UpdateAccountRequest, skipNotify bool, reqEditors ...RequestEditorFn) (Account, error) {
+	res, err := c.oac.UpdateAccountWithResponse(ctx, namespaceID, accountID, &UpdateAccountParams{SkipNotify: &skipNotify}, UpdateAccountJSONRequestBody{Data: &req}, reqEditors...)
 	if err != nil {
 		return Account{}, err
 	}

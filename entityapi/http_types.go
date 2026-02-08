@@ -139,6 +139,7 @@ type CreateAccountRequest struct {
 	OperatorID string         `param:"operator_id" json:"-"`
 	Name       string         `json:"name"`
 	Limits     *AccountLimits `json:"limits"`
+	SkipNotify bool           `query:"skip_notify"`
 }
 
 func (r CreateAccountRequest) Validate() error {
@@ -171,9 +172,10 @@ func (r GetAccountJWTRequest) Validate() error {
 }
 
 type UpdateAccountRequest struct {
-	ID     string         `param:"account_id" json:"-"`
-	Name   string         `json:"name"`
-	Limits *AccountLimits `json:"limits"`
+	ID         string         `param:"account_id" json:"-"`
+	Name       string         `json:"name"`
+	Limits     *AccountLimits `json:"limits"`
+	SkipNotify bool           `query:"skip_notify"`
 }
 
 func (r UpdateAccountRequest) Validate() error {

@@ -393,6 +393,12 @@ type UpdateAccountJSONBody struct {
 	Data *UpdateAccountRequest `json:"data,omitempty"`
 }
 
+// UpdateAccountParams defines parameters for UpdateAccount.
+type UpdateAccountParams struct {
+	// SkipNotify If true, skip sending account update notification to the operator NATS server
+	SkipNotify *bool `form:"skip_notify,omitempty" json:"skip_notify,omitempty"`
+}
+
 // FetchStreamMessagesParams defines parameters for FetchStreamMessages.
 type FetchStreamMessagesParams struct {
 	// StartSequence The sequence number to start reading messages from.
@@ -438,6 +444,12 @@ type ListAccountsParams struct {
 
 	// PageSize Number of items per page
 	PageSize *PageSize `form:"page_size,omitempty" json:"page_size,omitempty"`
+}
+
+// CreateAccountParams defines parameters for CreateAccount.
+type CreateAccountParams struct {
+	// SkipNotify If true, skip sending account update notification to the operator NATS server
+	SkipNotify *bool `form:"skip_notify,omitempty" json:"skip_notify,omitempty"`
 }
 
 // CreateNamespaceJSONRequestBody defines body for CreateNamespace for application/json ContentType.
@@ -560,9 +572,9 @@ type clientInterface interface {
 	GetAccount(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateAccountWithBody request with any body
-	UpdateAccountWithBody(ctx context.Context, namespaceId string, accountId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateAccountWithBody(ctx context.Context, namespaceId string, accountId string, params *UpdateAccountParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateAccount(ctx context.Context, namespaceId string, accountId string, body UpdateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateAccount(ctx context.Context, namespaceId string, accountId string, params *UpdateAccountParams, body UpdateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListStreams request
 	ListStreams(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -607,9 +619,9 @@ type clientInterface interface {
 	ListAccounts(ctx context.Context, namespaceId string, operatorId string, params *ListAccountsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateAccountWithBody request with any body
-	CreateAccountWithBody(ctx context.Context, namespaceId string, operatorId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateAccountWithBody(ctx context.Context, namespaceId string, operatorId string, params *CreateAccountParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateAccount(ctx context.Context, namespaceId string, operatorId string, body CreateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateAccount(ctx context.Context, namespaceId string, operatorId string, params *CreateAccountParams, body CreateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetOperatorNATSConfig request
 	GetOperatorNATSConfig(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -737,8 +749,8 @@ func (c *oapiClient) GetAccount(ctx context.Context, namespaceId string, account
 	return c.Client.Do(req)
 }
 
-func (c *oapiClient) UpdateAccountWithBody(ctx context.Context, namespaceId string, accountId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := newUpdateAccountRequestWithBody(c.Server, namespaceId, accountId, contentType, body)
+func (c *oapiClient) UpdateAccountWithBody(ctx context.Context, namespaceId string, accountId string, params *UpdateAccountParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := newUpdateAccountRequestWithBody(c.Server, namespaceId, accountId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -749,8 +761,8 @@ func (c *oapiClient) UpdateAccountWithBody(ctx context.Context, namespaceId stri
 	return c.Client.Do(req)
 }
 
-func (c *oapiClient) UpdateAccount(ctx context.Context, namespaceId string, accountId string, body UpdateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := newUpdateAccountRequest(c.Server, namespaceId, accountId, body)
+func (c *oapiClient) UpdateAccount(ctx context.Context, namespaceId string, accountId string, params *UpdateAccountParams, body UpdateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := newUpdateAccountRequest(c.Server, namespaceId, accountId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -941,8 +953,8 @@ func (c *oapiClient) ListAccounts(ctx context.Context, namespaceId string, opera
 	return c.Client.Do(req)
 }
 
-func (c *oapiClient) CreateAccountWithBody(ctx context.Context, namespaceId string, operatorId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := newCreateAccountRequestWithBody(c.Server, namespaceId, operatorId, contentType, body)
+func (c *oapiClient) CreateAccountWithBody(ctx context.Context, namespaceId string, operatorId string, params *CreateAccountParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := newCreateAccountRequestWithBody(c.Server, namespaceId, operatorId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -953,8 +965,8 @@ func (c *oapiClient) CreateAccountWithBody(ctx context.Context, namespaceId stri
 	return c.Client.Do(req)
 }
 
-func (c *oapiClient) CreateAccount(ctx context.Context, namespaceId string, operatorId string, body CreateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := newCreateAccountRequest(c.Server, namespaceId, operatorId, body)
+func (c *oapiClient) CreateAccount(ctx context.Context, namespaceId string, operatorId string, params *CreateAccountParams, body CreateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := newCreateAccountRequest(c.Server, namespaceId, operatorId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1376,18 +1388,18 @@ func newGetAccountRequest(server string, namespaceId string, accountId string) (
 }
 
 // newUpdateAccountRequest calls the generic UpdateAccount builder with application/json body
-func newUpdateAccountRequest(server string, namespaceId string, accountId string, body UpdateAccountJSONRequestBody) (*http.Request, error) {
+func newUpdateAccountRequest(server string, namespaceId string, accountId string, params *UpdateAccountParams, body UpdateAccountJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return newUpdateAccountRequestWithBody(server, namespaceId, accountId, "application/json", bodyReader)
+	return newUpdateAccountRequestWithBody(server, namespaceId, accountId, params, "application/json", bodyReader)
 }
 
 // newUpdateAccountRequestWithBody generates requests for UpdateAccount with any type of body
-func newUpdateAccountRequestWithBody(server string, namespaceId string, accountId string, contentType string, body io.Reader) (*http.Request, error) {
+func newUpdateAccountRequestWithBody(server string, namespaceId string, accountId string, params *UpdateAccountParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1417,6 +1429,28 @@ func newUpdateAccountRequestWithBody(server string, namespaceId string, accountI
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.SkipNotify != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "skip_notify", runtime.ParamLocationQuery, *params.SkipNotify); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("PUT", queryURL.String(), body)
@@ -2149,18 +2183,18 @@ func newListAccountsRequest(server string, namespaceId string, operatorId string
 }
 
 // newCreateAccountRequest calls the generic CreateAccount builder with application/json body
-func newCreateAccountRequest(server string, namespaceId string, operatorId string, body CreateAccountJSONRequestBody) (*http.Request, error) {
+func newCreateAccountRequest(server string, namespaceId string, operatorId string, params *CreateAccountParams, body CreateAccountJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return newCreateAccountRequestWithBody(server, namespaceId, operatorId, "application/json", bodyReader)
+	return newCreateAccountRequestWithBody(server, namespaceId, operatorId, params, "application/json", bodyReader)
 }
 
 // newCreateAccountRequestWithBody generates requests for CreateAccount with any type of body
-func newCreateAccountRequestWithBody(server string, namespaceId string, operatorId string, contentType string, body io.Reader) (*http.Request, error) {
+func newCreateAccountRequestWithBody(server string, namespaceId string, operatorId string, params *CreateAccountParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2190,6 +2224,28 @@ func newCreateAccountRequestWithBody(server string, namespaceId string, operator
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.SkipNotify != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "skip_notify", runtime.ParamLocationQuery, *params.SkipNotify); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("POST", queryURL.String(), body)
@@ -2648,9 +2704,9 @@ type clientWithResponsesInterface interface {
 	GetAccountWithResponse(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*GetAccountResponse, error)
 
 	// UpdateAccountWithBodyWithResponse request with any body
-	UpdateAccountWithBodyWithResponse(ctx context.Context, namespaceId string, accountId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateAccountResponse, error)
+	UpdateAccountWithBodyWithResponse(ctx context.Context, namespaceId string, accountId string, params *UpdateAccountParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateAccountResponse, error)
 
-	UpdateAccountWithResponse(ctx context.Context, namespaceId string, accountId string, body UpdateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAccountResponse, error)
+	UpdateAccountWithResponse(ctx context.Context, namespaceId string, accountId string, params *UpdateAccountParams, body UpdateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAccountResponse, error)
 
 	// ListStreamsWithResponse request
 	ListStreamsWithResponse(ctx context.Context, namespaceId string, accountId string, reqEditors ...RequestEditorFn) (*ListStreamsResponse, error)
@@ -2695,9 +2751,9 @@ type clientWithResponsesInterface interface {
 	ListAccountsWithResponse(ctx context.Context, namespaceId string, operatorId string, params *ListAccountsParams, reqEditors ...RequestEditorFn) (*ListAccountsResponse, error)
 
 	// CreateAccountWithBodyWithResponse request with any body
-	CreateAccountWithBodyWithResponse(ctx context.Context, namespaceId string, operatorId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAccountResponse, error)
+	CreateAccountWithBodyWithResponse(ctx context.Context, namespaceId string, operatorId string, params *CreateAccountParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAccountResponse, error)
 
-	CreateAccountWithResponse(ctx context.Context, namespaceId string, operatorId string, body CreateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAccountResponse, error)
+	CreateAccountWithResponse(ctx context.Context, namespaceId string, operatorId string, params *CreateAccountParams, body CreateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAccountResponse, error)
 
 	// GetOperatorNATSConfigWithResponse request
 	GetOperatorNATSConfigWithResponse(ctx context.Context, namespaceId string, operatorId string, reqEditors ...RequestEditorFn) (*GetOperatorNATSConfigResponse, error)
@@ -3813,16 +3869,16 @@ func (c *clientWithResponses) GetAccountWithResponse(ctx context.Context, namesp
 }
 
 // UpdateAccountWithBodyWithResponse request with arbitrary body returning *UpdateAccountResponse
-func (c *clientWithResponses) UpdateAccountWithBodyWithResponse(ctx context.Context, namespaceId string, accountId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateAccountResponse, error) {
-	rsp, err := c.UpdateAccountWithBody(ctx, namespaceId, accountId, contentType, body, reqEditors...)
+func (c *clientWithResponses) UpdateAccountWithBodyWithResponse(ctx context.Context, namespaceId string, accountId string, params *UpdateAccountParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateAccountResponse, error) {
+	rsp, err := c.UpdateAccountWithBody(ctx, namespaceId, accountId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return parseUpdateAccountResponse(rsp)
 }
 
-func (c *clientWithResponses) UpdateAccountWithResponse(ctx context.Context, namespaceId string, accountId string, body UpdateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAccountResponse, error) {
-	rsp, err := c.UpdateAccount(ctx, namespaceId, accountId, body, reqEditors...)
+func (c *clientWithResponses) UpdateAccountWithResponse(ctx context.Context, namespaceId string, accountId string, params *UpdateAccountParams, body UpdateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAccountResponse, error) {
+	rsp, err := c.UpdateAccount(ctx, namespaceId, accountId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -3962,16 +4018,16 @@ func (c *clientWithResponses) ListAccountsWithResponse(ctx context.Context, name
 }
 
 // CreateAccountWithBodyWithResponse request with arbitrary body returning *CreateAccountResponse
-func (c *clientWithResponses) CreateAccountWithBodyWithResponse(ctx context.Context, namespaceId string, operatorId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAccountResponse, error) {
-	rsp, err := c.CreateAccountWithBody(ctx, namespaceId, operatorId, contentType, body, reqEditors...)
+func (c *clientWithResponses) CreateAccountWithBodyWithResponse(ctx context.Context, namespaceId string, operatorId string, params *CreateAccountParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAccountResponse, error) {
+	rsp, err := c.CreateAccountWithBody(ctx, namespaceId, operatorId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return parseCreateAccountResponse(rsp)
 }
 
-func (c *clientWithResponses) CreateAccountWithResponse(ctx context.Context, namespaceId string, operatorId string, body CreateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAccountResponse, error) {
-	rsp, err := c.CreateAccount(ctx, namespaceId, operatorId, body, reqEditors...)
+func (c *clientWithResponses) CreateAccountWithResponse(ctx context.Context, namespaceId string, operatorId string, params *CreateAccountParams, body CreateAccountJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAccountResponse, error) {
+	rsp, err := c.CreateAccount(ctx, namespaceId, operatorId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}

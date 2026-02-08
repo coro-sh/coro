@@ -536,7 +536,7 @@ func (h *HTTPHandler[S]) CreateAccount(c echo.Context) error {
 		if err = store.CreateAccount(ctx, acc); err != nil {
 			return err
 		}
-		if h.commander != nil {
+		if h.commander != nil && !req.SkipNotify {
 			return h.commander.NotifyAccountClaimsUpdate(ctx, acc)
 		}
 		return nil
@@ -602,7 +602,7 @@ func (h *HTTPHandler[S]) UpdateAccount(c echo.Context) error {
 		if err = store.UpdateAccount(ctx, acc); err != nil {
 			return err
 		}
-		if h.commander != nil {
+		if h.commander != nil && !req.SkipNotify {
 			return h.commander.NotifyAccountClaimsUpdate(ctx, acc)
 		}
 		return nil

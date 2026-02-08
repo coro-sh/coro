@@ -470,6 +470,13 @@ paths:
           required: true
           schema:
             type: string
+        - name: skip_notify
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: If true, skip sending account update notification to the operator NATS server
       requestBody:
         required: true
         content:
@@ -611,6 +618,13 @@ paths:
           required: true
           schema:
             type: string
+        - name: skip_notify
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: If true, skip sending account update notification to the operator NATS server
       requestBody:
         required: true
         content:

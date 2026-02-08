@@ -125,7 +125,7 @@ func createOperator(ctx context.Context, c *client.Client, logger log.Logger, na
 func createAccount(ctx context.Context, c *client.Client, logger log.Logger, namespaceID string, operatorID string) (client.Account, error) {
 	account, err := c.CreateAccount(ctx, namespaceID, operatorID, client.CreateAccountRequest{
 		Name: testutil.RandName(),
-	})
+	}, false)
 	if err != nil {
 		return client.Account{}, fmt.Errorf("create account: %w", err)
 	}
